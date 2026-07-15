@@ -2791,6 +2791,8 @@ def network_defaults(**overrides: Any) -> dict[str, Any]:
         "read_only_check": False,
         "wifi_real_test_attempted": False,
         "wifi_activation_result": "not_run",
+        "wifi_link_ready": False,
+        "previous_profile_restored": False,
         "rollback_after_test": "not_run",
         "dedicated_profile_present_final": "unknown",
         "dedicated_profile_persistent": False,
@@ -3388,21 +3390,28 @@ def wifi_network_from_status(
 ) -> dict[str, Any]:
     profile_present = dedicated_profile_present()
     activation_result = str(adapter_status.get("wifi_activation_result") or "unknown")
+    wifi_link_ready = bool(
+        adapter_status.get("wifi_link_ready") is True
+        or (activation_result == "success" and adapter_status.get("ip_acquired") is True)
+    )
+    success = wifi_link_ready and profile_present is True
     network_changed = bool(adapter_status.get("network_changed", False)) or bool(
         adapter_status.get("wifi_activation_attempted", False)
     )
     return network_defaults(
         network_step="wifi_persistent",
-        label="Wi-Fi configurado neste totem",
-        connected="yes" if activation_result == "success" else "unknown",
+        label="Wi-Fi conectado neste totem" if success else "Wi-Fi nao conectado",
+        connected="yes" if success else ("no" if activation_result in {"failure", "timeout"} else "unknown"),
         connection_type="wifi",
-        connectivity="ok" if activation_result == "success" else "unknown",
+        connectivity="not_checked",
         read_only_check=False,
         wifi_real_test_attempted=bool(adapter_status.get("wifi_activation_attempted", False)),
         wifi_activation_result=activation_result,
-        rollback_after_test="not_requested" if activation_result == "success" else "failure",
+        wifi_link_ready=success,
+        previous_profile_restored=bool(adapter_status.get("previous_profile_restored", False)),
+        rollback_after_test=str(adapter_status.get("rollback_status") or "not_run"),
         dedicated_profile_present_final=profile_present,
-        dedicated_profile_persistent=bool(activation_result == "success" and profile_present is True),
+        dedicated_profile_persistent=success,
         network_changed=network_changed,
         credentials_collected=True,
         secrets_file_removed=not secrets_path.exists(),
@@ -3492,26 +3501,46 @@ def run_wifi_persistent(
     if rc != 0 and adapter_status.get("wifi_activation_result") == "success":
         adapter_status["wifi_activation_result"] = "unknown"
     network = wifi_network_from_status(adapter_status, secrets_path, selection_metadata)
+    if network["wifi_link_ready"]:
+        display.show(
+            "02-wifi-result",
+            build_screen_svg(
+                active_step=1,
+                title="Wi-Fi conectado",
+                subtitle="A rede foi salva neste totem.",
+                footer="Enter continua",
+                panel_title="Pronto",
+                panel_items=[
+                    "Endereco de rede recebido.",
+                    "Reconexao automatica ativa.",
+                    "Senha temporaria removida.",
+                ],
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        read_advertised_action("enter")
+        return network
+
+    restored = bool(network["previous_profile_restored"])
     display.show(
         "02-wifi-result",
         build_screen_svg(
             active_step=1,
-            title="Resultado do Wi-Fi",
-            subtitle=f"Resultado: {network['wifi_activation_result']}.",
-            footer="Enter continua | Esc volta",
-            panel_title="Resultado",
-            panel_items=[
-                f"Perfil presente: {network['dedicated_profile_present_final']}",
-                f"Persistente: {str(network['dedicated_profile_persistent']).lower()}",
-                f"Senha temporaria removida: {str(network['secrets_file_removed']).lower()}",
-            ],
+            title="Nova rede nao conectada" if restored else "Wi-Fi nao conectado",
+            subtitle="A rede anterior foi preservada." if restored else "Verifique a rede e tente novamente.",
+            footer="Enter escolhe outra rede | Esc volta",
+            panel_title="Sem conexao",
+            panel_items=(
+                ["Rede anterior restaurada.", "Confira a nova senha.", "Ethernet nao foi alterado."]
+                if restored
+                else ["Confira a senha.", "Confira o nome da rede.", "Ethernet nao foi alterado."]
+            ),
+            accent="#ef4444",
             layout_rotation_deg=layout_rotation_deg,
         ),
     )
-    key = read_advertised_action("enter", "b", "B", "back", "escape")
-    if key in {"b", "B", "back", "escape"}:
-        return None
-    return network
+    read_advertised_action("enter", "b", "B", "back", "escape")
+    return None
 
 
 def resolve_network_scripted(network_step: str) -> dict[str, Any]:
@@ -3599,6 +3628,8 @@ def build_visual_status(
             "internet_external_check": False,
             "wifi_real_test_attempted": network["wifi_real_test_attempted"],
             "wifi_activation_result": network["wifi_activation_result"],
+            "wifi_link_ready": network["wifi_link_ready"],
+            "previous_profile_restored": network["previous_profile_restored"],
             "rollback_after_test": network["rollback_after_test"],
             "dedicated_profile_present_final": network["dedicated_profile_present_final"],
             "dedicated_profile_persistent": network["dedicated_profile_persistent"],
@@ -3980,8 +4011,35 @@ def write_visual_artifacts(
     return status
 
 
+def cancelled_wifi_observation(out_dir: pathlib.Path) -> dict[str, bool]:
+    status_path = out_dir / WIFI_APPLY_DIRNAME / wifi_adapter.STATUS_FILENAME
+    defaults = {
+        "network_changed": False,
+        "nmcli_called": False,
+        "previous_profile_restored": False,
+    }
+    if status_path.is_symlink() or not status_path.is_file():
+        return defaults
+    try:
+        data = json.loads(status_path.read_text(encoding="utf-8"))
+    except Exception:
+        return defaults
+    if not isinstance(data, dict):
+        return defaults
+    return {
+        "network_changed": bool(data.get("network_changed", False)),
+        "nmcli_called": bool(
+            data.get("wifi_profile_created", False)
+            or data.get("wifi_activation_attempted", False)
+            or data.get("network_changed", False)
+        ),
+        "previous_profile_restored": bool(data.get("previous_profile_restored", False)),
+    }
+
+
 def write_cancelled_artifact(out_dir: pathlib.Path) -> None:
     prepare_private_dir(out_dir)
+    wifi = cancelled_wifi_observation(out_dir)
     status = {
         "schema_version": SCHEMA_VERSION,
         "generated_at_utc": utc_timestamp(),
@@ -3989,16 +4047,18 @@ def write_cancelled_artifact(out_dir: pathlib.Path) -> None:
         "candidate_generated": False,
         "interface_mode": INTERFACE_MODE,
         "guardrails": {
-            "writes_only_under_tmp": True,
+            "writes_only_under_tmp": not wifi["network_changed"],
             "real_config_read": False,
             "real_config_written": False,
             "writer_called": False,
-            "network_changed": False,
+            "network_changed": wifi["network_changed"],
+            "wifi_changed": wifi["network_changed"],
+            "previous_profile_restored": wifi["previous_profile_restored"],
             "display_changed": False,
             "player_started": False,
             "main_player_mpv_called": False,
             "visual_renderer_mpv_called": visual_renderer_uses_mpv(),
-            "nmcli_called": False,
+            "nmcli_called": wifi["nmcli_called"],
         },
         "privacy": {
             "candidate_payload_copied": False,
@@ -5807,6 +5867,80 @@ def run_self_test() -> None:
         assert_true(
             text_field_display_hint("abcd", hidden=False, show_plain_value=True, cursor_index=2) == "ab|cd",
             "cursor should render inside visible environment field",
+        )
+        original_profile_present = globals()["dedicated_profile_present"]
+        try:
+            globals()["dedicated_profile_present"] = lambda: True
+            selection_metadata = {
+                "wifi_networks_found_count": 1,
+                "selected_network_present": True,
+                "selected_network_signal_bucket": "strong",
+                "selected_network_security_present": True,
+            }
+            successful_wifi = wifi_network_from_status(
+                {
+                    "wifi_activation_attempted": True,
+                    "wifi_activation_result": "success",
+                    "wifi_link_ready": True,
+                    "ip_acquired": True,
+                    "network_changed": True,
+                    "rollback_status": "not_attempted",
+                },
+                root / "removed-success-secret.json",
+                selection_metadata,
+            )
+            assert_true(successful_wifi["connected"] == "yes", "Wi-Fi with activation and IP should be connected")
+            assert_true(
+                successful_wifi["connectivity"] == "not_checked",
+                "Wi-Fi activation must not be mislabeled as verified internet access",
+            )
+            restored_wifi = wifi_network_from_status(
+                {
+                    "wifi_activation_attempted": True,
+                    "wifi_activation_result": "failure",
+                    "wifi_link_ready": False,
+                    "ip_acquired": False,
+                    "network_changed": True,
+                    "rollback_status": "previous_profile_restored",
+                    "previous_profile_restored": True,
+                },
+                root / "removed-failure-secret.json",
+                selection_metadata,
+            )
+            assert_true(restored_wifi["connected"] == "no", "failed replacement must not claim a new connection")
+            assert_true(
+                restored_wifi["previous_profile_restored"] is True,
+                "failed replacement should disclose that the prior network was preserved",
+            )
+        finally:
+            globals()["dedicated_profile_present"] = original_profile_present
+
+        cancelled_root = require_tmp_dir(str(root / "cancelled-after-wifi"))
+        wifi_status_dir = cancelled_root / WIFI_APPLY_DIRNAME
+        prepare_private_dir(wifi_status_dir)
+        atomic_write_private_json(
+            wifi_status_dir / wifi_adapter.STATUS_FILENAME,
+            {
+                "network_changed": True,
+                "wifi_profile_created": True,
+                "wifi_activation_attempted": True,
+                "previous_profile_restored": False,
+            },
+            wifi_status_dir,
+        )
+        write_cancelled_artifact(cancelled_root)
+        cancelled_status = json.loads((cancelled_root / CANCELLED_FILENAME).read_text(encoding="utf-8"))
+        assert_true(
+            cancelled_status["guardrails"]["network_changed"] is True,
+            "cancellation after Wi-Fi apply must not claim that the network was untouched",
+        )
+        assert_true(
+            cancelled_status["guardrails"]["writes_only_under_tmp"] is False,
+            "cancellation after Wi-Fi apply must disclose the persistent network write",
+        )
+        assert_true(
+            cancelled_status["guardrails"]["nmcli_called"] is True,
+            "cancellation after Wi-Fi apply must disclose NetworkManager use",
         )
         assert_true(adjacent_navigable_step(0, 1) == 1, "right on focused steps should move to connection")
         assert_true(adjacent_navigable_step(0, -1) == 3, "left on focused steps should wrap to review")

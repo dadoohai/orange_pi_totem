@@ -466,6 +466,8 @@ def network_defaults(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "wifi_real_test_attempted": False,
         "wifi_activation_result": "not_run",
+        "wifi_link_ready": False,
+        "previous_profile_restored": False,
         "rollback_after_test": "not_run",
         "dedicated_profile_present_final": "unknown",
         "dedicated_profile_persistent": False,
@@ -708,9 +710,9 @@ def read_wifi_field(
         )
         key = stdscr.getch()
         if key in (curses.KEY_ENTER, 10, 13):
-            stripped = value.strip() if not hidden else value
-            if len(stripped) >= min_length:
-                return stripped
+            valid_value = value if hidden else value.strip()
+            if len(valid_value) >= min_length:
+                return value
             error_message = "Valor incompleto."
         elif key == curses.KEY_F2:
             raise setup.SetupError("operacao cancelada")
@@ -810,6 +812,8 @@ def dedicated_profile_present(profile_name: str = WIFI_TEST_PROFILE_NAME) -> boo
 def rollback_result_from_status(adapter_status: dict[str, Any], profile_present: bool | str) -> str:
     if not adapter_status.get("rollback_after_test"):
         return "not_run"
+    if adapter_status.get("rollback_status") == "previous_profile_restored":
+        return "success"
     if adapter_status.get("rollback_status") != "attempted":
         return "failure"
     if profile_present is False:
@@ -824,31 +828,49 @@ def wifi_network_from_status(adapter_status: dict[str, Any], secrets_path: pathl
         WIFI_PERSISTENT_PROFILE_NAME if persistent else WIFI_TEST_PROFILE_NAME
     )
     activation_result = str(adapter_status.get("wifi_activation_result") or "unknown")
+    wifi_link_ready = bool(
+        adapter_status.get("wifi_link_ready") is True
+        or (activation_result == "success" and adapter_status.get("ip_acquired") is True)
+    )
+    rollback_result = rollback_result_from_status(adapter_status, profile_present)
+    success = wifi_link_ready and (
+        profile_present is True if persistent else rollback_result == "success"
+    )
     network_changed = bool(adapter_status.get("network_changed", False)) or bool(
         adapter_status.get("wifi_activation_attempted", False)
     )
     return network_defaults(
         network_step="wifi_real_test",
         label="Wi-Fi dedicado persistente" if persistent else "Teste Wi-Fi real",
-        connected="yes" if activation_result == "success" else "unknown",
+        connected="yes" if success else ("no" if activation_result in {"failure", "timeout"} else "unknown"),
         connection_type="wifi",
-        connectivity="ok" if activation_result == "success" else "unknown",
+        connectivity="not_checked",
         read_only_check=False,
         wifi_real_test_attempted=bool(adapter_status.get("wifi_activation_attempted", False)),
         wifi_activation_result=activation_result,
+        wifi_link_ready=wifi_link_ready,
+        previous_profile_restored=bool(adapter_status.get("previous_profile_restored", False)),
         rollback_after_test=(
             "not_requested"
             if persistent and activation_result == "success"
-            else rollback_result_from_status(adapter_status, profile_present)
+            else rollback_result
         ),
         dedicated_profile_present_final=profile_present,
-        dedicated_profile_persistent=bool(persistent and activation_result == "success" and profile_present is True),
+        dedicated_profile_persistent=bool(persistent and success),
         network_changed=network_changed,
         credentials_collected=True,
         secrets_file_removed=not secrets_path.exists(),
         commands_executed=True,
         nmcli_called=True,
     )
+
+
+def wifi_apply_can_advance(network: dict[str, Any], *, persistent: bool) -> bool:
+    if network.get("wifi_activation_result") != "success" or network.get("wifi_link_ready") is not True:
+        return False
+    if persistent:
+        return network.get("dedicated_profile_persistent") is True
+    return network.get("rollback_after_test") == "success"
 
 
 def run_wifi_apply(stdscr: Any, out_dir: pathlib.Path, *, persistent: bool = False) -> dict[str, Any]:
@@ -929,22 +951,33 @@ def run_wifi_apply(stdscr: Any, out_dir: pathlib.Path, *, persistent: bool = Fal
     network = wifi_network_from_status(adapter_status, secrets_path, persistent=persistent)
     if persistent:
         network["network_step"] = "wifi_persistent"
+    can_advance = wifi_apply_can_advance(network, persistent=persistent)
+    restored = bool(network.get("previous_profile_restored", False))
     draw_product_screen(
         stdscr,
         active_step=0,
-        heading="Resultado do Wi-Fi",
-        body=[
-            f"Resultado: {network['wifi_activation_result']}",
-            f"Rollback: {network['rollback_after_test']}",
-            "O perfil dedicado sera mantido." if persistent else "O perfil de teste nao sera mantido.",
-            "Os dados da rede nao aparecem nos arquivos publicos.",
-        ],
-        footer="Enter continua | Esc cancela",
+        heading="Wi-Fi pronto" if can_advance else ("Nova rede nao conectada" if restored else "Wi-Fi nao conectado"),
+        body=(
+            [
+                "A rede foi validada neste totem.",
+                "O perfil dedicado sera mantido." if persistent else "O teste foi desfeito com seguranca.",
+                "Os dados da rede nao aparecem nos arquivos publicos.",
+            ]
+            if can_advance
+            else [
+                "A rede anterior foi restaurada." if restored else "Verifique o nome e a senha.",
+                "A configuracao nao pode avancar.",
+                "Ethernet nao foi alterado.",
+            ]
+        ),
+        footer="Enter continua | Esc cancela" if can_advance else "Enter tenta novamente | Esc cancela",
     )
     while True:
         key = stdscr.getch()
         if key in (curses.KEY_ENTER, 10, 13):
-            return network
+            if can_advance:
+                return network
+            raise setup.SetupError("wifi nao confirmado")
         if key in (27,):
             raise WizardAbort("setup local cancelado pelo operador")
 
@@ -1126,6 +1159,47 @@ def run_self_test() -> None:
 
     root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c9-4-setup-product-v0-self-test-", dir="/tmp"))
     try:
+        assert_true(
+            not wifi_apply_can_advance(
+                network_defaults(
+                    wifi_activation_result="failure",
+                    wifi_link_ready=False,
+                    dedicated_profile_persistent=False,
+                ),
+                persistent=True,
+            ),
+            "failed persistent Wi-Fi must not advance to candidate review",
+        )
+        assert_true(
+            rollback_result_from_status(
+                {"rollback_after_test": True, "rollback_status": "previous_profile_restored"},
+                True,
+            )
+            == "success",
+            "restored previous profile should be reported as successful rollback",
+        )
+        assert_true(
+            wifi_apply_can_advance(
+                network_defaults(
+                    wifi_activation_result="success",
+                    wifi_link_ready=True,
+                    dedicated_profile_persistent=True,
+                ),
+                persistent=True,
+            ),
+            "persistent Wi-Fi with link and retained profile should advance",
+        )
+        assert_true(
+            wifi_apply_can_advance(
+                network_defaults(
+                    wifi_activation_result="success",
+                    wifi_link_ready=True,
+                    rollback_after_test="success",
+                ),
+                persistent=False,
+            ),
+            "temporary Wi-Fi test should advance only after successful rollback",
+        )
         out_dir = setup.require_tmp_dir(str(root / "out"))
         environment_id, rotation, network = resolve_scripted_inputs(
             "ENV-PRODUTO-LOCAL-01",

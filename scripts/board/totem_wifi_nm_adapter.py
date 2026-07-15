@@ -76,6 +76,7 @@ MAX_ROUTE_JSON_BYTES = 64 * 1024
 MAX_ROUTE_JSON_ENTRIES = 64
 MAX_READ_ONLY_COMMAND_OUTPUT_BYTES = 64 * 1024
 READ_ONLY_COMMAND_CHUNK_BYTES = 8 * 1024
+MAX_PROFILE_SOURCE_BYTES = 64 * 1024
 _DEFERRED_READ_ONLY_PROCESS: subprocess.Popen[bytes] | None = None
 _READ_ONLY_PROCESS_LOCK = threading.Lock()
 
@@ -755,8 +756,7 @@ def parse_wifi_network_list(stdout: str, *, limit: int | None = None) -> list[di
         if len(fields) < 3:
             continue
         ssid, signal, security = fields[:3]
-        ssid = ssid.strip()
-        if not ssid:
+        if not ssid or not ssid.strip():
             continue
         bucket = signal_bucket(signal)
         try:
@@ -1505,14 +1505,16 @@ def validate_apply_gates(
 def validate_secret_text(value: str, *, field: str) -> str:
     if not isinstance(value, str):
         raise AdapterError("secrets-file invalid")
-    cleaned = value.strip()
-    if not cleaned or len(cleaned) > 256:
+    if not value or len(value) > 256:
         raise AdapterError("secrets-file invalid")
-    if any(char in cleaned for char in ("\x00", "\n", "\r")):
+    if any(char in value for char in ("\x00", "\n", "\r")):
         raise AdapterError("secrets-file invalid")
-    if field == "psk" and len(cleaned) < 8:
+    if field == "ssid":
+        if not value.strip() or len(value.encode("utf-8")) > 32:
+            raise AdapterError("secrets-file invalid")
+    if field == "psk" and len(value) < 8:
         raise AdapterError("secrets-file invalid")
-    return cleaned
+    return value
 
 
 def load_wifi_secrets(secrets_file: str) -> dict[str, str]:
@@ -1554,6 +1556,12 @@ def keyfile_value(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\n", "").replace("\r", "")
 
 
+def keyfile_ssid_value(value: str) -> str:
+    """Encode SSID bytes explicitly so leading/trailing spaces survive keyfile parsing."""
+
+    return ";".join(str(byte) for byte in value.encode("utf-8")) + ";"
+
+
 def nmconnection_text(profile_name: str, secrets: dict[str, str], *, autoconnect: bool = False) -> str:
     return "\n".join(
         [
@@ -1565,7 +1573,7 @@ def nmconnection_text(profile_name: str, secrets: dict[str, str], *, autoconnect
             "",
             "[wifi]",
             "mode=infrastructure",
-            f"ssid={keyfile_value(secrets['ssid'])}",
+            f"ssid={keyfile_ssid_value(secrets['ssid'])}",
             "",
             "[wifi-security]",
             "key-mgmt=wpa-psk",
@@ -1627,6 +1635,80 @@ def write_system_nmconnection(
         secrets,
         autoconnect=autoconnect,
     )
+
+
+def read_profile_source(path: pathlib.Path) -> str | None:
+    if path.is_symlink():
+        raise AdapterError("profile source path invalid")
+    try:
+        source_stat = path.lstat()
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISREG(source_stat.st_mode) or stat.S_IMODE(source_stat.st_mode) != PRIVATE_FILE_MODE:
+        raise AdapterError("profile source path invalid")
+    if source_stat.st_size > MAX_PROFILE_SOURCE_BYTES:
+        raise AdapterError("profile source path invalid")
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise AdapterError("profile source unavailable") from exc
+
+
+def write_profile_source(path: pathlib.Path, text: str) -> None:
+    parent = path.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    if parent.is_symlink() or path.is_symlink():
+        raise AdapterError("profile source path invalid")
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".restore", dir=str(parent), text=True)
+    tmp_path = pathlib.Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        os.chmod(tmp_path, PRIVATE_FILE_MODE)
+        os.replace(tmp_path, path)
+        os.chmod(path, PRIVATE_FILE_MODE)
+    finally:
+        try:
+            tmp_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def capture_profile_transaction(
+    *,
+    profile_name: str,
+    timeout_sec: int,
+    system_connection_dir: pathlib.Path,
+    command_runner: Callable[[list[str], int], CommandResult],
+) -> dict[str, Any]:
+    profile_name = require_allowed_profile_name(profile_name)
+    keyfile_path = system_connection_dir / dedicated_profile_filename(profile_name)
+    profile_present = dedicated_profile_present(
+        profile_name=profile_name,
+        timeout_sec=timeout_sec,
+        command_runner=command_runner,
+    )
+    if not isinstance(profile_present, bool):
+        raise AdapterError("existing dedicated profile state unavailable")
+    profile_active: bool = False
+    if profile_present:
+        active_result = dedicated_profile_active(
+            profile_name=profile_name,
+            timeout_sec=timeout_sec,
+            command_runner=command_runner,
+        )
+        if not isinstance(active_result, bool):
+            raise AdapterError("existing dedicated profile state unavailable")
+        profile_active = active_result
+    source_text = read_profile_source(keyfile_path)
+    if profile_present and source_text is None:
+        raise AdapterError("existing dedicated profile source unavailable")
+    return {
+        "keyfile_path": keyfile_path,
+        "previous_profile_present": profile_present,
+        "previous_profile_active": profile_active,
+        "previous_source_text": source_text,
+    }
 
 
 def ip_acquired_for_profile(
@@ -1695,6 +1777,77 @@ def rollback_dedicated_profile(
     return rollback
 
 
+def restore_profile_transaction(
+    *,
+    profile_name: str,
+    snapshot: dict[str, Any],
+    out_dir: pathlib.Path,
+    timeout_sec: int,
+    reason: str,
+    command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
+) -> dict[str, Any]:
+    profile_name = require_allowed_profile_name(profile_name)
+    keyfile_path = snapshot.get("keyfile_path")
+    if not isinstance(keyfile_path, pathlib.Path):
+        raise AdapterError("profile rollback snapshot invalid")
+
+    down_args = ["nmcli", "connection", "down", "id", profile_name]
+    delete_args = ["nmcli", "connection", "delete", "id", profile_name]
+    assert_apply_command(down_args, profile_name)
+    assert_apply_command(delete_args, profile_name)
+    down_result = command_runner(down_args, timeout_sec)
+    delete_result = command_runner(delete_args, timeout_sec)
+
+    previous_source = snapshot.get("previous_source_text")
+    previous_present = snapshot.get("previous_profile_present") is True
+    previous_active = snapshot.get("previous_profile_active") is True
+    source_restored = False
+    load_result = "not_required"
+    reactivation_result = "not_required"
+    if isinstance(previous_source, str):
+        write_profile_source(keyfile_path, previous_source)
+        source_restored = True
+        if previous_present:
+            load_args = ["nmcli", "connection", "load", str(keyfile_path)]
+            assert_apply_command(load_args, profile_name, keyfile_path)
+            load_result = command_runner(load_args, timeout_sec).status
+            if load_result == "ok" and previous_active:
+                up_args = ["nmcli", "--wait", str(timeout_sec), "connection", "up", "id", profile_name]
+                assert_apply_command(up_args, profile_name)
+                reactivation_result = command_runner(up_args, timeout_sec + 2).status
+        elif previous_active:
+            raise AdapterError("profile rollback snapshot invalid")
+    else:
+        try:
+            keyfile_path.unlink()
+        except FileNotFoundError:
+            pass
+
+    restored = (
+        source_restored
+        and (not previous_present or load_result == "ok")
+        and (not previous_active or reactivation_result == "ok")
+    )
+    rollback = build_rollback_status(
+        reason=reason,
+        attempted=True,
+        down_result=down_result.status,
+        delete_result=delete_result.status,
+    )
+    rollback.update(
+        {
+            "rollback_status": "previous_profile_restored" if restored else "attempted",
+            "previous_profile_present": previous_present,
+            "previous_profile_active": previous_active,
+            "previous_profile_source_restored": source_restored,
+            "previous_profile_load_result": load_result,
+            "previous_profile_reactivation_result": reactivation_result,
+        }
+    )
+    write_rollback_artifact(out_dir, rollback)
+    return rollback
+
+
 def create_or_update_dedicated_profile(
     *,
     profile_name: str,
@@ -1704,24 +1857,20 @@ def create_or_update_dedicated_profile(
     autoconnect: bool = False,
     system_connection_dir: pathlib.Path = SYSTEM_CONNECTION_DIR,
     command_runner: Callable[[list[str], int], CommandResult] = run_internal_command,
-) -> tuple[str, bool, pathlib.Path | None]:
+) -> tuple[str, bool, pathlib.Path | None, dict[str, Any]]:
     profile_name = require_allowed_profile_name(profile_name)
-    keyfile_path = write_system_nmconnection(system_connection_dir, profile_name, secrets, autoconnect=autoconnect)
-    replaced_existing = False
+    snapshot = capture_profile_transaction(
+        profile_name=profile_name,
+        timeout_sec=timeout_sec,
+        system_connection_dir=system_connection_dir,
+        command_runner=command_runner,
+    )
+    keyfile_path = snapshot["keyfile_path"]
+    replaced_existing = bool(
+        snapshot["previous_profile_present"] or snapshot["previous_source_text"] is not None
+    )
     try:
-        existing = dedicated_profile_present(
-            profile_name=profile_name,
-            timeout_sec=timeout_sec,
-            command_runner=command_runner,
-        )
-        if existing is True:
-            delete_args = ["nmcli", "connection", "delete", "id", profile_name]
-            assert_apply_command(delete_args, profile_name)
-            delete_result = command_runner(delete_args, timeout_sec)
-            if delete_result.status not in {"ok", "failed"}:
-                return delete_result.status, replaced_existing, keyfile_path
-            replaced_existing = delete_result.status == "ok"
-
+        write_system_nmconnection(system_connection_dir, profile_name, secrets, autoconnect=autoconnect)
         load_args = ["nmcli", "connection", "load", str(keyfile_path)]
         assert_apply_command(load_args, profile_name, keyfile_path)
         load_result = command_runner(load_args, timeout_sec)
@@ -1732,13 +1881,17 @@ def create_or_update_dedicated_profile(
                 command_runner=command_runner,
             )
             if loaded is not True:
-                return "profile_not_present_after_load", replaced_existing, keyfile_path
-        return load_result.status, replaced_existing, keyfile_path
+                return "profile_not_present_after_load", replaced_existing, keyfile_path, snapshot
+        return load_result.status, replaced_existing, keyfile_path, snapshot
     except Exception:
-        try:
-            keyfile_path.unlink()
-        except FileNotFoundError:
-            pass
+        restore_profile_transaction(
+            profile_name=profile_name,
+            snapshot=snapshot,
+            out_dir=out_dir,
+            timeout_sec=timeout_sec,
+            reason="profile_update_exception",
+            command_runner=command_runner,
+        )
         raise
 
 
@@ -1767,6 +1920,7 @@ def classify_activation_failure(
     preflight: dict[str, Any],
     profile_create_result: str,
     activation_command_result: CommandResult | None = None,
+    ip_acquired: bool | str = UNKNOWN,
 ) -> str:
     if activation_result == "success":
         return "none"
@@ -1780,6 +1934,13 @@ def classify_activation_failure(
         return "nm_profile_load_failed"
     if profile_create_result not in {"ok", "not_attempted"} and activation_result == "not_attempted":
         return "nm_activation_failed_generic"
+    if (
+        activation_result == "failure"
+        and activation_command_result is not None
+        and activation_command_result.status == "ok"
+        and ip_acquired is not True
+    ):
+        return "ip_not_acquired"
     if activation_command_result is not None:
         category = classify_failure_from_text(f"{activation_command_result.stdout}\n{activation_command_result.stderr}")
         if category != UNKNOWN:
@@ -1805,11 +1966,20 @@ def build_apply_status(
     persistent_product_wifi: bool,
     autoconnect_enabled: bool,
 ) -> dict[str, Any]:
-    network_changed = activation_result in {"success", "failure", "timeout"}
+    network_changed = (
+        profile_create_result != "not_attempted"
+        or profile_replaced
+        or activation_result in {"success", "failure", "timeout"}
+        or bool(rollback and rollback.get("rollback_attempted"))
+    )
+    wifi_link_ready = activation_result == "success" and ip_acquired is True
+    previous_profile_restored = bool(
+        rollback and rollback.get("rollback_status") == "previous_profile_restored"
+    )
     privacy = public_privacy_flags()
     privacy["network_changed"] = network_changed
     privacy["credentials_collected"] = True
-    privacy["nmcli_modify_called"] = profile_create_result == "ok" or activation_result != "not_attempted"
+    privacy["nmcli_modify_called"] = network_changed
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at_utc": utc_timestamp(),
@@ -1825,10 +1995,12 @@ def build_apply_status(
         "wifi_activation_result": activation_result,
         "failure_category": failure_category,
         "ip_acquired": bool_for_json(ip_acquired),
+        "wifi_link_ready": wifi_link_ready,
         "default_route_present": bool_for_json(default_route_present),
         "connectivity_check": "not_checked",
         "rollback_after_test": rollback is not None,
         "rollback_status": rollback["rollback_status"] if rollback else "not_attempted",
+        "previous_profile_restored": previous_profile_restored,
         "profile_retained": profile_retained,
         "persistent_product_wifi": persistent_product_wifi,
         "dedicated_profile_persistent": bool(profile_retained and persistent_product_wifi),
@@ -1937,12 +2109,13 @@ def apply_wifi_controlled(
     activation_result = "not_attempted"
     activation_command_result: CommandResult | None = None
     profile_source_path: pathlib.Path | None = None
+    profile_snapshot: dict[str, Any] | None = None
     ip_acquired: bool | str = UNKNOWN
     default_route_present: bool | str = preflight["default_route_present"]
     autoconnect_enabled = bool(persistent_product_wifi and keep_dedicated_profile)
 
     try:
-        profile_create_result, profile_replaced, profile_source_path = create_or_update_dedicated_profile(
+        profile_create_result, profile_replaced, profile_source_path, profile_snapshot = create_or_update_dedicated_profile(
             profile_name=profile_name,
             secrets=secrets,
             out_dir=out_dir,
@@ -1966,22 +2139,38 @@ def apply_wifi_controlled(
                 timeout_sec=timeout_sec,
                 command_runner=command_runner,
             )
+            if activation_result == "success" and ip_acquired is not True:
+                activation_result = "failure"
             route_text, route_available = file_reader(pathlib.Path("/proc/net/route"))
             default_route_present = detect_default_route_from_text(route_text) if route_available else UNKNOWN
 
         should_rollback = rollback_after_test or not keep_dedicated_profile or activation_result != "success"
         if should_rollback:
-            rollback = rollback_dedicated_profile(
-                profile_name=profile_name,
-                out_dir=out_dir,
-                timeout_sec=timeout_sec,
-                reason="rollback_after_test" if activation_result == "success" else "activation_not_successful",
-                command_runner=command_runner,
-            )
+            rollback_reason = "rollback_after_test" if activation_result == "success" else "activation_not_successful"
+            if profile_snapshot is not None:
+                rollback = restore_profile_transaction(
+                    profile_name=profile_name,
+                    snapshot=profile_snapshot,
+                    out_dir=out_dir,
+                    timeout_sec=timeout_sec,
+                    reason=rollback_reason,
+                    command_runner=command_runner,
+                )
+            else:
+                rollback = rollback_dedicated_profile(
+                    profile_name=profile_name,
+                    out_dir=out_dir,
+                    timeout_sec=timeout_sec,
+                    reason=rollback_reason,
+                    command_runner=command_runner,
+                )
         else:
             profile_retained = True
     finally:
-        if profile_source_path is not None and not (profile_retained and persistent_product_wifi):
+        previous_source_restored = bool(rollback and rollback.get("previous_profile_source_restored"))
+        if profile_source_path is not None and not (
+            (profile_retained and persistent_product_wifi) or previous_source_restored
+        ):
             try:
                 profile_source_path.unlink()
             except FileNotFoundError:
@@ -2003,6 +2192,7 @@ def apply_wifi_controlled(
             preflight=preflight,
             profile_create_result=profile_create_result,
             activation_command_result=activation_command_result,
+            ip_acquired=ip_acquired,
         ),
         ip_acquired=ip_acquired,
         default_route_present=default_route_present,
@@ -2171,9 +2361,11 @@ def build_apply_summary(status: dict[str, Any]) -> str:
         f"wifi_activation_result: {status['wifi_activation_result']}",
         f"failure_category: {status['failure_category']}",
         f"ip_acquired: {status['ip_acquired']}",
+        f"wifi_link_ready: {str(status['wifi_link_ready']).lower()}",
         f"default_route_present: {status['default_route_present']}",
         f"connectivity_check: {status['connectivity_check']}",
         f"rollback_status: {status['rollback_status']}",
+        f"previous_profile_restored: {str(status['previous_profile_restored']).lower()}",
         f"profile_retained: {str(status['profile_retained']).lower()}",
         f"persistent_product_wifi: {str(status['persistent_product_wifi']).lower()}",
         f"dedicated_profile_persistent: {str(status['dedicated_profile_persistent']).lower()}",
@@ -2620,6 +2812,11 @@ def run_self_test() -> None:
     assert_true(parsed_wifi_list[0]["signal_percent"] == 82, "signal percent should be kept for local UI")
     assert_true(parsed_wifi_list[0]["signal_bucket"] == "strong", "signal bucket should be strong")
     assert_true(all(item["ssid"] for item in parsed_wifi_list), "wifi list should ignore empty SSIDs")
+    spaced_wifi_list = parse_wifi_network_list("EDGE SSID  :91:WPA2\nEDGE SSID:90:WPA2\n")
+    assert_true(
+        [item["ssid"] for item in spaced_wifi_list] == ["EDGE SSID  ", "EDGE SSID"],
+        "SSID boundary spaces must be preserved and must not collapse distinct networks",
+    )
     public_wifi_meta = wifi_selection_public_metadata(parsed_wifi_list, parsed_wifi_list[0])
     assert_true(public_wifi_meta["wifi_networks_found_count"] == 3, "wifi count should be public")
     assert_true(public_wifi_meta["selected_network_present"] is True, "selection presence should be public")
@@ -2883,7 +3080,7 @@ def run_self_test() -> None:
         )
     assert_true(detect_dns_from_text(resolver_fixture) is True, "resolver should be aggregated")
 
-    fake_nm_state = {"profiles_loaded": set()}
+    fake_nm_state = {"profiles_loaded": set(), "active_profiles": set()}
 
     def fake_runner(args: list[str], timeout_sec: int) -> CommandResult:
         if args == IP_ROUTE_DEFAULT_COMMAND:
@@ -2896,6 +3093,8 @@ def run_self_test() -> None:
             return CommandResult("ok", device_fixture)
         if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
             return CommandResult("ok", active_fixture)
+        if args == ["nmcli", "-t", "-f", "NAME", "connection", "show", "--active"]:
+            return CommandResult("ok", "\n".join(sorted(fake_nm_state["active_profiles"])) + "\n")
         if args == ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "no"]:
             return CommandResult("ok", wifi_list_fixture)
         if args == ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "yes"]:
@@ -2918,11 +3117,14 @@ def run_self_test() -> None:
             fake_nm_state["profiles_loaded"].add(loaded_profile)
             return CommandResult("ok", "loaded Fake product wifi\n")
         if len(args) == 7 and args[:6] == ["nmcli", "--wait", "1", "connection", "up", "id"]:
+            fake_nm_state["active_profiles"].add(args[6])
             return CommandResult("ok", "successfully activated fake-token-value\n")
         if len(args) == 5 and args[:4] == ["nmcli", "connection", "down", "id"]:
+            fake_nm_state["active_profiles"].discard(args[4])
             return CommandResult("ok", "down fake-uuid-value\n")
         if len(args) == 5 and args[:4] == ["nmcli", "connection", "delete", "id"]:
             fake_nm_state["profiles_loaded"].discard(args[4])
+            fake_nm_state["active_profiles"].discard(args[4])
             return CommandResult("ok", "deleted Fake product wifi\n")
         return CommandResult("failed")
 
@@ -3441,6 +3643,31 @@ def run_self_test() -> None:
         )
         assert_true(preflight["ssh_path_category"] == "ethernet", "ssh path should be classified by category")
         assert_true(preflight["apply_allowed"] is True, "preflight should allow controlled apply fixture")
+        failed_create_status = build_apply_status(
+            preflight=preflight,
+            profile_create_result="failed",
+            profile_replaced=True,
+            activation_result="not_attempted",
+            failure_category="nm_activation_failed_generic",
+            ip_acquired=UNKNOWN,
+            default_route_present=True,
+            rollback=build_rollback_status(
+                reason="activation_not_successful",
+                attempted=True,
+                down_result="failed",
+                delete_result="ok",
+            ),
+            profile_retained=False,
+            secrets_file_cleanup=True,
+            profile_source_retained_during_activation=True,
+            persistent_product_wifi=True,
+            autoconnect_enabled=True,
+        )
+        assert_true(failed_create_status["network_changed"] is True, "failed replacement should record network touch")
+        assert_true(
+            failed_create_status["privacy_flags"]["nmcli_modify_called"] is True,
+            "failed replacement should disclose NetworkManager mutation",
+        )
         write_preflight_artifacts(preflight_out, preflight)
         assert_artifact_permissions(preflight_out, (STATUS_FILENAME, PREFLIGHT_FILENAME, SUMMARY_FILENAME))
         preflight_text = (preflight_out / STATUS_FILENAME).read_text(encoding="utf-8")
@@ -3494,6 +3721,30 @@ def run_self_test() -> None:
         os.chmod(safe_secret, PRIVATE_FILE_MODE)
         loaded = load_wifi_secrets(str(safe_secret))
         assert_true(loaded["ssid"] == "FAKE-STORE-WIFI", "safe secrets should load internally")
+
+        spaced_secret = secrets_parent / "wifi-spaced.json"
+        spaced_secret.write_text(
+            json.dumps({"ssid": "EDGE SSID  ", "psk": " replacement-pass "}),
+            encoding="utf-8",
+        )
+        os.chmod(spaced_secret, PRIVATE_FILE_MODE)
+        spaced_loaded = load_wifi_secrets(str(spaced_secret))
+        assert_true(spaced_loaded["ssid"] == "EDGE SSID  ", "SSID boundary spaces should survive secret loading")
+        assert_true(spaced_loaded["psk"] == " replacement-pass ", "PSK boundary spaces should survive secret loading")
+        spaced_keyfile = nmconnection_text(DEFAULT_PERSISTENT_PROFILE_NAME, spaced_loaded, autoconnect=True)
+        assert_true(
+            f"ssid={keyfile_ssid_value('EDGE SSID  ')}" in spaced_keyfile,
+            "SSID should use an exact byte-list keyfile representation",
+        )
+        assert_true("ssid=EDGE SSID" not in spaced_keyfile, "SSID must not use an ambiguous plain keyfile value")
+        assert_raises(
+            lambda: validate_secret_text(" " * 4, field="ssid"),
+            "all-space SSIDs should remain unsupported by the local product UI",
+        )
+        assert_raises(
+            lambda: validate_secret_text("x" * 33, field="ssid"),
+            "SSIDs longer than 32 bytes should fail closed",
+        )
 
         insecure_secret = secrets_parent / "insecure.json"
         insecure_secret.write_text(json.dumps({"ssid": "FAKE-STORE-WIFI", "psk": "fake-password"}), encoding="utf-8")
@@ -3585,6 +3836,136 @@ def run_self_test() -> None:
         persistent_text += (persistent_out / PREFLIGHT_FILENAME).read_text(encoding="utf-8")
         persistent_text += (persistent_out / SUMMARY_FILENAME).read_text(encoding="utf-8")
         assert_no_forbidden_values(persistent_text)
+
+        previous_profile_source = persistent_source.read_text(encoding="utf-8")
+        replacement_failed_once = False
+
+        def replacement_failure_runner(args: list[str], timeout_sec: int) -> CommandResult:
+            nonlocal replacement_failed_once
+            if (
+                len(args) == 7
+                and args[:6] == ["nmcli", "--wait", "1", "connection", "up", "id"]
+                and args[6] == DEFAULT_PERSISTENT_PROFILE_NAME
+                and not replacement_failed_once
+            ):
+                replacement_failed_once = True
+                fake_nm_state["active_profiles"].discard(DEFAULT_PERSISTENT_PROFILE_NAME)
+                return CommandResult("failed", "", "Secrets were required", 4)
+            return fake_runner(args, timeout_sec)
+
+        replacement_failure_out = require_tmp_dir(str(root / "persistent-replacement-failure"))
+        replacement_failure_status = apply_wifi_controlled(
+            out_dir=replacement_failure_out,
+            timeout_sec=1,
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file=str(spaced_secret),
+            profile_name=DEFAULT_PERSISTENT_PROFILE_NAME,
+            rollback_after_test=False,
+            keep_dedicated_profile=True,
+            persistent_product_wifi=True,
+            confirm_keep_dedicated_profile=CONFIRM_KEEP_DEDICATED_PROFILE,
+            cleanup_secrets_file=False,
+            allow_ssh_risk_with_local_console_confirmed=False,
+            local_console_confirmed=False,
+            system_connection_dir=root / "system-connections",
+            command_runner=replacement_failure_runner,
+            file_reader=fake_reader,
+            nmcli_path="/usr/bin/nmcli",
+        )
+        assert_true(
+            replacement_failure_status["wifi_activation_result"] == "failure",
+            "replacement fixture should exercise activation failure",
+        )
+        assert_true(
+            replacement_failure_status["previous_profile_restored"] is True,
+            "failed replacement must restore the previous profile",
+        )
+        assert_true(
+            replacement_failure_status["rollback_status"] == "previous_profile_restored",
+            "failed replacement should expose a verified restoration result",
+        )
+        assert_true(
+            persistent_source.read_text(encoding="utf-8") == previous_profile_source,
+            "failed replacement must restore the exact previous keyfile",
+        )
+        assert_true(
+            DEFAULT_PERSISTENT_PROFILE_NAME in fake_nm_state["active_profiles"],
+            "previously active profile must be reactivated after failed replacement",
+        )
+
+        replacement_commands: list[list[str]] = []
+
+        def replacement_success_runner(args: list[str], timeout_sec: int) -> CommandResult:
+            replacement_commands.append(list(args))
+            return fake_runner(args, timeout_sec)
+
+        replacement_success_out = require_tmp_dir(str(root / "persistent-replacement-success"))
+        replacement_success_status = apply_wifi_controlled(
+            out_dir=replacement_success_out,
+            timeout_sec=1,
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file=str(spaced_secret),
+            profile_name=DEFAULT_PERSISTENT_PROFILE_NAME,
+            rollback_after_test=False,
+            keep_dedicated_profile=True,
+            persistent_product_wifi=True,
+            confirm_keep_dedicated_profile=CONFIRM_KEEP_DEDICATED_PROFILE,
+            cleanup_secrets_file=False,
+            allow_ssh_risk_with_local_console_confirmed=False,
+            local_console_confirmed=False,
+            system_connection_dir=root / "system-connections",
+            command_runner=replacement_success_runner,
+            file_reader=fake_reader,
+            nmcli_path="/usr/bin/nmcli",
+        )
+        assert_true(replacement_success_status["wifi_activation_result"] == "success", "replacement should succeed")
+        assert_true(replacement_success_status["wifi_profile_replaced"] is True, "replacement should be recorded")
+        assert_true(replacement_success_status["wifi_link_ready"] is True, "successful replacement should have IP")
+        assert_true(
+            not any(command[:4] == ["nmcli", "connection", "delete", "id"] for command in replacement_commands),
+            "successful replacement must not delete the active profile before validation",
+        )
+        assert_true(
+            f"ssid={keyfile_ssid_value('EDGE SSID  ')}" in persistent_source.read_text(encoding="utf-8"),
+            "successful replacement should retain exact SSID bytes",
+        )
+
+        source_before_no_ip = persistent_source.read_text(encoding="utf-8")
+
+        def no_ip_runner(args: list[str], timeout_sec: int) -> CommandResult:
+            if len(args) == 7 and args[:6] == ["nmcli", "-t", "-f", "IP4.ADDRESS", "connection", "show"]:
+                return CommandResult("ok", "")
+            return fake_runner(args, timeout_sec)
+
+        no_ip_out = require_tmp_dir(str(root / "persistent-replacement-no-ip"))
+        no_ip_status = apply_wifi_controlled(
+            out_dir=no_ip_out,
+            timeout_sec=1,
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file=str(safe_secret),
+            profile_name=DEFAULT_PERSISTENT_PROFILE_NAME,
+            rollback_after_test=False,
+            keep_dedicated_profile=True,
+            persistent_product_wifi=True,
+            confirm_keep_dedicated_profile=CONFIRM_KEEP_DEDICATED_PROFILE,
+            cleanup_secrets_file=False,
+            allow_ssh_risk_with_local_console_confirmed=False,
+            local_console_confirmed=False,
+            system_connection_dir=root / "system-connections",
+            command_runner=no_ip_runner,
+            file_reader=fake_reader,
+            nmcli_path="/usr/bin/nmcli",
+        )
+        assert_true(no_ip_status["wifi_activation_result"] == "failure", "activation without IPv4 must fail")
+        assert_true(no_ip_status["failure_category"] == "ip_not_acquired", "missing IPv4 should be explicit")
+        assert_true(no_ip_status["previous_profile_restored"] is True, "missing IPv4 must restore prior Wi-Fi")
+        assert_true(
+            persistent_source.read_text(encoding="utf-8") == source_before_no_ip,
+            "missing IPv4 must restore the exact previous keyfile",
+        )
 
         failure_out = require_tmp_dir(str(root / "failure"))
         prepare_out_dir(failure_out)
