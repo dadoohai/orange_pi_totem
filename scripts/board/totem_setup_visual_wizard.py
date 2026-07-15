@@ -30,6 +30,7 @@ import sys
 import termios
 import tempfile
 import textwrap
+import threading
 import time
 import tty
 import uuid
@@ -105,8 +106,9 @@ CLOCK_IMPLAUSIBLE_LABEL = "Hora nao ajustada"
 CLOCK_MIN_PLAUSIBLE_YEAR = 2024
 CLOCK_MAX_PLAUSIBLE_YEAR = 2100
 DISPLAY_TIMEZONE_NAME = "America/Sao_Paulo"
-CONNECTIVITY_INDICATOR_REFRESH_SEC = 5.0
-CONNECTIVITY_INDICATOR_TIMEOUT_SEC = 1
+CONNECTIVITY_INDICATOR_REFRESH_SEC = 15.0
+CONNECTIVITY_INDICATOR_TIMEOUT_SEC = 2.0
+CONNECTIVITY_INDICATOR_POLL_SEC = 0.1
 CONNECTIVITY_INDICATOR_START = "<!-- dadooh-connectivity-indicator:start -->"
 CONNECTIVITY_INDICATOR_END = "<!-- dadooh-connectivity-indicator:end -->"
 MAX_SCREEN_ARTIFACTS = 64
@@ -217,6 +219,10 @@ _CONNECTIVITY_CACHE: dict[str, Any] | None = None
 _CONNECTIVITY_CACHE_AT = 0.0
 _CONNECTIVITY_REFRESH_CALLBACK: Callable[[], None] | None = None
 _CONNECTIVITY_NEXT_REFRESH_AT = 0.0
+_CONNECTIVITY_WORKER_LOCK = threading.Lock()
+_CONNECTIVITY_WORKER: threading.Thread | None = None
+_CONNECTIVITY_PENDING_RESULT: tuple[int, float, dict[str, Any] | None] | None = None
+_CONNECTIVITY_GENERATION = 0
 
 
 class VisualWizardAbort(RuntimeError):
@@ -517,9 +523,15 @@ def normalize_connectivity_snapshot(snapshot: dict[str, Any] | None) -> dict[str
 
 def set_connectivity_indicator_runtime(enabled: bool) -> None:
     global _CONNECTIVITY_RUNTIME_ENABLED, _CONNECTIVITY_CACHE, _CONNECTIVITY_CACHE_AT
-    _CONNECTIVITY_RUNTIME_ENABLED = bool(enabled)
-    _CONNECTIVITY_CACHE = None
-    _CONNECTIVITY_CACHE_AT = 0.0
+    global _CONNECTIVITY_GENERATION, _CONNECTIVITY_PENDING_RESULT, _CONNECTIVITY_WORKER
+    with _CONNECTIVITY_WORKER_LOCK:
+        _CONNECTIVITY_GENERATION += 1
+        _CONNECTIVITY_RUNTIME_ENABLED = bool(enabled)
+        _CONNECTIVITY_CACHE = None
+        _CONNECTIVITY_CACHE_AT = 0.0
+        _CONNECTIVITY_PENDING_RESULT = None
+        if _CONNECTIVITY_WORKER is not None and not _CONNECTIVITY_WORKER.is_alive():
+            _CONNECTIVITY_WORKER = None
 
 
 def set_connectivity_refresh_callback(callback: Callable[[], None] | None) -> None:
@@ -547,26 +559,103 @@ def refresh_connectivity_if_due(now_monotonic: float | None = None) -> bool:
     return True
 
 
+def schedule_connectivity_worker_poll() -> None:
+    global _CONNECTIVITY_NEXT_REFRESH_AT
+    if _CONNECTIVITY_REFRESH_CALLBACK is not None:
+        _CONNECTIVITY_NEXT_REFRESH_AT = time.monotonic() + CONNECTIVITY_INDICATOR_POLL_SEC
+
+
+def schedule_connectivity_cache_expiry(valid_until_monotonic: float) -> None:
+    global _CONNECTIVITY_NEXT_REFRESH_AT
+    if _CONNECTIVITY_REFRESH_CALLBACK is not None:
+        _CONNECTIVITY_NEXT_REFRESH_AT = valid_until_monotonic
+
+
+def start_connectivity_worker() -> bool:
+    global _CONNECTIVITY_WORKER, _CONNECTIVITY_PENDING_RESULT
+    with _CONNECTIVITY_WORKER_LOCK:
+        if not _CONNECTIVITY_RUNTIME_ENABLED:
+            return False
+        if _CONNECTIVITY_WORKER is not None:
+            if _CONNECTIVITY_WORKER.is_alive():
+                return False
+            _CONNECTIVITY_WORKER = None
+        generation = _CONNECTIVITY_GENERATION
+
+        def collect() -> None:
+            global _CONNECTIVITY_PENDING_RESULT
+            try:
+                result = wifi_adapter.collect_connectivity_indicator(
+                    timeout_sec=CONNECTIVITY_INDICATOR_TIMEOUT_SEC,
+                )
+            except Exception:
+                result = None
+            completed_at = time.monotonic()
+            with _CONNECTIVITY_WORKER_LOCK:
+                if _CONNECTIVITY_RUNTIME_ENABLED and generation == _CONNECTIVITY_GENERATION:
+                    _CONNECTIVITY_PENDING_RESULT = (generation, completed_at, result)
+
+        _CONNECTIVITY_PENDING_RESULT = None
+        try:
+            worker = threading.Thread(
+                target=collect,
+                name="dadooh-connectivity",
+                daemon=True,
+            )
+            _CONNECTIVITY_WORKER = worker
+            worker.start()
+        except Exception:
+            if _CONNECTIVITY_WORKER is None or not _CONNECTIVITY_WORKER.is_alive():
+                _CONNECTIVITY_WORKER = None
+                return False
+        return True
+
+
+def consume_connectivity_worker_result() -> tuple[float, dict[str, Any] | None] | object:
+    global _CONNECTIVITY_PENDING_RESULT, _CONNECTIVITY_WORKER
+    with _CONNECTIVITY_WORKER_LOCK:
+        pending = _CONNECTIVITY_PENDING_RESULT
+        if pending is not None:
+            _CONNECTIVITY_PENDING_RESULT = None
+            generation, completed_at, result = pending
+            if _CONNECTIVITY_WORKER is not None and not _CONNECTIVITY_WORKER.is_alive():
+                _CONNECTIVITY_WORKER = None
+            if generation == _CONNECTIVITY_GENERATION:
+                return completed_at, result
+        if _CONNECTIVITY_WORKER is not None and not _CONNECTIVITY_WORKER.is_alive():
+            _CONNECTIVITY_WORKER = None
+        return _CONNECTIVITY_SNAPSHOT_AUTO
+
+
+def connectivity_worker_in_flight() -> bool:
+    with _CONNECTIVITY_WORKER_LOCK:
+        return _CONNECTIVITY_WORKER is not None and _CONNECTIVITY_WORKER.is_alive()
+
+
 def current_connectivity_snapshot(now_monotonic: float | None = None) -> dict[str, str]:
     global _CONNECTIVITY_CACHE, _CONNECTIVITY_CACHE_AT
     if not _CONNECTIVITY_RUNTIME_ENABLED:
         return normalize_connectivity_snapshot(None)
     current = time.monotonic() if now_monotonic is None else float(now_monotonic)
+    pending = consume_connectivity_worker_result()
+    if pending is not _CONNECTIVITY_SNAPSHOT_AUTO:
+        completed_at, snapshot = pending
+        if completed_at <= current and current - completed_at < CONNECTIVITY_INDICATOR_REFRESH_SEC:
+            _CONNECTIVITY_CACHE = normalize_connectivity_snapshot(snapshot)
+            _CONNECTIVITY_CACHE_AT = completed_at
     if (
         _CONNECTIVITY_CACHE is not None
         and current >= _CONNECTIVITY_CACHE_AT
         and current - _CONNECTIVITY_CACHE_AT < CONNECTIVITY_INDICATOR_REFRESH_SEC
     ):
+        schedule_connectivity_cache_expiry(_CONNECTIVITY_CACHE_AT + CONNECTIVITY_INDICATOR_REFRESH_SEC)
         return dict(_CONNECTIVITY_CACHE)
-    try:
-        snapshot = wifi_adapter.collect_connectivity_indicator(
-            timeout_sec=CONNECTIVITY_INDICATOR_TIMEOUT_SEC,
-        )
-    except Exception:
-        snapshot = None
-    _CONNECTIVITY_CACHE = normalize_connectivity_snapshot(snapshot)
-    _CONNECTIVITY_CACHE_AT = current
-    return dict(_CONNECTIVITY_CACHE)
+    _CONNECTIVITY_CACHE = None
+    _CONNECTIVITY_CACHE_AT = 0.0
+    started = start_connectivity_worker()
+    if started or connectivity_worker_in_flight():
+        schedule_connectivity_worker_poll()
+    return normalize_connectivity_snapshot(None)
 
 
 def connectivity_indicator_position(layout: ScreenLayout) -> tuple[int, int]:
@@ -1610,6 +1699,7 @@ def read_key(timeout_sec: float | None = None) -> str:
             wait_sec = refresh_wait if wait_sec is None else min(wait_sec, refresh_wait)
         ready, _, _ = select.select([sys.stdin], [], [], wait_sec)
         if ready:
+            refresh_connectivity_if_due(time.monotonic())
             break
         now = time.monotonic()
         refresh_connectivity_if_due(now)
@@ -5665,6 +5755,7 @@ def assert_framebuffer_backbuffer_contract() -> None:
 
 
 def run_self_test() -> None:
+    global _CONNECTIVITY_CACHE_AT, _CONNECTIVITY_PENDING_RESULT
     assert_framebuffer_backbuffer_contract()
     assert_raises(lambda: require_tmp_dir("/var/tmp/dadooh-c9-9"), "out-dir outside /tmp should fail")
     assert_raises(lambda: validate_environment_id("bad environment"), "environment with space should fail")
@@ -5985,22 +6076,112 @@ def run_self_test() -> None:
             "explicit suppression should remain available to isolated renderer tests",
         )
         original_indicator_collector = wifi_adapter.collect_connectivity_indicator
-        indicator_calls: list[int] = []
+        indicator_calls: list[float] = []
+
+        def await_connectivity_worker() -> None:
+            deadline = time.monotonic() + 1.0
+            while connectivity_worker_in_flight() and time.monotonic() < deadline:
+                time.sleep(0.005)
+            assert_true(not connectivity_worker_in_flight(), "connectivity worker should finish within its bound")
+
         try:
+            blocked_release = threading.Event()
+            blocked_started = threading.Event()
+            blocked_calls = 0
+
+            def blocked_collector(timeout_sec: float) -> dict[str, str]:
+                nonlocal blocked_calls
+                assert_true(timeout_sec == CONNECTIVITY_INDICATOR_TIMEOUT_SEC, "worker must receive the fixed bound")
+                blocked_calls += 1
+                blocked_started.set()
+                blocked_release.wait(0.5)
+                return {"transport": "ethernet", "wifi_signal": "unknown", "internet": "online"}
+
+            wifi_adapter.collect_connectivity_indicator = blocked_collector
+            set_connectivity_indicator_runtime(True)
+            nonblocking_started = time.monotonic()
+            assert_true(current_connectivity_snapshot()["internet"] == "unknown", "pending work should be neutral")
+            assert_true(blocked_started.wait(0.2), "background collection should start promptly")
+            for _ in range(20):
+                assert_true(
+                    current_connectivity_snapshot()["internet"] == "unknown",
+                    "pending reads must remain fail-closed",
+                )
+            assert_true(time.monotonic() - nonblocking_started < 0.3, "pending reads must not block keyboard rendering")
+            assert_true(blocked_calls == 1, "only one connectivity collection may be in flight")
+            blocked_release.set()
+            await_connectivity_worker()
+            assert_true(current_connectivity_snapshot()["internet"] == "online", "completed work should publish once")
+
+            aged_result_calls = 0
+
+            def aged_result_collector(timeout_sec: float) -> dict[str, str]:
+                nonlocal aged_result_calls
+                del timeout_sec
+                aged_result_calls += 1
+                return {"transport": "ethernet", "wifi_signal": "unknown", "internet": "online"}
+
+            wifi_adapter.collect_connectivity_indicator = aged_result_collector
+            set_connectivity_indicator_runtime(True)
+            current_connectivity_snapshot()
+            await_connectivity_worker()
+            with _CONNECTIVITY_WORKER_LOCK:
+                assert_true(_CONNECTIVITY_PENDING_RESULT is not None, "completed result should occupy one pending slot")
+                generation, _, result = _CONNECTIVITY_PENDING_RESULT
+                _CONNECTIVITY_PENDING_RESULT = (
+                    generation,
+                    time.monotonic() - CONNECTIVITY_INDICATOR_REFRESH_SEC - 0.1,
+                    result,
+                )
+            assert_true(
+                current_connectivity_snapshot()["internet"] == "unknown",
+                "a result that expired before consumption must never publish green",
+            )
+            await_connectivity_worker()
+            assert_true(aged_result_calls == 2, "an expired pending result should trigger one replacement collection")
+            assert_true(current_connectivity_snapshot()["internet"] == "online", "the replacement proof may publish")
+
+            original_thread_start = threading.Thread.start
+
+            def fail_thread_start(self: threading.Thread) -> None:
+                del self
+                raise RuntimeError("synthetic thread start failure")
+
+            try:
+                threading.Thread.start = fail_thread_start
+                set_connectivity_indicator_runtime(True)
+                assert_true(
+                    current_connectivity_snapshot()["internet"] == "unknown",
+                    "worker startup failure must stay neutral",
+                )
+                assert_true(not connectivity_worker_in_flight(), "failed startup must not occupy the worker slot")
+            finally:
+                threading.Thread.start = original_thread_start
+
             wifi_adapter.collect_connectivity_indicator = lambda timeout_sec: (
                 indicator_calls.append(timeout_sec)
                 or {"transport": "ethernet", "wifi_signal": "unknown", "internet": "online"}
             )
             set_connectivity_indicator_runtime(True)
-            first_snapshot = current_connectivity_snapshot(100.0)
-            second_snapshot = current_connectivity_snapshot(101.0)
-            refreshed_snapshot = current_connectivity_snapshot(106.0)
-            assert_true(first_snapshot == second_snapshot == refreshed_snapshot, "cache should preserve one bounded snapshot")
+            first_snapshot = current_connectivity_snapshot()
+            assert_true(first_snapshot["internet"] == "unknown", "initial collection must not block rendering")
+            await_connectivity_worker()
+            fresh_snapshot = current_connectivity_snapshot()
+            second_snapshot = current_connectivity_snapshot()
+            _CONNECTIVITY_CACHE_AT = time.monotonic() - CONNECTIVITY_INDICATOR_REFRESH_SEC - 0.1
+            expired_snapshot = current_connectivity_snapshot()
+            assert_true(fresh_snapshot == second_snapshot, "a fresh result should be cached without new work")
+            assert_true(expired_snapshot["internet"] == "unknown", "expired positive state must fail closed while refreshing")
+            await_connectivity_worker()
+            refreshed_snapshot = current_connectivity_snapshot()
+            assert_true(fresh_snapshot == refreshed_snapshot, "a completed refresh should replace the expired state")
             assert_true(len(indicator_calls) == 2, "indicator cache should refresh by replacement, not accumulate")
-            assert_true(CONNECTIVITY_INDICATOR_TIMEOUT_SEC == 1, "indicator reads should stay tightly bounded")
+            assert_true(CONNECTIVITY_INDICATOR_TIMEOUT_SEC == 2.0, "background reads should stay tightly bounded")
+            assert_true(CONNECTIVITY_INDICATOR_REFRESH_SEC == 15.0, "service probe cadence should remain moderate")
+            assert_true(CONNECTIVITY_INDICATOR_POLL_SEC == 0.1, "background completion polling should stay responsive")
             stale_calls = 0
 
-            def online_then_fail(timeout_sec: int) -> dict[str, str]:
+            def online_then_fail(timeout_sec: float) -> dict[str, str]:
                 nonlocal stale_calls
                 stale_calls += 1
                 if stale_calls == 1:
@@ -6009,9 +6190,14 @@ def run_self_test() -> None:
 
             wifi_adapter.collect_connectivity_indicator = online_then_fail
             set_connectivity_indicator_runtime(True)
-            assert_true(current_connectivity_snapshot(200.0)["internet"] == "online", "fresh proof may show online")
+            assert_true(current_connectivity_snapshot()["internet"] == "unknown", "refresh must start asynchronously")
+            await_connectivity_worker()
+            assert_true(current_connectivity_snapshot()["internet"] == "online", "fresh proof may show online")
+            _CONNECTIVITY_CACHE_AT = time.monotonic() - CONNECTIVITY_INDICATOR_REFRESH_SEC - 0.1
+            assert_true(current_connectivity_snapshot()["internet"] == "unknown", "expired proof must clear immediately")
+            await_connectivity_worker()
             assert_true(
-                current_connectivity_snapshot(206.0)["internet"] == "unknown",
+                current_connectivity_snapshot()["internet"] == "unknown",
                 "expired positive cache must fail closed after a read timeout",
             )
 
@@ -6023,6 +6209,8 @@ def run_self_test() -> None:
                 "internet": "online",
             }
             set_connectivity_indicator_runtime(True)
+            current_connectivity_snapshot()
+            await_connectivity_worker()
             refresh_display.show(
                 "bounded-refresh",
                 build_screen_svg(
@@ -6032,12 +6220,18 @@ def run_self_test() -> None:
                     footer="Enter confirma",
                 ),
             )
+            assert_true(
+                'data-internet="online"' in refresh_display.current_svg,
+                "a completed background result should render on the current screen",
+            )
             wifi_adapter.collect_connectivity_indicator = lambda timeout_sec: {
                 "transport": "none",
                 "wifi_signal": "unknown",
                 "internet": "offline",
             }
             set_connectivity_indicator_runtime(True)
+            current_connectivity_snapshot()
+            await_connectivity_worker()
             assert_true(refresh_display.refresh_connectivity_header(), "changed state should repaint the current screen")
             assert_true(
                 'data-internet="offline"' in refresh_display.current_svg,
@@ -6099,6 +6293,12 @@ def run_self_test() -> None:
 
             refresh_events: list[str] = []
             set_connectivity_refresh_callback(lambda: refresh_events.append("refresh"))
+            current_connectivity_snapshot()
+            assert_true(
+                abs(_CONNECTIVITY_NEXT_REFRESH_AT - (_CONNECTIVITY_CACHE_AT + CONNECTIVITY_INDICATOR_REFRESH_SEC))
+                < 0.001,
+                "the scheduler must wake at proof expiry rather than drift by another cadence",
+            )
             scheduled_at = _CONNECTIVITY_NEXT_REFRESH_AT
             assert_true(
                 not refresh_connectivity_if_due(scheduled_at - 0.01),

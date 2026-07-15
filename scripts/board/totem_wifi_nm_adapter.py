@@ -20,9 +20,12 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import uuid
 from typing import Any, Callable
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 
 sys.dont_write_bytecode = True
@@ -42,6 +45,13 @@ SYSTEM_CONNECTION_DIR = pathlib.Path("/etc/NetworkManager/system-connections")
 PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
 UNKNOWN = "unknown"
+CONNECTIVITY_PROBE_URL = "https://api-lbyvh5uf6q-uc.a.run.app/health"
+CONNECTIVITY_PROBE_USER_AGENT = "Dadooh-Totem-Connectivity/1"
+CONNECTIVITY_PROBE_INTERNAL_ARG = "--connectivity-probe-internal"
+CONNECTIVITY_PROBE_SOCKET_TIMEOUT_SEC = 0.75
+READ_ONLY_PROCESS_REAP_RESERVE_SEC = 0.05
+NMCLI_READ_ONLY_EXECUTABLE = pathlib.Path("/usr/bin/nmcli")
+IP_READ_ONLY_EXECUTABLE = pathlib.Path("/usr/sbin/ip")
 CONFIRM_REAL_WIFI_APPLY = "CONFIRMO APPLY WIFI REAL C9.6 EM BANCADA"
 CONFIRM_REAL_WIFI_APPLY_LOCAL_CONSOLE = "CONFIRMO APPLY WIFI REAL C9.6 COM CONSOLE LOCAL"
 CONFIRM_KEEP_DEDICATED_PROFILE = "CONFIRMO MANTER WIFI DEDICADO C9.8"
@@ -62,11 +72,12 @@ ALLOWED_READ_ONLY_COMMANDS = {
 }
 
 IP_ROUTE_DEFAULT_COMMAND = ["ip", "-j", "-4", "route", "show", "table", "main", "default"]
-NMCLI_DEVICE_CONNECTIVITY_FIELDS = "GENERAL.DEVICE,GENERAL.STATE,GENERAL.IP4-CONNECTIVITY"
 MAX_ROUTE_JSON_BYTES = 64 * 1024
 MAX_ROUTE_JSON_ENTRIES = 64
 MAX_READ_ONLY_COMMAND_OUTPUT_BYTES = 64 * 1024
 READ_ONLY_COMMAND_CHUNK_BYTES = 8 * 1024
+_DEFERRED_READ_ONLY_PROCESS: subprocess.Popen[bytes] | None = None
+_READ_ONLY_PROCESS_LOCK = threading.Lock()
 
 SENSITIVE_MARKERS = (
     "FAKE-STORE-WIFI",
@@ -186,24 +197,58 @@ def command_is_forbidden(args: list[str]) -> bool:
 def assert_read_only_command(args: list[str]) -> None:
     if command_is_forbidden(args):
         raise AdapterError("network modifying command blocked")
-    if tuple(args) not in ALLOWED_READ_ONLY_COMMANDS and not is_allowed_device_connectivity_command(args):
+    if tuple(args) not in ALLOWED_READ_ONLY_COMMANDS and not is_allowed_connectivity_probe_command(args):
         raise AdapterError("command is not in the C9.5 read-only allowlist")
 
 
-def is_allowed_device_connectivity_command(args: list[str]) -> bool:
+def connectivity_probe_command() -> list[str]:
+    return [
+        sys.executable,
+        "-I",
+        "-B",
+        str(pathlib.Path(__file__).resolve()),
+        CONNECTIVITY_PROBE_INTERNAL_ARG,
+    ]
+
+
+def is_allowed_connectivity_probe_command(args: list[str]) -> bool:
     return (
-        len(args) == 7
-        and args[:6] == ["nmcli", "-t", "-f", NMCLI_DEVICE_CONNECTIVITY_FIELDS, "device", "show"]
-        and bool(re.fullmatch(r"[A-Za-z0-9_.:@-]{1,15}", args[6]))
-        and args[6] != "*"
+        len(args) == 5
+        and args[0] == sys.executable
+        and args[1:3] == ["-I", "-B"]
+        and pathlib.Path(args[3]).resolve() == pathlib.Path(__file__).resolve()
+        and args[4] == CONNECTIVITY_PROBE_INTERNAL_ARG
     )
 
 
-def run_read_only_command(args: list[str], timeout_sec: float) -> CommandResult:
-    assert_read_only_command(args)
+def read_only_executable(args: list[str]) -> str:
+    if is_allowed_connectivity_probe_command(args):
+        return sys.executable
+    return {
+        "nmcli": str(NMCLI_READ_ONLY_EXECUTABLE),
+        "ip": str(IP_READ_ONLY_EXECUTABLE),
+    }.get(args[0] if args else "", "")
+
+
+def reap_deferred_read_only_process() -> bool:
+    global _DEFERRED_READ_ONLY_PROCESS
+    process = _DEFERRED_READ_ONLY_PROCESS
+    if process is None:
+        return True
+    if process.poll() is None:
+        return False
+    _DEFERRED_READ_ONLY_PROCESS = None
+    return True
+
+
+def _run_bounded_process_locked(args: list[str], timeout_sec: float, *, executable: str) -> CommandResult:
+    global _DEFERRED_READ_ONLY_PROCESS
+    if not reap_deferred_read_only_process():
+        return CommandResult("busy")
     try:
         process = subprocess.Popen(
             args,
+            executable=executable,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=read_only_command_env(),
@@ -213,19 +258,31 @@ def run_read_only_command(args: list[str], timeout_sec: float) -> CommandResult:
     except OSError:
         return CommandResult("failed")
 
-    deadline = time.monotonic() + max(0.05, float(timeout_sec))
+    total_timeout = max(0.05, float(timeout_sec))
+    deadline = time.monotonic() + total_timeout
+    reap_reserve = min(READ_ONLY_PROCESS_REAP_RESERVE_SEC, total_timeout / 4)
+    io_deadline = deadline - reap_reserve
     selector = selectors.DefaultSelector()
     stdout = bytearray()
     stderr = bytearray()
     streams = ((process.stdout, stdout), (process.stderr, stderr))
 
     def kill_and_wait() -> None:
+        global _DEFERRED_READ_ONLY_PROCESS
         if process.poll() is None:
             try:
                 process.kill()
             except ProcessLookupError:
                 pass
-        process.wait()
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            if process.poll() is None:
+                _DEFERRED_READ_ONLY_PROCESS = process
+            return
+        try:
+            process.wait(timeout=remaining)
+        except subprocess.TimeoutExpired:
+            _DEFERRED_READ_ONLY_PROCESS = process
 
     try:
         for stream, buffer in streams:
@@ -233,7 +290,7 @@ def run_read_only_command(args: list[str], timeout_sec: float) -> CommandResult:
                 selector.register(stream, selectors.EVENT_READ, buffer)
 
         while selector.get_map():
-            remaining = deadline - time.monotonic()
+            remaining = io_deadline - time.monotonic()
             if remaining <= 0:
                 kill_and_wait()
                 return CommandResult("timeout")
@@ -254,7 +311,10 @@ def run_read_only_command(args: list[str], timeout_sec: float) -> CommandResult:
                     kill_and_wait()
                     return CommandResult("too_large")
 
-        remaining = max(0.05, deadline - time.monotonic())
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            kill_and_wait()
+            return CommandResult("timeout")
         try:
             returncode = process.wait(timeout=remaining)
         except subprocess.TimeoutExpired:
@@ -270,6 +330,23 @@ def run_read_only_command(args: list[str], timeout_sec: float) -> CommandResult:
     stderr_text = stderr.decode("utf-8", errors="replace")
     status = "ok" if returncode == 0 else "failed"
     return CommandResult(status, stdout_text, stderr_text, returncode)
+
+
+def run_bounded_process(args: list[str], timeout_sec: float, *, executable: str) -> CommandResult:
+    if not _READ_ONLY_PROCESS_LOCK.acquire(blocking=False):
+        return CommandResult("busy")
+    try:
+        return _run_bounded_process_locked(args, timeout_sec, executable=executable)
+    finally:
+        _READ_ONLY_PROCESS_LOCK.release()
+
+
+def run_read_only_command(args: list[str], timeout_sec: float) -> CommandResult:
+    assert_read_only_command(args)
+    executable = read_only_executable(args)
+    if not executable or not pathlib.Path(executable).is_file() or not os.access(executable, os.X_OK):
+        return CommandResult("unavailable")
+    return run_bounded_process(args, timeout_sec, executable=executable)
 
 
 def read_only_command_env() -> dict[str, str]:
@@ -586,34 +663,50 @@ def signal_bucket(raw_signal: str | int | None) -> str:
     return "weak"
 
 
-def parse_nmcli_device_connectivity(stdout: str, *, expected_device: str) -> str:
-    expected_keys = {
-        "GENERAL.DEVICE",
-        "GENERAL.STATE",
-        "GENERAL.IP4-CONNECTIVITY",
-    }
-    values: dict[str, str] = {}
-    for raw_line in stdout.splitlines():
-        if not raw_line.strip():
-            continue
-        fields = split_nmcli_terse(raw_line)
-        if len(fields) != 2 or fields[0] not in expected_keys or fields[0] in values:
-            return UNKNOWN
-        values[fields[0]] = fields[1].strip()
-    if set(values) != expected_keys or values["GENERAL.DEVICE"] != expected_device:
-        return UNKNOWN
-    if values["GENERAL.STATE"] != "100 (connected)":
-        return UNKNOWN
-    connectivity_match = re.fullmatch(
-        r"([0-4]) \((unknown|none|portal|limited|full)\)",
-        values["GENERAL.IP4-CONNECTIVITY"],
+class RejectConnectivityProbeRedirect(urllib_request.HTTPRedirectHandler):
+    def redirect_request(
+        self,
+        req: urllib_request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> None:
+        del req, fp, code, msg, headers, newurl
+        return None
+
+
+def connectivity_probe_opener() -> urllib_request.OpenerDirector:
+    return urllib_request.build_opener(
+        urllib_request.ProxyHandler({}),
+        RejectConnectivityProbeRedirect(),
     )
-    if connectivity_match is None:
+
+
+def probe_dadooh_service(opener: Any | None = None) -> bool:
+    request = urllib_request.Request(
+        CONNECTIVITY_PROBE_URL,
+        headers={"User-Agent": CONNECTIVITY_PROBE_USER_AGENT},
+        method="HEAD",
+    )
+    active_opener = connectivity_probe_opener() if opener is None else opener
+    try:
+        with active_opener.open(request, timeout=CONNECTIVITY_PROBE_SOCKET_TIMEOUT_SEC) as response:
+            return response.status == 200 and response.geturl() == CONNECTIVITY_PROBE_URL
+    except (OSError, ValueError, urllib_error.URLError):
+        return False
+
+
+def parse_connectivity_probe_result(result: CommandResult) -> str:
+    if not command_result_stdout_is_bounded(result, allowed_statuses=frozenset({"ok", "failed"})):
         return UNKNOWN
-    code = int(connectivity_match.group(1))
-    label = connectivity_match.group(2)
-    expected_label = {0: "unknown", 1: "none", 2: "portal", 3: "limited", 4: "full"}[code]
-    return label if label == expected_label else UNKNOWN
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if result.status == "ok" and result.returncode == 0 and lines == ["reachable"] and not result.stderr:
+        return "reachable"
+    if result.status == "failed" and result.returncode == 1 and lines == ["unreachable"] and not result.stderr:
+        return "unreachable"
+    return UNKNOWN
 
 
 def parse_active_wifi_signal(stdout: str, *, expected_device: str = "") -> str:
@@ -921,8 +1014,12 @@ def valid_ipv4_route_address(value: Any, *, reject_reserved: bool = False) -> bo
     return True
 
 
-def command_result_stdout_is_bounded(result: CommandResult) -> bool:
-    if result.status != "ok" or len(result.stdout) > MAX_READ_ONLY_COMMAND_OUTPUT_BYTES:
+def command_result_stdout_is_bounded(
+    result: CommandResult,
+    *,
+    allowed_statuses: frozenset[str] = frozenset({"ok"}),
+) -> bool:
+    if result.status not in allowed_statuses or len(result.stdout) > MAX_READ_ONLY_COMMAND_OUTPUT_BYTES:
         return False
     try:
         return len(result.stdout.encode("utf-8")) <= MAX_READ_ONLY_COMMAND_OUTPUT_BYTES
@@ -1087,7 +1184,7 @@ def classify_device_category(device_name: str) -> str:
 
 def collect_connectivity_indicator(
     *,
-    timeout_sec: int = 2,
+    timeout_sec: float = 2,
     command_runner: Callable[[list[str], float], CommandResult] = run_read_only_command,
     nmcli_path: str | None = None,
     ip_path: str | None = None,
@@ -1104,14 +1201,14 @@ def collect_connectivity_indicator(
         return command_runner(args, max(0.05, remaining))
 
     if nmcli_path is None:
-        nmcli_path = shutil.which("nmcli")
+        nmcli_path = str(NMCLI_READ_ONLY_EXECUTABLE) if NMCLI_READ_ONLY_EXECUTABLE.is_file() else None
     if ip_path is None:
-        ip_path = shutil.which("ip")
+        ip_path = str(IP_READ_ONLY_EXECUTABLE) if IP_READ_ONLY_EXECUTABLE.is_file() else None
     nmcli_available = bool(nmcli_path)
     checks = {
         "device_status": "not_run",
         "active_connections": "not_run",
-        "connectivity_cached": "not_run",
+        "service_reachability": "not_run",
         "active_wifi_signal": "not_run",
         "default_route": "not_run",
     }
@@ -1128,7 +1225,8 @@ def collect_connectivity_indicator(
         "ethernet_active_devices": [],
         "wifi_active_devices": [],
     }
-    cached_connectivity = UNKNOWN
+    service_reachability = UNKNOWN
+    external_probe_attempted = False
 
     if nmcli_available:
         device_result = run_snapshot_command(
@@ -1169,26 +1267,6 @@ def collect_connectivity_indicator(
         active_connections.get("wifi_active_devices") or []
     )
     route_verified = bool(route_device and (route_device in ethernet_devices or route_device in wifi_devices))
-    if nmcli_available and route_verified:
-        connectivity_result = run_snapshot_command(
-            [
-                "nmcli",
-                "-t",
-                "-f",
-                NMCLI_DEVICE_CONNECTIVITY_FIELDS,
-                "device",
-                "show",
-                route_device,
-            ]
-        )
-        checks["connectivity_cached"] = connectivity_result.status
-        if connectivity_result.status == "ok" and not command_result_stdout_is_bounded(connectivity_result):
-            checks["connectivity_cached"] = "too_large"
-        elif connectivity_result.status == "ok":
-            cached_connectivity = parse_nmcli_device_connectivity(
-                connectivity_result.stdout,
-                expected_device=route_device,
-            )
     if route_ambiguous:
         transport = UNKNOWN
     elif route_device in ethernet_devices:
@@ -1225,16 +1303,26 @@ def collect_connectivity_indicator(
                 expected_device=route_device if route_device in wifi_devices else "",
             )
 
+    if route_verified:
+        external_probe_attempted = True
+        probe_result = run_snapshot_command(connectivity_probe_command())
+        checks["service_reachability"] = probe_result.status
+        if probe_result.status in {"ok", "failed"} and not command_result_stdout_is_bounded(
+            probe_result,
+            allowed_statuses=frozenset({"ok", "failed"}),
+        ):
+            checks["service_reachability"] = "too_large"
+        else:
+            service_reachability = parse_connectivity_probe_result(probe_result)
+
     if transport == "none":
         internet = "offline"
     elif transport == UNKNOWN or not route_verified:
         internet = UNKNOWN
-    elif cached_connectivity == "full":
+    elif service_reachability == "reachable":
         internet = "online"
-    elif cached_connectivity in {"limited", "portal"}:
-        internet = cached_connectivity
-    elif cached_connectivity == "none":
-        internet = "offline"
+    elif service_reachability == "unreachable":
+        internet = "limited"
     else:
         internet = UNKNOWN
 
@@ -1248,7 +1336,7 @@ def collect_connectivity_indicator(
         "guardrails": {
             "read_only_commands_only": True,
             "network_changed": False,
-            "external_connectivity_probe": False,
+            "external_connectivity_probe": external_probe_attempted,
             "speed_test_executed": False,
             "wifi_rescan_executed": False,
             "ssid_collected": False,
@@ -2383,18 +2471,27 @@ def run_self_test() -> None:
         assert_raises(lambda command=command: assert_read_only_command(command), "modifier should be blocked")
 
     for command in (
-        ["nmcli", "-t", "-f", NMCLI_DEVICE_CONNECTIVITY_FIELDS, "device", "show", "end0"],
+        connectivity_probe_command(),
         ["nmcli", "-t", "-f", "DEVICE,IN-USE,SIGNAL", "device", "wifi", "list", "--rescan", "no"],
     ):
         assert_read_only_command(command)
+    assert_true(
+        read_only_executable(["nmcli", "-t", "-f", "RUNNING", "general"])
+        == str(NMCLI_READ_ONLY_EXECUTABLE),
+        "read-only nmcli must resolve to the fixed system executable",
+    )
+    assert_true(
+        read_only_executable(IP_ROUTE_DEFAULT_COMMAND) == str(IP_READ_ONLY_EXECUTABLE),
+        "read-only ip must resolve to the fixed system executable",
+    )
     for command in (
-        ["nmcli", "-t", "-f", NMCLI_DEVICE_CONNECTIVITY_FIELDS, "device", "show", "*"],
-        ["nmcli", "-t", "-f", NMCLI_DEVICE_CONNECTIVITY_FIELDS, "device", "show", "x" * 16],
-        ["nmcli", "-t", "-f", NMCLI_DEVICE_CONNECTIVITY_FIELDS, "device", "show", "wlan0", "extra"],
+        connectivity_probe_command() + ["extra"],
+        [*connectivity_probe_command()[:-1], "--another-mode"],
+        [sys.executable, "-B", "-I", str(pathlib.Path(__file__).resolve()), CONNECTIVITY_PROBE_INTERNAL_ARG],
     ):
         assert_raises(
             lambda command=command: assert_read_only_command(command),
-            "dynamic device connectivity command must remain exact and bounded",
+            "internal connectivity probe command must remain exact",
         )
     assert_true(read_only_command_env()["LC_ALL"] == "C", "read-only nmcli output should use a stable locale")
     assert_true(
@@ -2529,35 +2626,86 @@ def run_self_test() -> None:
     assert_true(public_wifi_meta["selected_network_signal_bucket"] == "strong", "selected bucket should be public")
     assert_true(public_wifi_meta["selected_network_security_present"] is True, "security presence should be public")
     assert_no_forbidden_values(json.dumps(public_wifi_meta, sort_keys=True))
-    device_connectivity_output_fixture = (
-        "GENERAL.DEVICE:wlan0\n"
-        "GENERAL.STATE:100 (connected)\n"
-        "GENERAL.IP4-CONNECTIVITY:4 (full)\n"
+    assert_true(
+        parse_connectivity_probe_result(CommandResult("ok", "reachable\n", "", 0)) == "reachable",
+        "an exact successful probe result should authorize reachability",
     )
     assert_true(
-        parse_nmcli_device_connectivity(device_connectivity_output_fixture, expected_device="wlan0") == "full",
-        "full connectivity for the selected device should parse",
+        parse_connectivity_probe_result(CommandResult("failed", "unreachable\n", "", 1)) == "unreachable",
+        "an exact failed probe result should classify degraded reachability",
     )
-    assert_true(
-        parse_nmcli_device_connectivity(
-            device_connectivity_output_fixture.replace("4 (full)", "3 (limited)"),
-            expected_device="wlan0",
-        )
-        == "limited",
-        "limited connectivity for the selected device should parse",
-    )
-    for malformed_connectivity_fixture in (
-        device_connectivity_output_fixture.replace("wlan0", "eth0"),
-        device_connectivity_output_fixture.replace("4 (full)", "4 (limited)"),
-        device_connectivity_output_fixture.replace("100 (connected)", "30 (disconnected)"),
-        device_connectivity_output_fixture + "GENERAL.DEVICE:wlan0\n",
-        device_connectivity_output_fixture.replace("GENERAL.STATE:100 (connected)\n", ""),
-        device_connectivity_output_fixture.replace("GENERAL.DEVICE:wlan0", "GENERAL.DEVICE:wlan0:extra"),
+    for malformed_probe_result in (
+        CommandResult("ok", "reachable\nextra\n", "", 0),
+        CommandResult("ok", "reachable\n", "warning", 0),
+        CommandResult("ok", "unreachable\n", "", 0),
+        CommandResult("failed", "reachable\n", "", 1),
+        CommandResult("failed", "unreachable\n", "warning", 1),
+        CommandResult("failed", "unreachable\n", "", 2),
+        CommandResult("timeout", "", "", None),
+        CommandResult("busy", "", "", None),
     ):
         assert_true(
-            parse_nmcli_device_connectivity(malformed_connectivity_fixture, expected_device="wlan0") == UNKNOWN,
-            "malformed or mismatched device connectivity must fail closed",
+            parse_connectivity_probe_result(malformed_probe_result) == UNKNOWN,
+            "ambiguous probe results must fail closed",
         )
+
+    class FakeProbeResponse:
+        def __init__(self, status: int, url: str) -> None:
+            self.status = status
+            self.url = url
+
+        def geturl(self) -> str:
+            return self.url
+
+        def __enter__(self) -> "FakeProbeResponse":
+            return self
+
+        def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+            del exc_type, exc, traceback
+
+    class FakeProbeOpener:
+        def __init__(self, response: FakeProbeResponse | Exception) -> None:
+            self.response = response
+            self.requests: list[tuple[urllib_request.Request, float]] = []
+
+        def open(self, request: urllib_request.Request, timeout: float) -> FakeProbeResponse:
+            self.requests.append((request, timeout))
+            if isinstance(self.response, Exception):
+                raise self.response
+            return self.response
+
+    successful_probe_opener = FakeProbeOpener(FakeProbeResponse(200, CONNECTIVITY_PROBE_URL))
+    assert_true(probe_dadooh_service(successful_probe_opener) is True, "exact HTTPS health response should pass")
+    probe_request, probe_timeout = successful_probe_opener.requests[0]
+    assert_true(probe_request.get_method() == "HEAD", "probe must use HEAD")
+    assert_true(probe_request.full_url == CONNECTIVITY_PROBE_URL, "probe URL must remain exact and query-free")
+    assert_true(probe_request.get_header("User-agent") == CONNECTIVITY_PROBE_USER_AGENT, "probe user agent should be fixed")
+    assert_true(probe_timeout == CONNECTIVITY_PROBE_SOCKET_TIMEOUT_SEC, "probe socket timeout should remain bounded")
+    assert_true(
+        set(probe_request.header_items()) == {("User-agent", CONNECTIVITY_PROBE_USER_AGENT)},
+        "probe must not send credentials, cookies, or device identifiers",
+    )
+    assert_true(
+        probe_dadooh_service(FakeProbeOpener(FakeProbeResponse(302, CONNECTIVITY_PROBE_URL))) is False,
+        "redirect response must fail closed",
+    )
+    assert_true(
+        probe_dadooh_service(FakeProbeOpener(FakeProbeResponse(200, CONNECTIVITY_PROBE_URL + "/redirected"))) is False,
+        "a different final URL must fail closed",
+    )
+    assert_true(
+        probe_dadooh_service(FakeProbeOpener(urllib_error.URLError("offline"))) is False,
+        "network errors must fail closed",
+    )
+    strict_probe_opener = connectivity_probe_opener()
+    assert_true(
+        not any(isinstance(handler, urllib_request.ProxyHandler) for handler in strict_probe_opener.handlers),
+        "probe must ignore ambient proxy configuration",
+    )
+    assert_true(
+        any(isinstance(handler, RejectConnectivityProbeRedirect) for handler in strict_probe_opener.handlers),
+        "probe must refuse redirects",
+    )
     assert_true(
         parse_active_wifi_signal("wlan0: :91\nwlan0:*:68\n", expected_device="wlan0") == "medium",
         "active Wi-Fi signal should parse",
@@ -2737,21 +2885,13 @@ def run_self_test() -> None:
 
     fake_nm_state = {"profiles_loaded": set()}
 
-    def build_nmcli_device_connectivity_fixture(device: str, connectivity: str = "full") -> str:
-        code = {"unknown": 0, "none": 1, "portal": 2, "limited": 3, "full": 4}[connectivity]
-        return (
-            f"GENERAL.DEVICE:{device}\n"
-            "GENERAL.STATE:100 (connected)\n"
-            f"GENERAL.IP4-CONNECTIVITY:{code} ({connectivity})\n"
-        )
-
     def fake_runner(args: list[str], timeout_sec: int) -> CommandResult:
         if args == IP_ROUTE_DEFAULT_COMMAND:
             return CommandResult("ok", route_json_fixture)
         if args == ["nmcli", "-t", "-f", "RUNNING", "general"]:
             return CommandResult("ok", "running\n")
-        if is_allowed_device_connectivity_command(args):
-            return CommandResult("ok", build_nmcli_device_connectivity_fixture(args[-1]))
+        if is_allowed_connectivity_probe_command(args):
+            return CommandResult("ok", "reachable\n", "", 0)
         if args == ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]:
             return CommandResult("ok", device_fixture)
         if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
@@ -2817,22 +2957,38 @@ def run_self_test() -> None:
             encoding="utf-8",
         )
         fake_nmcli.chmod(0o700)
-        previous_path = os.environ.get("PATH")
-        os.environ["PATH"] = f"{fake_bin_dir}:{previous_path or ''}"
-        try:
-            oversized_command_result = run_read_only_command(
-                ["nmcli", "-t", "-f", "RUNNING", "general"],
-                1,
-            )
-        finally:
-            if previous_path is None:
-                os.environ.pop("PATH", None)
-            else:
-                os.environ["PATH"] = previous_path
+        oversized_command_result = run_bounded_process(
+            [str(fake_nmcli)],
+            1,
+            executable=str(fake_nmcli),
+        )
         assert_true(
             oversized_command_result.status == "too_large",
             "read-only subprocess output must be bounded before capture completes",
         )
+        assert_true(_READ_ONLY_PROCESS_LOCK.acquire(blocking=False), "test should acquire the single-process guard")
+        try:
+            concurrent_command_result = run_bounded_process(
+                [str(fake_nmcli)],
+                1,
+                executable=str(fake_nmcli),
+            )
+        finally:
+            _READ_ONLY_PROCESS_LOCK.release()
+        assert_true(
+            concurrent_command_result.status == "busy",
+            "a concurrent read-only child request must fail closed without spawning or queuing",
+        )
+        timeout_started = time.monotonic()
+        timeout_command_result = run_bounded_process(
+            [sys.executable, "-I", "-c", "import time; time.sleep(5)"],
+            0.1,
+            executable=sys.executable,
+        )
+        timeout_elapsed = time.monotonic() - timeout_started
+        assert_true(timeout_command_result.status == "timeout", "stalled child should time out")
+        assert_true(timeout_elapsed < 0.25, "child cleanup must stay inside a tight bounded margin")
+        assert_true(reap_deferred_read_only_process(), "a normal killed child should be reaped without backlog")
 
         os.environ["SSH_CONNECTION"] = "192.0.2.10 54321 192.0.2.44 22"
         status = collect_read_only_status(
@@ -2856,9 +3012,9 @@ def run_self_test() -> None:
             ip_path="/usr/sbin/ip",
         )
         assert_true(indicator["transport"] == "ethernet", "default Ethernet route should drive the indicator")
-        assert_true(indicator["internet"] == "online", "cached full connectivity should show online")
+        assert_true(indicator["internet"] == "online", "verified Dadooh service reachability should show online")
         assert_true(indicator["wifi_signal"] == UNKNOWN, "Ethernet should not claim Wi-Fi signal")
-        assert_true(indicator["guardrails"]["external_connectivity_probe"] is False, "indicator must not probe")
+        assert_true(indicator["guardrails"]["external_connectivity_probe"] is True, "verified routes should run one probe")
         assert_true(indicator["guardrails"]["history_persisted"] is False, "indicator must not retain history")
 
         direct_indicator = collect_connectivity_indicator(
@@ -2868,7 +3024,7 @@ def run_self_test() -> None:
             ip_path="/usr/sbin/ip",
         )
         assert_true(direct_indicator["transport"] == "ethernet", "an on-link default should select Ethernet")
-        assert_true(direct_indicator["internet"] == "online", "cached full may confirm a valid on-link default")
+        assert_true(direct_indicator["internet"] == "online", "service proof may confirm a valid on-link default")
 
         preferred_indicator = collect_connectivity_indicator(
             timeout_sec=1,
@@ -2877,7 +3033,7 @@ def run_self_test() -> None:
             ip_path="/usr/sbin/ip",
         )
         assert_true(preferred_indicator["transport"] == "ethernet", "the lowest route metric should select Ethernet")
-        assert_true(preferred_indicator["internet"] == "online", "cached full may confirm the preferred default route")
+        assert_true(preferred_indicator["internet"] == "online", "service proof may confirm the preferred default route")
 
         wifi_indicator = collect_connectivity_indicator(
             timeout_sec=1,
@@ -2978,7 +3134,7 @@ def run_self_test() -> None:
         assert_true(disconnected_indicator["transport"] == "none", "no active link should show no transport")
         assert_true(
             disconnected_indicator["internet"] == "offline",
-            "stale cached full state must not override an absent transport",
+            "an absent transport must remain offline without probing",
         )
 
         def active_wifi_without_route_runner(args: list[str], timeout_sec: float) -> CommandResult:
@@ -3012,7 +3168,7 @@ def run_self_test() -> None:
         )
         assert_true(
             active_without_route_indicator["internet"] == UNKNOWN,
-            "cached full must not show online without a verified default route",
+            "service reachability must not be probed without a verified default route",
         )
         for rejected_route_json in rejected_route_json_fixtures:
             malformed_indicator = collect_connectivity_indicator(
@@ -3023,7 +3179,7 @@ def run_self_test() -> None:
             )
             assert_true(
                 malformed_indicator["internet"] == UNKNOWN,
-                f"untrusted typed route must not promote cached full: {rejected_route_json}",
+                f"untrusted typed route must not authorize a service probe: {rejected_route_json}",
             )
         oversized_nmcli_output = "\n" * (MAX_READ_ONLY_COMMAND_OUTPUT_BYTES + 1)
 
@@ -3048,28 +3204,25 @@ def run_self_test() -> None:
             "oversized status input should be classified",
         )
 
-        def oversized_device_connectivity_runner(args: list[str], timeout_sec: float) -> CommandResult:
-            if is_allowed_device_connectivity_command(args):
-                return CommandResult(
-                    "ok",
-                    oversized_nmcli_output + build_nmcli_device_connectivity_fixture(args[-1]),
-                )
+        def oversized_service_probe_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if is_allowed_connectivity_probe_command(args):
+                return CommandResult("ok", oversized_nmcli_output + "reachable\n", "", 0)
             return runner_with_route(fake_runner, wifi_route_json_fixture)(args, timeout_sec)
 
-        oversized_device_connectivity_indicator = collect_connectivity_indicator(
+        oversized_service_probe_indicator = collect_connectivity_indicator(
             timeout_sec=1,
-            command_runner=oversized_device_connectivity_runner,
+            command_runner=oversized_service_probe_runner,
             nmcli_path="/usr/bin/nmcli",
             ip_path="/usr/sbin/ip",
         )
         assert_true(
-            oversized_device_connectivity_indicator["transport"] == "wifi"
-            and oversized_device_connectivity_indicator["internet"] == UNKNOWN,
-            "oversized per-device connectivity must preserve transport but fail internet closed",
+            oversized_service_probe_indicator["transport"] == "wifi"
+            and oversized_service_probe_indicator["internet"] == UNKNOWN,
+            "oversized service proof must preserve transport but fail internet closed",
         )
         assert_true(
-            oversized_device_connectivity_indicator["read_only_checks"]["connectivity_cached"] == "too_large",
-            "oversized per-device connectivity should be classified",
+            oversized_service_probe_indicator["read_only_checks"]["service_reachability"] == "too_large",
+            "oversized service proof should be classified",
         )
         stale_route_indicator = collect_connectivity_indicator(
             timeout_sec=1,
@@ -3078,7 +3231,7 @@ def run_self_test() -> None:
             ip_path="/usr/sbin/ip",
         )
         assert_true(stale_route_indicator["transport"] == UNKNOWN, "stale route must not prove a transport")
-        assert_true(stale_route_indicator["internet"] == UNKNOWN, "stale route plus cached full must not show online")
+        assert_true(stale_route_indicator["internet"] == UNKNOWN, "stale routes must not authorize a service probe")
 
         mismatched_device_fixture = "wlan0:wifi:disconnected\nwlan1:wifi:connected\n"
         mismatched_active_fixture = "802-11-wireless:wlan1\n"
@@ -3102,7 +3255,7 @@ def run_self_test() -> None:
         )
         assert_true(
             mismatched_indicator["internet"] == UNKNOWN,
-            "cached full must not override an exact interface mismatch",
+            "service proof must not run for an exact interface mismatch",
         )
 
         dual_route_json_fixture = json.dumps(
@@ -3111,13 +3264,12 @@ def run_self_test() -> None:
                 {"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "metric": 100, "flags": []},
             ]
         )
-        queried_connectivity_devices: list[str] = []
+        service_probe_calls: list[list[str]] = []
 
         def dual_link_runner(args: list[str], timeout_sec: float) -> CommandResult:
-            if is_allowed_device_connectivity_command(args):
-                queried_connectivity_devices.append(args[-1])
-                connectivity = "limited" if args[-1] == "wlan0" else "full"
-                return CommandResult("ok", build_nmcli_device_connectivity_fixture(args[-1], connectivity))
+            if is_allowed_connectivity_probe_command(args):
+                service_probe_calls.append(args)
+                return CommandResult("failed", "unreachable\n", "", 1)
             return runner_with_route(fake_runner, dual_route_json_fixture)(args, timeout_sec)
 
         dual_link_indicator = collect_connectivity_indicator(
@@ -3128,28 +3280,54 @@ def run_self_test() -> None:
         )
         assert_true(
             dual_link_indicator["transport"] == "wifi" and dual_link_indicator["internet"] == "limited",
-            "internet state must come from the preferred route device, not another connected link",
+            "a failed Dadooh probe on the preferred route should show a limited service state",
         )
         assert_true(
-            queried_connectivity_devices == ["wlan0"],
-            "only the selected route device may authorize internet state",
+            service_probe_calls == [connectivity_probe_command()],
+            "a verified snapshot must execute exactly one fixed service probe",
         )
 
-        def wrong_device_connectivity_runner(args: list[str], timeout_sec: float) -> CommandResult:
-            if is_allowed_device_connectivity_command(args):
-                return CommandResult("ok", build_nmcli_device_connectivity_fixture("eth0"))
+        def malformed_service_probe_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if is_allowed_connectivity_probe_command(args):
+                return CommandResult("ok", "reachable\nextra\n", "", 0)
             return runner_with_route(fake_runner, wifi_route_json_fixture)(args, timeout_sec)
 
-        wrong_device_connectivity_indicator = collect_connectivity_indicator(
+        malformed_service_probe_indicator = collect_connectivity_indicator(
             timeout_sec=1,
-            command_runner=wrong_device_connectivity_runner,
+            command_runner=malformed_service_probe_runner,
             nmcli_path="/usr/bin/nmcli",
             ip_path="/usr/sbin/ip",
         )
         assert_true(
-            wrong_device_connectivity_indicator["transport"] == "wifi"
-            and wrong_device_connectivity_indicator["internet"] == UNKNOWN,
-            "connectivity returned for another device must fail internet closed",
+            malformed_service_probe_indicator["transport"] == "wifi"
+            and malformed_service_probe_indicator["internet"] == UNKNOWN,
+            "ambiguous service-probe output must fail internet closed",
+        )
+
+        observed_probe_commands: list[list[str]] = []
+
+        def unavailable_service_probe_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if is_allowed_connectivity_probe_command(args):
+                observed_probe_commands.append(args)
+                return CommandResult("unavailable")
+            if "GENERAL.IP4-CONNECTIVITY" in args:
+                return CommandResult("ok", "GENERAL.IP4-CONNECTIVITY:4 (full)\n", "", 0)
+            return runner_with_route(fake_runner, wifi_route_json_fixture)(args, timeout_sec)
+
+        unavailable_service_probe_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=unavailable_service_probe_runner,
+            nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
+        )
+        assert_true(
+            unavailable_service_probe_indicator["transport"] == "wifi"
+            and unavailable_service_probe_indicator["internet"] == UNKNOWN,
+            "an unavailable HTTPS proof must never inherit NetworkManager full",
+        )
+        assert_true(
+            observed_probe_commands == [connectivity_probe_command()],
+            "the collector should use one exact service probe and never query optimistic NM connectivity",
         )
         ambiguous_route_indicator = collect_connectivity_indicator(
             timeout_sec=1,
@@ -3163,7 +3341,7 @@ def run_self_test() -> None:
         )
         assert_true(
             ambiguous_route_indicator["internet"] == UNKNOWN,
-            "multiple default-route devices should not inherit cached full connectivity",
+            "multiple default-route devices should not authorize a service probe",
         )
         budget_clock = [0.0]
         budget_timeouts: list[float] = []
@@ -3494,12 +3672,22 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     modes.add_argument("--apply", action="store_true", help="Run controlled real Wi-Fi apply only when all gates are present.")
     modes.add_argument("--rollback-last", action="store_true", help="Rollback only the dedicated C9.6 profile.")
     modes.add_argument("--diagnose-last-failure", action="store_true", help="Classify the last sanitized activation failure.")
+    modes.add_argument(
+        CONNECTIVITY_PROBE_INTERNAL_ARG,
+        dest="connectivity_probe_internal",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     try:
+        if args.connectivity_probe_internal:
+            reachable = probe_dadooh_service()
+            print("reachable" if reachable else "unreachable")
+            return 0 if reachable else 1
         if args.timeout_sec <= 0 or args.timeout_sec > 120:
             raise AdapterError("timeout-sec must be between 1 and 120")
         if args.self_test:
