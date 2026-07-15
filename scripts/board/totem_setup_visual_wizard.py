@@ -559,6 +559,16 @@ def refresh_connectivity_if_due(now_monotonic: float | None = None) -> bool:
     return True
 
 
+def advance_connectivity_before_ready_input(now_monotonic: float) -> bool:
+    global _CONNECTIVITY_NEXT_REFRESH_AT
+    now = float(now_monotonic)
+    if _CONNECTIVITY_REFRESH_CALLBACK is None or now < _CONNECTIVITY_NEXT_REFRESH_AT:
+        return False
+    current_connectivity_snapshot(now)
+    _CONNECTIVITY_NEXT_REFRESH_AT = now
+    return True
+
+
 def schedule_connectivity_worker_poll() -> None:
     global _CONNECTIVITY_NEXT_REFRESH_AT
     if _CONNECTIVITY_REFRESH_CALLBACK is not None:
@@ -1700,8 +1710,7 @@ def read_key(timeout_sec: float | None = None) -> str:
         ready, _, _ = select.select([sys.stdin], [], [], wait_sec)
         if ready:
             now = time.monotonic()
-            if _CONNECTIVITY_REFRESH_CALLBACK is not None and now >= _CONNECTIVITY_NEXT_REFRESH_AT:
-                current_connectivity_snapshot(now)
+            advance_connectivity_before_ready_input(now)
             break
         now = time.monotonic()
         refresh_connectivity_if_due(now)
@@ -6305,6 +6314,18 @@ def run_self_test() -> None:
             assert_true(
                 not refresh_connectivity_if_due(scheduled_at - 0.01),
                 "refresh should not run before its fixed deadline",
+            )
+            assert_true(
+                not advance_connectivity_before_ready_input(scheduled_at - 0.01),
+                "ready input before expiry must not consume the connectivity deadline",
+            )
+            assert_true(
+                advance_connectivity_before_ready_input(scheduled_at),
+                "ready input at expiry should advance the model without presenting",
+            )
+            assert_true(
+                _CONNECTIVITY_NEXT_REFRESH_AT == scheduled_at and not refresh_events,
+                "ready input must preserve an immediate presentation deadline",
             )
             assert_true(refresh_connectivity_if_due(scheduled_at), "refresh should run at its fixed deadline")
             assert_true(
