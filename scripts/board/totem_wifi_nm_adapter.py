@@ -749,8 +749,12 @@ def default_route_devices_from_ip_json(text: str) -> list[str]:
     try:
         if len(text.encode("utf-8")) > MAX_ROUTE_JSON_BYTES:
             return []
-        routes = json.loads(text)
-    except (ValueError, UnicodeError):
+        routes = json.loads(
+            text,
+            object_pairs_hook=json_object_without_duplicate_keys,
+            parse_constant=reject_nonstandard_json_constant,
+        )
+    except (RecursionError, ValueError, UnicodeError):
         return []
     if not isinstance(routes, list) or not routes or len(routes) > MAX_ROUTE_JSON_ENTRIES:
         return []
@@ -809,6 +813,19 @@ def default_route_devices_from_ip_json(text: str) -> list[str]:
     best_metric = min(metric for metric, _ in candidates)
     best_routes = [device for metric, device in candidates if metric == best_metric]
     return best_routes if len(best_routes) == 1 else []
+
+
+def json_object_without_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key")
+        result[key] = value
+    return result
+
+
+def reject_nonstandard_json_constant(value: str) -> None:
+    raise ValueError(f"non-standard JSON constant: {value}")
 
 
 def valid_ipv4_route_address(value: Any, *, reject_reserved: bool = False) -> bool:
@@ -2494,6 +2511,10 @@ def run_self_test() -> None:
         "",
         "{}",
         "not-json",
+        '[{"dst":"host","dst":"default","type":"blackhole","type":"unicast",'
+        '"gateway":"192.0.2.1","dev":"eth0","metric":0,"flags":[]}]',
+        "[" * 2000 + "0" + "]" * 2000,
+        '[{"dst":"default","gateway":"192.0.2.1","dev":"eth0","metric":NaN,"flags":[]}]',
         json.dumps([{"dst": "default", "tos": "0x10", "gateway": "192.0.2.1", "dev": "eth0", "flags": []}]),
         json.dumps([{"type": "local", "dst": "default", "dev": "eth0", "metric": 0, "flags": []}]),
         json.dumps([{"type": "blackhole", "dst": "default", "metric": 0, "flags": []}]),
@@ -2672,6 +2693,36 @@ def run_self_test() -> None:
         assert_true(wifi_indicator["transport"] == "wifi", "default Wi-Fi route should drive the indicator")
         assert_true(wifi_indicator["wifi_signal"] == "medium", "active Wi-Fi signal should be bucketed")
         assert_true(wifi_indicator["internet"] == "online", "Wi-Fi may be online")
+
+        def wifi_signal_timeout_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if args == [
+                "nmcli",
+                "-t",
+                "-f",
+                "DEVICE,IN-USE,SIGNAL",
+                "device",
+                "wifi",
+                "list",
+                "--rescan",
+                "no",
+            ]:
+                return CommandResult("timeout")
+            return runner_with_route(fake_runner, wifi_route_json_fixture)(args, timeout_sec)
+
+        wifi_signal_timeout_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=wifi_signal_timeout_runner,
+            nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
+        )
+        assert_true(
+            wifi_signal_timeout_indicator["internet"] == "online",
+            "optional signal detail must not invalidate independently verified internet state",
+        )
+        assert_true(
+            wifi_signal_timeout_indicator["wifi_signal"] == UNKNOWN,
+            "signal timeout should fail closed only for the signal detail",
+        )
 
         disconnected_device_fixture = "eth0:ethernet:disconnected\nwlan0:wifi:disconnected\n"
 
