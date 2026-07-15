@@ -14,6 +14,7 @@ import json
 import os
 import pathlib
 import re
+import selectors
 import shutil
 import stat
 import subprocess
@@ -64,6 +65,8 @@ ALLOWED_READ_ONLY_COMMANDS = {
 IP_ROUTE_DEFAULT_COMMAND = ["ip", "-j", "-4", "route", "show", "table", "main", "default"]
 MAX_ROUTE_JSON_BYTES = 64 * 1024
 MAX_ROUTE_JSON_ENTRIES = 64
+MAX_READ_ONLY_COMMAND_OUTPUT_BYTES = 64 * 1024
+READ_ONLY_COMMAND_CHUNK_BYTES = 8 * 1024
 
 SENSITIVE_MARKERS = (
     "FAKE-STORE-WIFI",
@@ -190,25 +193,74 @@ def assert_read_only_command(args: list[str]) -> None:
 def run_read_only_command(args: list[str], timeout_sec: float) -> CommandResult:
     assert_read_only_command(args)
     try:
-        completed = subprocess.run(
+        process = subprocess.Popen(
             args,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
-            timeout=timeout_sec,
-            check=False,
             env=read_only_command_env(),
         )
     except FileNotFoundError:
         return CommandResult("unavailable")
-    except subprocess.TimeoutExpired:
-        return CommandResult("timeout")
     except OSError:
         return CommandResult("failed")
 
-    if completed.returncode == 0:
-        return CommandResult("ok", completed.stdout, completed.stderr, completed.returncode)
-    return CommandResult("failed", completed.stdout, completed.stderr, completed.returncode)
+    deadline = time.monotonic() + max(0.05, float(timeout_sec))
+    selector = selectors.DefaultSelector()
+    stdout = bytearray()
+    stderr = bytearray()
+    streams = ((process.stdout, stdout), (process.stderr, stderr))
+
+    def kill_and_wait() -> None:
+        if process.poll() is None:
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass
+        process.wait()
+
+    try:
+        for stream, buffer in streams:
+            if stream is not None:
+                selector.register(stream, selectors.EVENT_READ, buffer)
+
+        while selector.get_map():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                kill_and_wait()
+                return CommandResult("timeout")
+            events = selector.select(remaining)
+            if not events:
+                kill_and_wait()
+                return CommandResult("timeout")
+            for key, _ in events:
+                try:
+                    chunk = os.read(key.fileobj.fileno(), READ_ONLY_COMMAND_CHUNK_BYTES)
+                except BlockingIOError:
+                    continue
+                if not chunk:
+                    selector.unregister(key.fileobj)
+                    continue
+                key.data.extend(chunk)
+                if len(stdout) + len(stderr) > MAX_READ_ONLY_COMMAND_OUTPUT_BYTES:
+                    kill_and_wait()
+                    return CommandResult("too_large")
+
+        remaining = max(0.05, deadline - time.monotonic())
+        try:
+            returncode = process.wait(timeout=remaining)
+        except subprocess.TimeoutExpired:
+            kill_and_wait()
+            return CommandResult("timeout")
+    finally:
+        selector.close()
+        for stream, _ in streams:
+            if stream is not None:
+                stream.close()
+
+    stdout_text = stdout.decode("utf-8", errors="replace")
+    stderr_text = stderr.decode("utf-8", errors="replace")
+    status = "ok" if returncode == 0 else "failed"
+    return CommandResult(status, stdout_text, stderr_text, returncode)
 
 
 def read_only_command_env() -> dict[str, str]:
@@ -692,59 +744,94 @@ def default_route_device_from_text(text: str) -> str:
 
 
 def default_route_devices_from_ip_json(text: str) -> list[str]:
-    if not isinstance(text, str) or not text or len(text.encode("utf-8")) > MAX_ROUTE_JSON_BYTES:
+    if not isinstance(text, str) or not text or len(text) > MAX_ROUTE_JSON_BYTES:
         return []
     try:
+        if len(text.encode("utf-8")) > MAX_ROUTE_JSON_BYTES:
+            return []
         routes = json.loads(text)
-    except (json.JSONDecodeError, UnicodeError):
+    except (ValueError, UnicodeError):
         return []
     if not isinstance(routes, list) or not routes or len(routes) > MAX_ROUTE_JSON_ENTRIES:
         return []
 
-    candidates: list[tuple[int, dict[str, Any]]] = []
+    allowed_keys = {
+        "dev",
+        "dst",
+        "flags",
+        "gateway",
+        "metric",
+        "prefsrc",
+        "protocol",
+        "scope",
+        "table",
+        "type",
+    }
+    candidates: list[tuple[int, str]] = []
     for route in routes:
-        if not isinstance(route, dict) or route.get("dst") != "default":
+        if not isinstance(route, dict) or set(route) - allowed_keys or route.get("dst") != "default":
             return []
         route_type = route.get("type", "unicast")
         table = route.get("table", "main")
         metric = route.get("metric", 0)
-        if not isinstance(route_type, str) or table not in {"main", 254}:
-            return []
-        if isinstance(metric, bool) or not isinstance(metric, int) or not 0 <= metric <= 0xFFFFFFFF:
-            return []
-        candidates.append((metric, route))
-
-    best_metric = min(metric for metric, _ in candidates)
-    best_routes = [route for metric, route in candidates if metric == best_metric]
-    if any(route.get("type", "unicast") != "unicast" for route in best_routes):
-        return []
-
-    devices: set[str] = set()
-    rejected_flags = {"dead", "linkdown", "unresolved"}
-    for route in best_routes:
         device = route.get("dev")
         scope = route.get("scope")
         gateway = route.get("gateway")
+        protocol = route.get("protocol")
+        preferred_source = route.get("prefsrc")
         flags = route.get("flags", [])
+        table_is_main = table == "main" or (
+            isinstance(table, int) and not isinstance(table, bool) and table == 254
+        )
+        if route_type != "unicast" or not table_is_main:
+            return []
+        if isinstance(metric, bool) or not isinstance(metric, int) or not 0 <= metric <= 0xFFFFFFFF:
+            return []
         if not isinstance(device, str) or not re.fullmatch(r"[A-Za-z0-9_.:@-]{1,15}", device) or device == "*":
             return []
         if scope not in {None, "global", "link"}:
             return []
-        if not isinstance(flags, list) or any(not isinstance(flag, str) for flag in flags):
+        if flags != []:
             return []
-        if rejected_flags.intersection(flags) or "nexthops" in route or "via" in route:
+        if protocol is not None and (
+            not isinstance(protocol, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,32}", protocol)
+        ):
+            return []
+        if preferred_source is not None and not valid_ipv4_route_address(preferred_source):
             return []
         if gateway is not None:
-            if not isinstance(gateway, str):
+            if scope == "link" or not valid_ipv4_route_address(gateway, reject_reserved=True):
                 return []
-            try:
-                gateway_ip = ipaddress.IPv4Address(gateway)
-            except ipaddress.AddressValueError:
-                return []
-            if gateway_ip.is_unspecified or gateway_ip.is_loopback or gateway_ip.is_multicast:
-                return []
-        devices.add(device)
-    return sorted(devices)
+        elif scope != "link":
+            return []
+        candidates.append((metric, device))
+
+    best_metric = min(metric for metric, _ in candidates)
+    best_routes = [device for metric, device in candidates if metric == best_metric]
+    return best_routes if len(best_routes) == 1 else []
+
+
+def valid_ipv4_route_address(value: Any, *, reject_reserved: bool = False) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        address = ipaddress.IPv4Address(value)
+    except ipaddress.AddressValueError:
+        return False
+    if address.is_unspecified or address.is_loopback or address.is_multicast:
+        return False
+    if reject_reserved and address.is_reserved:
+        return False
+    return True
+
+
+def command_result_stdout_is_bounded(result: CommandResult) -> bool:
+    if result.status != "ok" or len(result.stdout) > MAX_READ_ONLY_COMMAND_OUTPUT_BYTES:
+        return False
+    try:
+        return len(result.stdout.encode("utf-8")) <= MAX_READ_ONLY_COMMAND_OUTPUT_BYTES
+    except UnicodeError:
+        return False
 
 
 def detect_dns_from_text(text: str) -> bool | str:
@@ -952,28 +1039,36 @@ def collect_connectivity_indicator(
             ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]
         )
         checks["device_status"] = device_result.status
-        if device_result.status == "ok":
+        if device_result.status == "ok" and not command_result_stdout_is_bounded(device_result):
+            checks["device_status"] = "too_large"
+        elif device_result.status == "ok":
             device_status = parse_device_status(device_result.stdout)
 
         active_result = run_snapshot_command(
             ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]
         )
         checks["active_connections"] = active_result.status
-        if active_result.status == "ok":
+        if active_result.status == "ok" and not command_result_stdout_is_bounded(active_result):
+            checks["active_connections"] = "too_large"
+        elif active_result.status == "ok":
             active_connections = parse_active_connections(active_result.stdout)
 
         connectivity_result = run_snapshot_command(
             ["nmcli", "-t", "-f", "CONNECTIVITY", "general"]
         )
         checks["connectivity_cached"] = connectivity_result.status
-        if connectivity_result.status == "ok":
+        if connectivity_result.status == "ok" and not command_result_stdout_is_bounded(connectivity_result):
+            checks["connectivity_cached"] = "too_large"
+        elif connectivity_result.status == "ok":
             cached_connectivity = parse_nmcli_connectivity(connectivity_result.stdout)
 
     route_devices: list[str] = []
     if ip_path:
         route_result = run_snapshot_command(IP_ROUTE_DEFAULT_COMMAND)
         checks["default_route"] = route_result.status
-        if route_result.status == "ok":
+        if route_result.status == "ok" and not command_result_stdout_is_bounded(route_result):
+            checks["default_route"] = "too_large"
+        elif route_result.status == "ok":
             route_devices = default_route_devices_from_ip_json(route_result.stdout)
     else:
         checks["default_route"] = "unavailable"
@@ -1015,7 +1110,9 @@ def collect_connectivity_indicator(
             ["nmcli", "-t", "-f", "DEVICE,IN-USE,SIGNAL", "device", "wifi", "list", "--rescan", "no"]
         )
         checks["active_wifi_signal"] = signal_result.status
-        if signal_result.status == "ok":
+        if signal_result.status == "ok" and not command_result_stdout_is_bounded(signal_result):
+            checks["active_wifi_signal"] = "too_large"
+        elif signal_result.status == "ok":
             wifi_signal = parse_active_wifi_signal(
                 signal_result.stdout,
                 expected_device=route_device if route_device in wifi_devices else "",
@@ -2371,6 +2468,12 @@ def run_self_test() -> None:
             {"dst": "default", "gateway": "192.0.2.1", "dev": "wlan0", "metric": 100, "flags": []},
         ]
     )
+    same_device_ambiguous_route_json_fixture = json.dumps(
+        [
+            {"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "metric": 100, "flags": []},
+            {"dst": "default", "gateway": "192.0.2.2", "dev": "eth0", "metric": 100, "flags": []},
+        ]
+    )
     wifi_route_json_fixture = json.dumps(
         [{"dst": "default", "gateway": "192.0.2.1", "dev": "wlan0", "metric": 100, "flags": []}]
     )
@@ -2384,13 +2487,14 @@ def run_self_test() -> None:
         "typed route should select the lowest metric",
     )
     assert_true(
-        default_route_devices_from_ip_json(ambiguous_route_json_fixture) == ["eth0", "wlan0"],
-        "equal typed metrics should preserve ambiguity",
+        default_route_devices_from_ip_json(ambiguous_route_json_fixture) == [],
+        "equal typed metrics should fail closed",
     )
     rejected_route_json_fixtures = [
         "",
         "{}",
         "not-json",
+        json.dumps([{"dst": "default", "tos": "0x10", "gateway": "192.0.2.1", "dev": "eth0", "flags": []}]),
         json.dumps([{"type": "local", "dst": "default", "dev": "eth0", "metric": 0, "flags": []}]),
         json.dumps([{"type": "blackhole", "dst": "default", "metric": 0, "flags": []}]),
         json.dumps([{"dst": "default", "dev": "*", "metric": 0, "flags": []}]),
@@ -2399,12 +2503,22 @@ def run_self_test() -> None:
         json.dumps([{"dst": "default", "dev": "eth0", "metric": True, "flags": []}]),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "scope": "host", "flags": []}]),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "table": "local", "flags": []}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "table": 254.0, "flags": []}]),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "gateway": "127.0.0.1", "flags": []}]),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "gateway": "bad", "flags": []}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "gateway": "255.255.255.255", "flags": []}]),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "flags": ["linkdown"]}]),
+        json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "flags": ["not-an-iproute-flag"]}]),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "flags": [], "nexthops": []}]),
         json.dumps([{"dst": "default", "dev": "eth0", "metric": 0, "flags": [], "via": {"family": "inet6"}}]),
         json.dumps([{"dst": "192.0.2.0/24", "dev": "eth0", "metric": 0, "flags": []}]),
+        same_device_ambiguous_route_json_fixture,
+        json.dumps(
+            [
+                {"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "metric": 100, "flags": []},
+                {"dst": "default", "gateway": "192.0.2.1", "dev": 123, "metric": 600, "flags": []},
+            ]
+        ),
     ]
     for rejected_fixture in rejected_route_json_fixtures:
         assert_true(
@@ -2478,6 +2592,32 @@ def run_self_test() -> None:
 
     root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c9-6-wifi-apply-self-test-", dir="/tmp"))
     try:
+        fake_bin_dir = root / "fake-bin"
+        fake_bin_dir.mkdir(mode=0o700)
+        fake_nmcli = fake_bin_dir / "nmcli"
+        fake_nmcli.write_text(
+            "#!/usr/bin/python3\n"
+            f"import sys\nsys.stdout.write('x' * {MAX_READ_ONLY_COMMAND_OUTPUT_BYTES + 1})\n",
+            encoding="utf-8",
+        )
+        fake_nmcli.chmod(0o700)
+        previous_path = os.environ.get("PATH")
+        os.environ["PATH"] = f"{fake_bin_dir}:{previous_path or ''}"
+        try:
+            oversized_command_result = run_read_only_command(
+                ["nmcli", "-t", "-f", "CONNECTIVITY", "general"],
+                1,
+            )
+        finally:
+            if previous_path is None:
+                os.environ.pop("PATH", None)
+            else:
+                os.environ["PATH"] = previous_path
+        assert_true(
+            oversized_command_result.status == "too_large",
+            "read-only subprocess output must be bounded before capture completes",
+        )
+
         os.environ["SSH_CONNECTION"] = "192.0.2.10 54321 192.0.2.44 22"
         status = collect_read_only_status(
             timeout_sec=1,
@@ -2602,6 +2742,30 @@ def run_self_test() -> None:
                 malformed_indicator["internet"] == UNKNOWN,
                 f"untrusted typed route must not promote cached full: {rejected_route_json}",
             )
+        oversized_nmcli_output = "\n" * (MAX_READ_ONLY_COMMAND_OUTPUT_BYTES + 1)
+
+        def oversized_nmcli_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if args == ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]:
+                return CommandResult("ok", oversized_nmcli_output + "wlan0:wifi:connected\n")
+            if args == ["nmcli", "-t", "-f", "TYPE,DEVICE", "connection", "show", "--active"]:
+                return CommandResult("ok", oversized_nmcli_output + "802-11-wireless:wlan0\n")
+            if args == ["nmcli", "-t", "-f", "CONNECTIVITY", "general"]:
+                return CommandResult("ok", oversized_nmcli_output + "full\n")
+            if args == IP_ROUTE_DEFAULT_COMMAND:
+                return CommandResult("ok", wifi_route_json_fixture)
+            return CommandResult("failed")
+
+        oversized_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=oversized_nmcli_runner,
+            nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
+        )
+        assert_true(oversized_indicator["internet"] == UNKNOWN, "oversized status input must fail closed")
+        assert_true(
+            oversized_indicator["read_only_checks"]["device_status"] == "too_large",
+            "oversized status input should be classified",
+        )
         stale_route_indicator = collect_connectivity_indicator(
             timeout_sec=1,
             command_runner=runner_with_route(disconnected_runner, route_json_fixture),
