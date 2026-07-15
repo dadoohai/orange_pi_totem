@@ -1,0 +1,6 @@
+...................candidate_health_lab_guard_required: pass --lab-only-candidate-runner and set C18_PLAYER_RUNTIME_CANDIDATE_HEALTH_LAB_ONLY=1
+............................................................................................
+----------------------------------------------------------------------
+Ran 111 tests in 0.532s
+
+OK
