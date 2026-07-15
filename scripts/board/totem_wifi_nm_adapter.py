@@ -12,6 +12,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import shutil
 import stat
 import subprocess
@@ -604,41 +605,77 @@ def wifi_selection_public_metadata(networks: list[dict[str, Any]], selected: dic
     }
 
 
-def valid_default_route_device(parts: list[str]) -> str:
-    if len(parts) < 8:
-        return ""
+PROC_NET_ROUTE_HEADER = (
+    "Iface",
+    "Destination",
+    "Gateway",
+    "Flags",
+    "RefCnt",
+    "Use",
+    "Metric",
+    "Mask",
+    "MTU",
+    "Window",
+    "IRTT",
+)
+
+
+def parse_default_route_candidate(parts: list[str]) -> tuple[str, int] | None:
+    if len(parts) != len(PROC_NET_ROUTE_HEADER):
+        return None
     device, destination, gateway, flags = parts[:4]
     mask = parts[7]
+    if not device or len(device) > 15:
+        return None
     if destination != "00000000" or mask != "00000000":
-        return ""
-    try:
-        gateway_value = int(gateway, 16)
-        route_flags = int(flags, 16)
-    except ValueError:
-        return ""
-    required_flags = 0x1 | 0x2  # RTF_UP | RTF_GATEWAY
-    if gateway_value == 0 or route_flags & required_flags != required_flags:
-        return ""
-    return device.strip()
+        return None
+    if not re.fullmatch(r"[0-9A-F]{8}", gateway):
+        return None
+    if not re.fullmatch(r"[0-9A-F]{4,8}", flags):
+        return None
+    route_flags = int(flags, 16)
+    if flags != f"{route_flags:04X}":
+        return None
+    decimal_fields = parts[4:7] + parts[8:11]
+    if any(not re.fullmatch(r"0|[1-9][0-9]*", value) for value in decimal_fields):
+        return None
+
+    rtf_up = 0x1
+    rtf_gateway = 0x2
+    rtf_host = 0x4
+    rtf_reject = 0x200
+    supported_flags = 0x1 | 0x2 | 0x8 | 0x10 | 0x20 | 0x40 | 0x80 | 0x100
+    if (
+        not route_flags & rtf_up
+        or route_flags & (rtf_host | rtf_reject)
+        or route_flags & ~supported_flags
+    ):
+        return None
+
+    gateway_value = int(gateway, 16)
+    uses_gateway = bool(route_flags & rtf_gateway)
+    if uses_gateway != (gateway_value != 0):
+        return None
+    return device, int(parts[6], 10)
 
 
 def detect_default_route_from_text(text: str) -> bool | str:
-    lines = text.splitlines()
-    if len(lines) < 2:
-        return False
-    return any(valid_default_route_device(line.split()) for line in lines[1:])
+    return bool(default_route_devices_from_text(text))
 
 
 def default_route_devices_from_text(text: str) -> list[str]:
     lines = text.splitlines()
-    if len(lines) < 2:
+    if len(lines) < 2 or tuple(lines[0].split()) != PROC_NET_ROUTE_HEADER:
         return []
-    devices: set[str] = set()
+    candidates: list[tuple[str, int]] = []
     for line in lines[1:]:
-        device = valid_default_route_device(line.split())
-        if device:
-            devices.add(device)
-    return sorted(devices)
+        candidate = parse_default_route_candidate(line.split())
+        if candidate is not None:
+            candidates.append(candidate)
+    if not candidates:
+        return []
+    best_metric = min(metric for _, metric in candidates)
+    return sorted({device for device, metric in candidates if metric == best_metric})
 
 
 def default_route_device_from_text(text: str) -> str:
@@ -2175,7 +2212,7 @@ def run_self_test() -> None:
     route_fixture = "\n".join(
         [
             "Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT",
-            "eth0 00000000 010200C0 0003 0 0 100 00000000 0 0 0 # 192.0.2.1",
+            "eth0 00000000 010200C0 0003 0 0 100 00000000 0 0 0",
         ]
     )
     resolver_fixture = "\n".join(
@@ -2195,7 +2232,7 @@ def run_self_test() -> None:
         default_route_device_from_text(route_without_up_fixture) == "",
         "a gateway route without RTF_UP must not identify a device",
     )
-    non_default_mask_fixture = route_fixture.replace("00000000 0 0 0 #", "00FFFFFF 0 0 0 #", 1)
+    non_default_mask_fixture = route_fixture.replace("100 00000000", "100 00FFFFFF", 1)
     assert_true(
         detect_default_route_from_text(non_default_mask_fixture) is False,
         "a zero destination with a nonzero mask must fail closed",
@@ -2209,11 +2246,41 @@ def run_self_test() -> None:
         default_route_device_from_text(zero_gateway_fixture) == "",
         "a gateway-flagged route with no gateway must fail closed",
     )
-    ambiguous_route_fixture = route_fixture + "\nwlan0 00000000 010200C0 0003 0 0 200 00000000 0 0 0"
+    direct_route_fixture = route_fixture.replace("010200C0 0003", "00000000 0001", 1)
+    assert_true(
+        default_route_device_from_text(direct_route_fixture) == "eth0",
+        "a canonical on-link default route should remain valid",
+    )
+    preferred_route_fixture = route_fixture + "\nwlan0 00000000 010200C0 0003 0 0 600 00000000 0 0 0"
+    assert_true(
+        default_route_device_from_text(preferred_route_fixture) == "eth0",
+        "the lowest-metric default route should select its device",
+    )
+    ambiguous_route_fixture = route_fixture + "\nwlan0 00000000 010200C0 0003 0 0 100 00000000 0 0 0"
     assert_true(
         default_route_device_from_text(ambiguous_route_fixture) == "",
-        "multiple default-route devices should fail closed",
+        "equal-metric default routes on multiple devices should fail closed",
     )
+    malformed_route_rows = [
+        "eth0 00000000 010200C0 0003 0 0 100 00000000",
+        "eth0 00000000 1 0003 0 0 100 00000000 0 0 0",
+        "eth0 00000000 -1 0003 0 0 100 00000000 0 0 0",
+        "eth0 00000000 100000000 0003 0 0 100 00000000 0 0 0",
+        "eth0 00000000 0x010200C0 0003 0 0 100 00000000 0 0 0",
+        "eth0 00000000 010200C0 3 0 0 100 00000000 0 0 0",
+        "eth0 00000000 010200C0 -1 0 0 100 00000000 0 0 0",
+        "eth0 00000000 010200C0 0003 0 0 -1 00000000 0 0 0",
+        "eth0 00000000 010200C0 0203 0 0 100 00000000 0 0 0",
+        "eth0 00000000 010200C0 1003 0 0 100 00000000 0 0 0",
+    ]
+    for malformed_row in malformed_route_rows:
+        malformed_fixture = " ".join(PROC_NET_ROUTE_HEADER) + "\n" + malformed_row
+        assert_true(
+            default_route_device_from_text(malformed_fixture) == "",
+            f"malformed route row must fail closed: {malformed_row}",
+        )
+    wrong_header_fixture = route_fixture.replace("Iface", "Device", 1)
+    assert_true(default_route_device_from_text(wrong_header_fixture) == "", "unexpected route header must fail closed")
     assert_true(detect_dns_from_text(resolver_fixture) is True, "resolver should be aggregated")
 
     fake_nm_state = {"profiles_loaded": set()}
@@ -2293,6 +2360,24 @@ def run_self_test() -> None:
         assert_true(indicator["guardrails"]["external_connectivity_probe"] is False, "indicator must not probe")
         assert_true(indicator["guardrails"]["history_persisted"] is False, "indicator must not retain history")
 
+        direct_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=fake_runner,
+            file_reader=lambda path: (direct_route_fixture, True),
+            nmcli_path="/usr/bin/nmcli",
+        )
+        assert_true(direct_indicator["transport"] == "ethernet", "an on-link default should select Ethernet")
+        assert_true(direct_indicator["internet"] == "online", "cached full may confirm a valid on-link default")
+
+        preferred_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=fake_runner,
+            file_reader=lambda path: (preferred_route_fixture, True),
+            nmcli_path="/usr/bin/nmcli",
+        )
+        assert_true(preferred_indicator["transport"] == "ethernet", "the lowest route metric should select Ethernet")
+        assert_true(preferred_indicator["internet"] == "online", "cached full may confirm the preferred default route")
+
         wifi_route_fixture = route_fixture.replace("eth0", "wlan0")
 
         def wifi_reader(path: pathlib.Path) -> tuple[str, bool]:
@@ -2368,6 +2453,18 @@ def run_self_test() -> None:
             active_without_route_indicator["internet"] == UNKNOWN,
             "cached full must not show online without a verified default route",
         )
+        for malformed_row in malformed_route_rows:
+            malformed_wifi_fixture = " ".join(PROC_NET_ROUTE_HEADER) + "\n" + malformed_row.replace("eth0", "wlan0", 1)
+            malformed_indicator = collect_connectivity_indicator(
+                timeout_sec=1,
+                command_runner=active_wifi_without_route_runner,
+                file_reader=lambda path, fixture=malformed_wifi_fixture: (fixture, True),
+                nmcli_path="/usr/bin/nmcli",
+            )
+            assert_true(
+                malformed_indicator["internet"] == UNKNOWN,
+                f"malformed route must not promote cached full: {malformed_row}",
+            )
         stale_route_indicator = collect_connectivity_indicator(
             timeout_sec=1,
             command_runner=disconnected_runner,
