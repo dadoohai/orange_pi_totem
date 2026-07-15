@@ -380,6 +380,8 @@ def split_nmcli_terse(line: str) -> list[str]:
     escaped = False
     for char in line.rstrip("\n"):
         if escaped:
+            if char not in {"\\", ":"}:
+                return []
             buffer.append(char)
             escaped = False
             continue
@@ -391,6 +393,8 @@ def split_nmcli_terse(line: str) -> list[str]:
             buffer = []
             continue
         buffer.append(char)
+    if escaped:
+        return []
     fields.append("".join(buffer))
     return fields
 
@@ -464,16 +468,20 @@ def parse_device_status(stdout: str) -> dict[str, Any]:
         device_name, device_type, state = fields[:3]
         is_wifi = type_is_wifi(device_type, device_name)
         is_ethernet = type_is_ethernet(device_type, device_name)
-        if not is_wifi and not is_ethernet:
-            continue
-        if is_wifi == is_ethernet or not re.fullmatch(r"[A-Za-z0-9_.:@-]{1,15}", device_name):
+        normalized_type = device_type.strip().lower()
+        if (
+            not re.fullmatch(r"[A-Za-z0-9_.-]{1,32}", normalized_type)
+            or not re.fullmatch(r"[A-Za-z0-9_.:@-]{1,15}", device_name)
+        ):
             return unknown_status()
-        category = "wifi" if is_wifi else "ethernet"
+        category = "wifi" if is_wifi else "ethernet" if is_ethernet else f"other:{normalized_type}"
         connected = state_is_connected(state)
         observed = observed_devices.get(device_name)
         if observed is not None and observed != (category, connected):
             return unknown_status()
         observed_devices[device_name] = (category, connected)
+        if not is_wifi and not is_ethernet:
+            continue
         if is_wifi:
             wifi_present = True
             if connected:
@@ -521,15 +529,19 @@ def parse_active_connections(stdout: str) -> dict[str, Any]:
         connection_type, device_name = fields[:2]
         is_wifi = type_is_wifi(connection_type, device_name)
         is_ethernet = type_is_ethernet(connection_type, device_name)
-        if not is_wifi and not is_ethernet:
-            continue
-        if is_wifi == is_ethernet or not re.fullmatch(r"[A-Za-z0-9_.:@-]{1,15}", device_name):
+        normalized_type = connection_type.strip().lower()
+        if (
+            not re.fullmatch(r"[A-Za-z0-9_.-]{1,32}", normalized_type)
+            or not re.fullmatch(r"[A-Za-z0-9_.:@-]{1,15}", device_name)
+        ):
             return unknown_connections()
-        category = "wifi" if is_wifi else "ethernet"
+        category = "wifi" if is_wifi else "ethernet" if is_ethernet else f"other:{normalized_type}"
         observed = observed_devices.get(device_name)
         if observed is not None and observed != category:
             return unknown_connections()
         observed_devices[device_name] = category
+        if not is_wifi and not is_ethernet:
+            continue
         if is_wifi:
             wifi_active = True
             wifi_active_devices.add(device_name)
@@ -2337,6 +2349,16 @@ def run_self_test() -> None:
     ):
         assert_read_only_command(command)
     assert_true(read_only_command_env()["LC_ALL"] == "C", "read-only nmcli output should use a stable locale")
+    assert_true(
+        split_nmcli_terse(r"wlan0:Wi\:Fi:connected") == ["wlan0", "Wi:Fi", "connected"],
+        "canonical escaped colon should parse",
+    )
+    assert_true(
+        split_nmcli_terse(r"wlan\\0:wifi:connected") == [r"wlan\0", "wifi", "connected"],
+        "canonical escaped backslash should parse",
+    )
+    assert_true(split_nmcli_terse(r"wlan\0:wifi:connected") == [], "unknown escape must fail closed")
+    assert_true(split_nmcli_terse("full\\") == [], "trailing escape must fail closed")
 
     device_fixture = "\n".join(
         [
@@ -2364,6 +2386,11 @@ def run_self_test() -> None:
         virtual_named_like_wifi["wifi_active"] is False
         and virtual_named_like_wifi["wifi_connected_devices"] == [],
         "device names must not override the NetworkManager type",
+    )
+    conflicting_virtual_device = parse_device_status("wlan0:dummy:connected\nwlan0:wifi:connected\n")
+    assert_true(
+        conflicting_virtual_device["wifi_active"] == UNKNOWN,
+        "ignored device types must still participate in conflict detection",
     )
     malformed_device = parse_device_status("wlan0:wifi:connected:disconnected\n")
     assert_true(
@@ -2395,6 +2422,11 @@ def run_self_test() -> None:
         virtual_active_named_like_wifi["wifi_active"] is False
         and virtual_active_named_like_wifi["wifi_active_devices"] == [],
         "active software devices must not be inferred as Wi-Fi from their names",
+    )
+    conflicting_virtual_active = parse_active_connections("dummy:wlan0\nwifi:wlan0\n")
+    assert_true(
+        conflicting_virtual_active["wifi_active"] == UNKNOWN,
+        "ignored active types must still participate in conflict detection",
     )
     malformed_active = parse_active_connections("wifi:wlan0:ethernet\n")
     assert_true(
@@ -2456,6 +2488,7 @@ def run_self_test() -> None:
     assert_true(parse_nmcli_connectivity("unexpected\n") == UNKNOWN, "unexpected connectivity should fail closed")
     assert_true(parse_nmcli_connectivity("prefix:full\n") == UNKNOWN, "extra connectivity fields should fail closed")
     assert_true(parse_nmcli_connectivity("full\nnone\n") == UNKNOWN, "multiple connectivity rows should fail closed")
+    assert_true(parse_nmcli_connectivity("full\\\n") == UNKNOWN, "malformed connectivity escape should fail closed")
     assert_true(
         parse_active_wifi_signal("wlan0: :91\nwlan0:*:68\n", expected_device="wlan0") == "medium",
         "active Wi-Fi signal should parse",
