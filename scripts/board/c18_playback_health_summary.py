@@ -706,12 +706,125 @@ def sanitized_status_snapshot(row: dict[str, str]) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def startup_unclassified_media_ok(rows: list[dict[str, str]]) -> bool:
+def bounded_transition_unclassified_indexes(rows: list[dict[str, str]]) -> set[int]:
+    """Return typed unknown rows proven to be a bounded forward transition.
+
+    The collector cannot classify a new MPV path until the public status catches
+    up. This exception stays narrower than the general status/MPV lag policy: it
+    requires alignment on both sides, one forward alias, valid local decode
+    evidence, and sustained frame progress across the whole unknown run.
+    """
+
+    events: list[dict[str, Any]] = []
+    for row_index, row in enumerate(rows):
+        if row.get("ipc_result") != "success":
+            continue
+        status_alias = status_item_alias(row)
+        mpv_alias = mpv_item_alias(row)
+        if not status_alias or not mpv_alias:
+            continue
+        events.append(
+            {
+                "row_index": row_index,
+                "status_alias": status_alias,
+                "mpv_alias": mpv_alias,
+                "status_next_alias": status_next_item_alias(row),
+                "aligned": status_alias == mpv_alias,
+                "rel_sec": as_float(row.get("rel_sec")),
+            }
+        )
+
+    accepted: set[int] = set()
+    index = 0
+    while index < len(events):
+        if events[index]["aligned"]:
+            index += 1
+            continue
+        start = index
+        index += 1
+        while (
+            index < len(events)
+            and not events[index]["aligned"]
+            and events[index]["row_index"] == events[index - 1]["row_index"] + 1
+        ):
+            index += 1
+        end = index
+        if not _status_mpv_is_bounded_transition_lag(events, start, end):
+            continue
+
+        before = events[start - 1]
+        after = events[end]
+        run = events[start:end]
+        if (
+            int(run[0]["row_index"]) != int(before["row_index"]) + 1
+            or int(after["row_index"]) != int(run[-1]["row_index"]) + 1
+        ):
+            continue
+        old_alias = before["mpv_alias"]
+        new_alias = after["mpv_alias"]
+        if not all(
+            event["status_alias"] == old_alias and event["mpv_alias"] == new_alias
+            for event in run
+        ):
+            continue
+        run_rows = [rows[int(event["row_index"])] for event in run]
+        before_row = rows[int(before["row_index"])]
+        after_row = rows[int(after["row_index"])]
+        if playback_evidence_kind(before_row) != "motion_media":
+            continue
+        if playback_evidence_kind(after_row) != "motion_media":
+            continue
+        if not row_local_evidence(before_row, typed=True):
+            continue
+        if not row_local_evidence(after_row, typed=True):
+            continue
+        if not all(playback_evidence_kind(row) == "unclassified_media" for row in run_rows):
+            continue
+        if not all(row_local_evidence(row, typed=True) for row in run_rows):
+            continue
+        sequences = [as_int(row.get("seq")) for row in run_rows]
+        if any(value <= 0 for value in sequences) or any(
+            current != previous + 1 for previous, current in zip(sequences, sequences[1:])
+        ):
+            continue
+        rel_seconds = [as_float(row.get("rel_sec")) for row in run_rows]
+        if any(value is None or value < 0 for value in rel_seconds):
+            continue
+        valid_rel_seconds = [float(value) for value in rel_seconds if value is not None]
+        if any(
+            current <= previous
+            for previous, current in zip(valid_rel_seconds, valid_rel_seconds[1:])
+        ):
+            continue
+        if max(valid_rel_seconds) - min(valid_rel_seconds) > MAX_STATUS_MPV_TRANSITION_LAG_SECONDS:
+            continue
+        frames = [as_frame_number(row.get("estimated_frame_number")) for row in run_rows]
+        valid_frames = [float(value) for value in frames if value is not None]
+        if len(valid_frames) != len(run_rows) or any(
+            current < previous for previous, current in zip(valid_frames, valid_frames[1:])
+        ):
+            continue
+        after_frame = as_frame_number(after_row.get("estimated_frame_number"))
+        if after_frame is None or after_frame < valid_frames[-1]:
+            continue
+        if not sustained_progressed(valid_frames):
+            continue
+        accepted.update(int(event["row_index"]) for event in run)
+    return accepted
+
+
+def startup_unclassified_media_ok(
+    rows: list[dict[str, str]],
+    *,
+    accepted_transition_indexes: set[int] | None = None,
+) -> bool:
+    accepted = accepted_transition_indexes or set()
     unclassified = [
         (index, row)
         for index, row in enumerate(rows)
         if row.get("ipc_result") == "success"
         and playback_evidence_kind(row) == "unclassified_media"
+        and index not in accepted
     ]
     if not unclassified:
         return True
@@ -1050,7 +1163,11 @@ def evaluate(
     motion_frame_progress_ok = not motion_failed_indexes
     still_frame_availability_ok = all(still_episode_local_ok)
     public_surface_availability_ok = all(public_surface_episode_local_ok)
-    unclassified_media_bounded_to_startup = startup_unclassified_media_ok(rows)
+    bounded_transition_unclassified = bounded_transition_unclassified_indexes(rows)
+    unclassified_media_bounded_to_startup = startup_unclassified_media_ok(
+        rows,
+        accepted_transition_indexes=bounded_transition_unclassified,
+    )
     proven_content_episodes = [motion_episodes[index] for index in motion_proven_indexes]
     proven_content_episodes.extend(
         episode
@@ -1256,6 +1373,9 @@ def evaluate(
             "still_image_frame_available": still_frame_available,
             "motion_media_samples": len(motion_media_rows),
             "unclassified_media_samples": len(unclassified_media_rows),
+            "unclassified_media_bounded_transition_samples": len(
+                bounded_transition_unclassified
+            ),
             "invalid_frame_number_samples": len(invalid_frame_number_rows),
             "unclassified_media_max_startup_samples": MAX_STARTUP_UNCLASSIFIED_MEDIA_SAMPLES,
             "unclassified_media_max_startup_seconds": MAX_STARTUP_UNCLASSIFIED_MEDIA_SECONDS,
