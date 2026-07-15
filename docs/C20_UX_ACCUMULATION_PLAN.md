@@ -472,21 +472,22 @@ O metodo final esta registrado em:
 
 ## Pacote Acumulado Atual
 
-Estado em 2026-07-15: C20.16 chegou a C21.15, mas a candidata foi bloqueada na
-auditoria final. O ultimo acumulo aprovado continua C20.15/C21.13.
+Estado em 2026-07-15: C20.16 foi fechada na candidata C21.18 depois de tres
+candidatas intermediarias bloqueadas ou supersedidas antes de promocao.
 
 Candidata acumulada atual:
-`releases/core-updates/c21.13-wizard-retained-status-20260714T231059Z-81d64ee`.
+`releases/core-updates/c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18`.
 
 Referencia stable de distribuicao e retorno:
 `releases/core-updates/c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea`.
 
 Ultimo pacote/evidencia:
-`docs/evidence/c20-totem-core-ota/20260715T014809Z-c21-15-wizard-connectivity-bounded-board-e2e/`.
+`docs/evidence/c20-totem-core-ota/20260715T055121Z-c21-18-wizard-connectivity-verified-board-e2e/`.
 
-O C21.13 passou release gate `84/84`, apply, rollback, reaplicacao, fluxo visual
-real, cancelamento e playback final verde, sem restart do player. Ele continua
-a candidata acumulada de `totem-core` em homologacao; nao substitui C21.12 como
+O C21.18 passou dois release gates `84/84`, bloqueio de prerelease pela policy
+stable, apply, rollback para C21.13, reaplicacao, fluxo visual real,
+cancelamento sem writer/rede e playback preservado sem restart. Ele e a
+candidata acumulada de `totem-core` em homologacao; nao substitui C21.12 como
 stable nem muda a imagem oficial por inferencia.
 
 Intencao macro: continuar acumulando apenas melhorias fechadas e reversiveis do
@@ -538,16 +539,26 @@ Contrato funcional:
   forte;
 - internet usa `OK`, `!`, `X` ou `?`, com cor e simbolo para nao depender so de
   cor;
-- `online` exige a mesma interface conectada, ativa e usada pela rota, alem do
-  estado `full` cacheado pelo NetworkManager;
+- o transporte positivo exige uma unica rota IPv4 default preferida cuja
+  interface tambem esteja conectada e ativa no NetworkManager;
+- `OK` exige `HEAD` 200 na URL fixa de health do servico Dadooh, sem proxy,
+  redirect, autenticacao, cookie, query ou identificador da placa;
+- `!` significa rota verificada mas servico Dadooh inacessivel; `X` significa
+  nenhum transporte ativo comprovado; `?` significa leitura inconclusiva;
 - leitura ausente, inconsistente, expirada ou ambigua falha fechada para `?`;
-- nao ha probe externo, speedtest, rescan, SSID, credencial ou mudanca de rede.
+- nao ha speedtest, rescan, SSID, credencial ou mudanca de rede;
+- o indicador nao afirma velocidade, saude de CDN/midia, Internet inteira nem
+  que o probe ficou preso fisicamente a uma interface durante toda a chamada.
 
 Contrato 24/7:
 
 - existe somente um snapshot em memoria, substituido a cada leitura;
-- o refresh ocorre a cada cinco segundos enquanto o wizard esta aberto, sem
-  thread, fila, historico ou persistencia;
+- o snapshot vale por 15 segundos e a coleta tem orcamento total de dois
+  segundos;
+- existe no maximo um worker, um resultado pendente e uma thread de coleta;
+  nao existe fila, historico nem persistencia;
+- o loop consulta o worker a cada 100 ms sem bloquear entrada; tecla pronta tem
+  prioridade sobre repaint do indicador;
 - o framebuffer nao gera arquivo por refresh; o fallback MPV reutiliza dois
   arquivos temporarios;
 - os SVGs temporarios da sessao usam anel fixo de 64 arquivos.
@@ -578,10 +589,36 @@ registro completo esta em:
 A auditoria final encontrou um blocker adicional e o decisor central o
 reproduziu: linhas de rota sem `RTF_UP` ou com mascara nao-default ainda podiam
 produzir falso `online`. C21.15 foi bloqueada e supersedida sem promocao. A
-sucessora deve validar a linha completa, repetir pacote e roundtrip e passar
-nova auditoria independente. Enquanto isso, C21.13 continua candidata
-acumulada, C21.12 continua stable de retorno e `prod14` continua imagem de
-referencia.
+sucessora passou a usar a saida JSON tipada de `ip route`, validar a rota
+completa, conferir o device ativo e testar o servico Dadooh de forma limitada.
+
+C21.16 e C21.17 foram empacotadas, mas supersedidas antes de qualquer apply na
+placa para fechar, respectivamente, prioridade de entrada e apresentacao
+imediata do estado. Nenhuma foi promovida.
+
+A candidata final
+`c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18` passou os gates
+`84/84` e o roundtrip real na placa. A tela mostrou Ethernet + `OK` por pixels
+reais e pela captura visual; navegacao e cancelamento preservaram configuracao,
+contexto e estado de rede. Um teste de 600 segundos manteve RSS, FDs, threads e
+arquivos limitados; outro teste instrumentado observou tres probes exatos em 60
+segundos e terminou com o player ativo, tocando e sem restart.
+
+Uma coleta de playback encontrou tres amostras classificadas como desconhecidas
+durante uma troca curta, embora frames, HW decode e alinhamento final estivessem
+verdes. O RCA mostrou conflito entre dois checks do summary. O gate passou a
+aceitar somente a transicao forward delimitada, progressiva e recuperada, e
+continua negando transicao terminal ou sem progresso. Os mesmos dados brutos
+foram reavaliados com resultado verde; a evidencia negativa original foi
+preservada.
+
+O summary e uma ferramenta fixa da imagem, deliberadamente excluida do pacote
+`totem-core`. A correcao fica registrada como entrada obrigatoria da proxima
+imagem de referencia; C21.18 nao altera esse binario na placa por inferencia.
+
+Estado final da bancada: current C21.18, previous C21.13, policy/timer stable
+restaurados e player ativo. C21.12 continua stable de retorno e `prod14`
+continua imagem de referencia ate decisao explicita de promocao ou nova imagem.
 
 ## Rodada C25 - Estados Visiveis
 

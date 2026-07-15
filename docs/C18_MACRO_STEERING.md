@@ -374,3 +374,18 @@ Enquanto nada mudar, a ordem de execucao e:
     passar todo o ciclo.
     Evidencia:
     `docs/evidence/c20-totem-core-ota/20260715T014809Z-c21-15-wizard-connectivity-bounded-board-e2e/`.
+13. C20.16 foi fechada na candidata C21.18. C21.16 e C21.17 foram
+    supersedidas antes da placa para corrigir prioridade de entrada e
+    apresentacao imediata; nenhuma foi promovida. C21.18 passou dois release
+    gates `84/84`, bloqueio pela policy stable, apply, rollback para C21.13,
+    reaplicacao, fluxo visual real e cancelamento sem escrita. O teste de 600
+    segundos manteve recursos limitados e o teste instrumentado observou tres
+    probes exatos em 60 segundos, com player ativo e zero restart. Um falso
+    negativo do summary de playback durante transicao curta foi corrigido com
+    fixtures positiva e negativa; os dados brutos originais ficaram
+    preservados. Como o summary e fixo da imagem e nao pertence ao
+    `totem-core`, a correcao entra obrigatoriamente na proxima imagem de
+    referencia. A bancada terminou em C21.18 com C21.13 como previous.
+    C21.12/prod14 continua a referencia publica e de retorno; nao houve stable,
+    imagem nova ou promocao por inferencia. Evidencia:
+    `docs/evidence/c20-totem-core-ota/20260715T055121Z-c21-18-wizard-connectivity-verified-board-e2e/`.

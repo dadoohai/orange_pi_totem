@@ -1,0 +1,75 @@
+{
+  "final_checks": {
+    "cancel_without_writer_or_network_change": true,
+    "config_preserved": true,
+    "network_state_preserved": true,
+    "playback_processes_restored": true,
+    "player_restarts_preserved": true,
+    "player_restored": true,
+    "retained_context_preserved": true,
+    "settings_cleanup_complete": true
+  },
+  "non_claims": [
+    "not_a_24_hour_soak",
+    "not_proof_against_slower_resource_leaks"
+  ],
+  "passed": true,
+  "resource_summary": {
+    "checks": {
+      "child_count_bounded": true,
+      "connectivity_worker_observed": true,
+      "duration_reached": true,
+      "duration_upper_bound": true,
+      "fd_growth_bounded": true,
+      "multiple_exact_connectivity_probes_observed": true,
+      "refresh_files_bounded": true,
+      "rss_range_bounded_24mb": true,
+      "screen_ring_bounded": true,
+      "thread_growth_bounded": true
+    },
+    "child_count": {
+      "first": 0,
+      "last": 0,
+      "max": 0
+    },
+    "connectivity_probe_cycle_count": 3,
+    "connectivity_probe_distinct_pids": [
+      127133,
+      127420,
+      127710
+    ],
+    "connectivity_worker_sample_count": 6,
+    "fd_count": {
+      "first": 6,
+      "last": 9,
+      "max": 9
+    },
+    "observed_duration_sec": 60,
+    "refresh_file_count": {
+      "first": 0,
+      "last": 0,
+      "max": 0
+    },
+    "requested_duration_sec": 60,
+    "resource_checks_passed": true,
+    "rss_kb": {
+      "first": 44816,
+      "last": 44820,
+      "max": 44820,
+      "min": 44816
+    },
+    "sample_count": 52,
+    "schema": "dadooh.c20.connectivity_session_soak.v1",
+    "screen_count": {
+      "first": 1,
+      "last": 1,
+      "max": 1
+    },
+    "thread_count": {
+      "first": 1,
+      "last": 2,
+      "max": 2
+    }
+  },
+  "schema": "dadooh.c20.connectivity_session_soak.v1"
+}

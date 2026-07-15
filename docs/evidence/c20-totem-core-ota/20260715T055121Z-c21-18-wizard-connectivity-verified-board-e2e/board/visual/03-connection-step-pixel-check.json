@@ -1,0 +1,19 @@
+{
+  "cyan_ethernet_pixels": 364,
+  "ethernet_port_inner_pixels": 180,
+  "framebuffer": {
+    "height": 768,
+    "width": 1360
+  },
+  "green_online_pixels": 353,
+  "passed": true,
+  "region": {
+    "x_end": 948,
+    "x_start": 872,
+    "y_end": 68,
+    "y_start": 34
+  },
+  "region_rgb24_bytes": 7752,
+  "region_rgb24_path": "03-connection-step-pixel-check.rgb24",
+  "schema": "dadooh.c20.connectivity_indicator_pixel_check.v1"
+}

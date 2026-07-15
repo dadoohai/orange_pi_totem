@@ -1,0 +1,2 @@
+2026-07-15T05:03:36Z INFO update_lock_acquired operation=rollback:totem-core lock=/run/totem-updatectl.lock
+2026-07-15T05:03:49Z INFO manual_rollback_ok rolled_to=c21.13-wizard-retained-status-20260714T231059Z-81d64ee

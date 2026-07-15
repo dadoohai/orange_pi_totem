@@ -1,0 +1,1 @@
+id="connectivity-indicator" data-transport="unknown" data-wifi-signal="unknown" data-internet="unknown"

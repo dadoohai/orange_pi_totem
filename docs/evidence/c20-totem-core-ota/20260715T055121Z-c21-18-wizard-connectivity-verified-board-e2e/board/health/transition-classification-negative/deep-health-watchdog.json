@@ -1,0 +1,16 @@
+{
+  "action_during_window": "",
+  "collection_finished_at_utc": "2026-07-15T06:14:32Z",
+  "collection_started_at_utc": "2026-07-15T06:13:32Z",
+  "end": {
+    "exists": false,
+    "path": "/data/state/kiosky-player/status-mpv-watchdog.json"
+  },
+  "event_changed_during_window": false,
+  "schema": "dadooh.c18.playback.deep_health.watchdog.v1",
+  "start": {
+    "exists": false,
+    "path": "/data/state/kiosky-player/status-mpv-watchdog.json"
+  },
+  "state_file": "/data/state/kiosky-player/status-mpv-watchdog.json"
+}

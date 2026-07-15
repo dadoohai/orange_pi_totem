@@ -1,0 +1,146 @@
+[
+  {
+    "assertion": "valid_uuid_passes_local_validation",
+    "detail": "",
+    "passed": true,
+    "scenario": "happy_path_synthetic"
+  },
+  {
+    "assertion": "writer_not_called",
+    "detail": "",
+    "passed": true,
+    "scenario": "happy_path_synthetic"
+  },
+  {
+    "assertion": "esc_returns_to_previous_screen",
+    "detail": "",
+    "passed": true,
+    "scenario": "back_navigation"
+  },
+  {
+    "assertion": "no_save_on_back",
+    "detail": "",
+    "passed": true,
+    "scenario": "back_navigation"
+  },
+  {
+    "assertion": "partial_state_cannot_commit",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  },
+  {
+    "assertion": "first_pending_is_connection",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  },
+  {
+    "assertion": "review_status_blocked",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  },
+  {
+    "assertion": "candidate_not_generated_for_partial_state",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  },
+  {
+    "assertion": "invalid_uuid_blocks_advance",
+    "detail": "",
+    "passed": true,
+    "scenario": "environment_invalid_uuid"
+  },
+  {
+    "assertion": "writer_not_called",
+    "detail": "",
+    "passed": true,
+    "scenario": "environment_invalid_uuid"
+  },
+  {
+    "assertion": "middle_edit_reaches_valid_uuid",
+    "detail": "",
+    "passed": true,
+    "scenario": "environment_edit_middle"
+  },
+  {
+    "assertion": "cursor_editing_supported",
+    "detail": "",
+    "passed": true,
+    "scenario": "environment_edit_middle"
+  },
+  {
+    "assertion": "password_value_not_rendered",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_wrong_password_fake"
+  },
+  {
+    "assertion": "retry_path_available",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_wrong_password_fake"
+  },
+  {
+    "assertion": "api_unavailable_requires_confirmation",
+    "detail": "",
+    "passed": true,
+    "scenario": "api_unavailable_fake"
+  },
+  {
+    "assertion": "operator_confirmation_recorded",
+    "detail": "",
+    "passed": true,
+    "scenario": "api_unavailable_fake"
+  },
+  {
+    "assertion": "reopens_directly_on_review",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "existing_configuration_can_commit",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "environment_is_retained_without_remote_preflight",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "backend_not_called_for_retained_environment",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "network_not_changed",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "wifi_probe_is_reported",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "esc_cancels_without_writer",
+    "detail": "",
+    "passed": true,
+    "scenario": "cancel_flow"
+  },
+  {
+    "assertion": "real_config_not_written",
+    "detail": "",
+    "passed": true,
+    "scenario": "cancel_flow"
+  }
+]

@@ -1,0 +1,8 @@
+utc=2026-07-15T05:03:17Z
+current=/data/core/totem/releases/c21.13-wizard-retained-status-20260714T231059Z-81d64ee
+previous=/data/core/totem/releases/c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26
+player_active=active
+player_restarts=0
+settings_active=inactive
+core_timer_active=active
+core_timer_enabled=enabled

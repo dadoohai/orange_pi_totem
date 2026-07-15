@@ -1,0 +1,1 @@
+id="connectivity-indicator" data-transport="ethernet" data-wifi-signal="unknown" data-internet="online"

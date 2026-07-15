@@ -1,0 +1,2 @@
+c408e671d130470b978e8246a4fa522ef16c831777202eac8c6ab14b716dbcfa  dadooh-totem-core-c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18.tar.gz
+e61120f7179391cc76cc6d8c3f802c727064605b32c98ea9753a1d66cc2e2d54  dadooh-totem-core-c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18.manifest.json

@@ -1,0 +1,60 @@
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c21.13-wizard-retained-status-20260714T231059Z-81d64ee",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-15T05:03:26Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-15T04:55:34Z",
+      "path": "/data/core/totem/releases/c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18",
+      "payload_sha256": "c408e671d130470b978e8246a4fa522ef16c831777202eac8c6ab14b716dbcfa",
+      "source": "local:dadooh-totem-core-c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "3bdbd1868693c3ffabcb7a5183c3a05b001d9c46",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-15T05:03:34Z",
+      "source": "local:dadooh-totem-core-c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18.manifest.json",
+      "started_at_utc": "2026-07-15T05:03:18Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-15T05:03:09Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-14T23:10:59Z",
+      "path": "/data/core/totem/releases/c21.13-wizard-retained-status-20260714T231059Z-81d64ee",
+      "payload_sha256": "b6a4ee0f33e0ded8247d4096dab890ef10e0f230548eefcf675ed577945a6132",
+      "source": "local:dadooh-totem-core-c21.13-wizard-retained-status-20260714T231059Z-81d64ee.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "81d64ee9752ade6af53e0a7acc9cb4a83911a50d",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.13-wizard-retained-status-20260714T231059Z-81d64ee"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-14T17:32:45Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}

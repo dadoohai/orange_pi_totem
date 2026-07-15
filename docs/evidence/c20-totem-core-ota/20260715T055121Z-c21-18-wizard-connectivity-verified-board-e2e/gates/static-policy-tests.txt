@@ -1,0 +1,129 @@
+self-test ok; sanitized fixture root: /tmp/dadooh-c7-selftest-root
+test_config_content_read_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_config_content_read_denies) ... ok
+test_h2_claim_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_h2_claim_denies) ... ok
+test_manifest_hash_mismatch_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_manifest_hash_mismatch_denies) ... ok
+test_overclaim_readme_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_overclaim_readme_denies) ... ok
+test_privacy_leak_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_privacy_leak_denies) ... ok
+test_root_symlink_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_root_symlink_denies) ... ok
+test_sensitive_json_key_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_sensitive_json_key_denies) ... ok
+test_sensitive_negative_looking_json_key_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_sensitive_negative_looking_json_key_denies) ... ok
+test_valid_fixture_passes (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_valid_fixture_passes) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.091s
+
+OK
+test_empty_edid_low_mode_classifies_fallback (__main__.DisplayProfileBaselineSelfTest.test_empty_edid_low_mode_classifies_fallback) ... ok
+test_mode_area_ignores_refresh_suffix (__main__.DisplayProfileBaselineSelfTest.test_mode_area_ignores_refresh_suffix) ... ok
+test_non_empty_edid_does_not_include_raw_bytes (__main__.DisplayProfileBaselineSelfTest.test_non_empty_edid_does_not_include_raw_bytes) ... ok
+test_video_override_is_sanitized (__main__.DisplayProfileBaselineSelfTest.test_video_override_is_sanitized) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.023s
+
+OK
+test_private_path_denies (__main__.DisplayProfileBaselineGateSelfTest.test_private_path_denies) ... ok
+test_raw_edid_key_denies (__main__.DisplayProfileBaselineGateSelfTest.test_raw_edid_key_denies) ... ok
+test_valid_fixture_passes (__main__.DisplayProfileBaselineGateSelfTest.test_valid_fixture_passes) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.011s
+
+OK
+test_connected_enabled_modes_with_empty_mode_file_is_unknown_not_stalled (__main__.DisplayStatusCollectSelfTest.test_connected_enabled_modes_with_empty_mode_file_is_unknown_not_stalled) ... ok
+test_connected_enabled_modes_without_mode_file_is_unknown_not_stalled (__main__.DisplayStatusCollectSelfTest.test_connected_enabled_modes_without_mode_file_is_unknown_not_stalled) ... ok
+test_connected_without_mode_is_pipeline_stalled (__main__.DisplayStatusCollectSelfTest.test_connected_without_mode_is_pipeline_stalled) ... ok
+test_disconnected_connector_modes_do_not_make_connected_sink_ready (__main__.DisplayStatusCollectSelfTest.test_disconnected_connector_modes_do_not_make_connected_sink_ready) ... ok
+test_display_ok_classification (__main__.DisplayStatusCollectSelfTest.test_display_ok_classification) ... ok
+test_no_sink_classification (__main__.DisplayStatusCollectSelfTest.test_no_sink_classification) ... ok
+test_output_json_roundtrip (__main__.DisplayStatusCollectSelfTest.test_output_json_roundtrip) ... ok
+test_status_error_classifies_pipeline_stalled (__main__.DisplayStatusCollectSelfTest.test_status_error_classifies_pipeline_stalled) ... ok
+test_status_fields_are_token_sanitized (__main__.DisplayStatusCollectSelfTest.test_status_fields_are_token_sanitized) ... ok
+test_visible_black_with_healthy_board_classifies_sink_hung (__main__.DisplayStatusCollectSelfTest.test_visible_black_with_healthy_board_classifies_sink_hung) ... ok
+test_visible_ok_with_mode_file_unavailable_can_classify_display_ok (__main__.DisplayStatusCollectSelfTest.test_visible_ok_with_mode_file_unavailable_can_classify_display_ok) ... ok
+test_visible_ok_without_status_does_not_overclaim_display_ok (__main__.DisplayStatusCollectSelfTest.test_visible_ok_without_status_does_not_overclaim_display_ok) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.088s
+
+OK
+self-test ok
+lab_thaw_guard_required:set C18_PLAYER_RUNTIME_LAB_THAW=1 and pass --lab-only-thaw
+test_board_overclaim_fails_closed (__main__.MacroGovernanceGateSelfTest.test_board_overclaim_fails_closed) ... ok
+test_docs_must_name_macro_gate (__main__.MacroGovernanceGateSelfTest.test_docs_must_name_macro_gate) ... ok
+test_docs_reject_stale_current_pilot_wording (__main__.MacroGovernanceGateSelfTest.test_docs_reject_stale_current_pilot_wording) ... ok
+test_h1_data_git_guard_is_required (__main__.MacroGovernanceGateSelfTest.test_h1_data_git_guard_is_required) ... ok
+test_h2_current_snapshot_is_hash_bound (__main__.MacroGovernanceGateSelfTest.test_h2_current_snapshot_is_hash_bound) ... ok
+test_h2_missing_expected_blocker_fails (__main__.MacroGovernanceGateSelfTest.test_h2_missing_expected_blocker_fails) ... ok
+test_h2_must_remain_red_with_exact_blockers (__main__.MacroGovernanceGateSelfTest.test_h2_must_remain_red_with_exact_blockers) ... ok
+test_pilot_channel_must_remain_homologation (__main__.MacroGovernanceGateSelfTest.test_pilot_channel_must_remain_homologation) ... ok
+test_repo_clean_and_tracked_inputs_are_required_by_default (__main__.MacroGovernanceGateSelfTest.test_repo_clean_and_tracked_inputs_are_required_by_default) ... ok
+test_server_side_asset_records_are_file_hash_bound (__main__.MacroGovernanceGateSelfTest.test_server_side_asset_records_are_file_hash_bound) ... ok
+test_server_side_asset_records_reject_parent_symlink (__main__.MacroGovernanceGateSelfTest.test_server_side_asset_records_reject_parent_symlink) ... ok
+test_server_side_current_is_hash_bound (__main__.MacroGovernanceGateSelfTest.test_server_side_current_is_hash_bound) ... ok
+test_server_side_rollout_state_must_be_paused_pre_h2 (__main__.MacroGovernanceGateSelfTest.test_server_side_rollout_state_must_be_paused_pre_h2) ... ok
+test_target_blocking_diagnostic_blocks_current_target (__main__.MacroGovernanceGateSelfTest.test_target_blocking_diagnostic_blocks_current_target) ... ok
+test_valid_fixture_passes (__main__.MacroGovernanceGateSelfTest.test_valid_fixture_passes) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.414s
+
+OK
+test_expired_authorization_blocks (__main__.OperationalResumeGateSelfTest.test_expired_authorization_blocks) ... ok
+test_macro_snapshot_must_preserve_h2_blockers (__main__.OperationalResumeGateSelfTest.test_macro_snapshot_must_preserve_h2_blockers) ... ok
+test_missing_current_inputs_block (__main__.OperationalResumeGateSelfTest.test_missing_current_inputs_block) ... ok
+test_post_apply_preflight_does_not_resume_pre_apply (__main__.OperationalResumeGateSelfTest.test_post_apply_preflight_does_not_resume_pre_apply) ... ok
+test_preflight_device_must_be_authorized (__main__.OperationalResumeGateSelfTest.test_preflight_device_must_be_authorized) ... ok
+test_repo_clean_and_tracked_inputs_are_required_by_default (__main__.OperationalResumeGateSelfTest.test_repo_clean_and_tracked_inputs_are_required_by_default) ... ok
+test_stale_preflight_blocks (__main__.OperationalResumeGateSelfTest.test_stale_preflight_blocks) ... ok
+test_valid_fresh_inputs_pass (__main__.OperationalResumeGateSelfTest.test_valid_fresh_inputs_pass) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.018s
+
+OK
+test_active_rollout_denies (__main__.RolloutStateGateSelfTest.test_active_rollout_denies) ... ok
+test_allowlist_and_raw_ids_deny (__main__.RolloutStateGateSelfTest.test_allowlist_and_raw_ids_deny) ... ok
+test_empty_state_denies (__main__.RolloutStateGateSelfTest.test_empty_state_denies) ... ok
+test_hash_mismatch_denies (__main__.RolloutStateGateSelfTest.test_hash_mismatch_denies) ... ok
+test_raw_identifiers_and_positive_claims_deny (__main__.RolloutStateGateSelfTest.test_raw_identifiers_and_positive_claims_deny) ... ok
+test_target_mismatch_denies (__main__.RolloutStateGateSelfTest.test_target_mismatch_denies) ... ok
+test_valid_fixture_passes (__main__.RolloutStateGateSelfTest.test_valid_fixture_passes) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.013s
+
+OK
+test_docs_require_all_responsibility_fronts (__main__.PreSoakScaleGovernanceGateSelfTest.test_docs_require_all_responsibility_fronts) ... ok
+test_h2_green_is_rejected_pre_soak (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_green_is_rejected_pre_soak) ... ok
+test_h2_must_remain_blocked_with_exact_blockers (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_must_remain_blocked_with_exact_blockers) ... ok
+test_h2_powerloss_preflight_snapshot_is_accepted (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_powerloss_preflight_snapshot_is_accepted) ... ok
+test_h2_powerloss_preflight_snapshot_rejects_manifest_restamp (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_powerloss_preflight_snapshot_rejects_manifest_restamp) ... ok
+test_h2_powerloss_preflight_snapshot_rejects_stale_freshness (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_powerloss_preflight_snapshot_rejects_stale_freshness) ... ok
+test_h2_powerloss_preflight_snapshot_rejects_tampered_key_check (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_powerloss_preflight_snapshot_rejects_tampered_key_check) ... ok
+test_operational_resume_blocked_snapshot_is_accepted (__main__.PreSoakScaleGovernanceGateSelfTest.test_operational_resume_blocked_snapshot_is_accepted) ... ok
+test_operational_resume_blocked_snapshot_rejects_green_claim (__main__.PreSoakScaleGovernanceGateSelfTest.test_operational_resume_blocked_snapshot_rejects_green_claim) ... ok
+test_operational_resume_default_requires_current_macro_and_blocks (__main__.PreSoakScaleGovernanceGateSelfTest.test_operational_resume_default_requires_current_macro_and_blocks) ... ok
+test_server_side_current_snapshot_is_accepted (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_is_accepted) ... ok
+test_server_side_current_snapshot_rejects_active_rollout_state (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_active_rollout_state) ... ok
+test_server_side_current_snapshot_rejects_missing_non_claim (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_missing_non_claim) ... ok
+test_server_side_current_snapshot_rejects_missing_rollout_or_audit (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_missing_rollout_or_audit) ... ok
+test_server_side_current_snapshot_rejects_missing_signature_attestation (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_missing_signature_attestation) ... ok
+test_server_side_current_snapshot_rejects_parent_symlink_asset_record (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_parent_symlink_asset_record) ... ok
+test_server_side_current_snapshot_rejects_tampered_asset_record (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_tampered_asset_record) ... ok
+test_skipped_release_gate_blocks_by_default (__main__.PreSoakScaleGovernanceGateSelfTest.test_skipped_release_gate_blocks_by_default) ... ok
+test_skipped_release_gate_requires_explicit_advisory_mode (__main__.PreSoakScaleGovernanceGateSelfTest.test_skipped_release_gate_requires_explicit_advisory_mode) ... ok
+test_stable_thaw_draft_blocked_snapshot_is_accepted (__main__.PreSoakScaleGovernanceGateSelfTest.test_stable_thaw_draft_blocked_snapshot_is_accepted) ... ok
+test_stable_thaw_draft_blocked_snapshot_rejects_authorized_thaw (__main__.PreSoakScaleGovernanceGateSelfTest.test_stable_thaw_draft_blocked_snapshot_rejects_authorized_thaw) ... ok
+test_stable_thaw_draft_blocked_snapshot_rejects_run_authorization (__main__.PreSoakScaleGovernanceGateSelfTest.test_stable_thaw_draft_blocked_snapshot_rejects_run_authorization) ... ok
+test_stable_thaw_draft_blocked_snapshot_rejects_written_output_claim (__main__.PreSoakScaleGovernanceGateSelfTest.test_stable_thaw_draft_blocked_snapshot_rejects_written_output_claim) ... ok
+test_tracked_inputs_follow_cli_overrides (__main__.PreSoakScaleGovernanceGateSelfTest.test_tracked_inputs_follow_cli_overrides) ... ok
+
+----------------------------------------------------------------------
+Ran 24 tests in 0.102s
+
+OK
+----------------------------------------------------------------------
+Ran 81 tests in 33.656s
+
+OK

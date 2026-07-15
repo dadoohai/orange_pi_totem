@@ -1,0 +1,16 @@
+{
+  "checks": {
+    "cancel_without_writer_or_network_change": true,
+    "config_preserved": true,
+    "connection_step_reached": true,
+    "live_service_probe_online": true,
+    "network_state_preserved": true,
+    "online_ethernet_presented": true,
+    "playback_processes_restored": true,
+    "player_restored": true,
+    "retained_context_preserved": true,
+    "settings_cleanup_complete": true
+  },
+  "passed": true,
+  "schema": "dadooh.c20.connectivity_indicator_board_probe.v1"
+}

@@ -1,0 +1,25 @@
+{
+  "generated_at_utc": "2026-07-15T06:07:19Z",
+  "guardrails": {
+    "credentials_collected": false,
+    "external_connectivity_probe": true,
+    "history_persisted": false,
+    "network_changed": false,
+    "read_only_commands_only": true,
+    "speed_test_executed": false,
+    "ssid_collected": false,
+    "wifi_rescan_executed": false,
+    "writer_called": false
+  },
+  "internet": "online",
+  "read_only_checks": {
+    "active_connections": "ok",
+    "active_wifi_signal": "not_run",
+    "default_route": "ok",
+    "device_status": "ok",
+    "service_reachability": "ok"
+  },
+  "schema_version": "dadooh.c20.connectivity_indicator.v1",
+  "transport": "ethernet",
+  "wifi_signal": "unknown"
+}

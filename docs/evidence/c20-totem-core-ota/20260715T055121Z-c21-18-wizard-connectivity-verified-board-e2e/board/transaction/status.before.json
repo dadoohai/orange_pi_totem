@@ -1,0 +1,61 @@
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c21.14-wizard-connectivity-20260715T003032Z-4835ca8",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-15T01:31:59Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-15T01:15:39Z",
+      "path": "/data/core/totem/releases/c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26",
+      "payload_sha256": "3e84358d6745b31e3232680b8d3e10c1048e5e81f8b7fca921e05dbd5deaefea",
+      "source": "local:dadooh-totem-core-c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "0c08a26ec1be2d1bd5973b56ac47f48e4f4f0167",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-15T01:32:06Z",
+      "source": "local:dadooh-totem-core-c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26.manifest.json",
+      "started_at_utc": "2026-07-15T01:31:52Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c21.15-wizard-connectivity-bounded-20260715T011533Z-0c08a26"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-15T01:31:49Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-15T00:30:33Z",
+      "path": "/data/core/totem/releases/c21.14-wizard-connectivity-20260715T003032Z-4835ca8",
+      "payload_sha256": "f324098458e0c50e472af0902f9216ef82d4c99dc1c1975976f3af07f186a8f6",
+      "source": "local:dadooh-totem-core-c21.14-wizard-connectivity-20260715T003032Z-4835ca8.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "4835ca8520370582f273cd0afd53b032dcc48fb3",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.14-wizard-connectivity-20260715T003032Z-4835ca8",
+      "via": "manual_rollback"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-14T17:32:45Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}

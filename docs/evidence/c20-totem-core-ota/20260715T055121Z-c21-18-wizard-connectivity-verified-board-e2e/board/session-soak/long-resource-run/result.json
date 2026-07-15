@@ -1,0 +1,65 @@
+{
+  "final_checks": {
+    "config_preserved": true,
+    "network_state_preserved": true,
+    "player_restarts_preserved": true,
+    "player_restored": true,
+    "retained_context_preserved": true,
+    "settings_cleanup_complete": true
+  },
+  "non_claims": [
+    "not_a_24_hour_soak",
+    "not_proof_against_slower_resource_leaks"
+  ],
+  "passed": true,
+  "resource_summary": {
+    "checks": {
+      "child_count_bounded": true,
+      "connectivity_refresh_exercised": true,
+      "duration_reached": true,
+      "fd_growth_bounded": true,
+      "refresh_files_bounded": true,
+      "rss_range_bounded_24mb": true,
+      "screen_ring_bounded": true,
+      "thread_growth_bounded": true
+    },
+    "child_count": {
+      "first": 0,
+      "last": 0,
+      "max": 0
+    },
+    "connectivity_worker_sample_count": 42,
+    "fd_count": {
+      "first": 6,
+      "last": 6,
+      "max": 12
+    },
+    "observed_duration_sec": 600,
+    "refresh_file_count": {
+      "first": 0,
+      "last": 0,
+      "max": 0
+    },
+    "requested_duration_sec": 600,
+    "resource_checks_passed": true,
+    "rss_kb": {
+      "first": 44816,
+      "last": 44816,
+      "max": 44820,
+      "min": 44816
+    },
+    "sample_count": 538,
+    "schema": "dadooh.c20.connectivity_session_soak.v1",
+    "screen_count": {
+      "first": 1,
+      "last": 1,
+      "max": 1
+    },
+    "thread_count": {
+      "first": 1,
+      "last": 1,
+      "max": 2
+    }
+  },
+  "schema": "dadooh.c20.connectivity_session_soak.v1"
+}

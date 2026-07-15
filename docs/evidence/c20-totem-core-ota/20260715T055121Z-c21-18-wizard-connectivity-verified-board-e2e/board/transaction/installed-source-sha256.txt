@@ -1,0 +1,2 @@
+05082fc80f6baed4f57548dd5c0312a3c681ae14a52772e82133c409a1b19945  /data/core/totem/current/bin/totem_wifi_nm_adapter.py
+dfc216cfb2659197742a81ff84f56d111ae5cf6b0a21619b4b2112f0dbb532dd  /data/core/totem/current/bin/totem_setup_visual_wizard.py
