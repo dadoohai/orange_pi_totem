@@ -34,7 +34,7 @@ import time
 import tty
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 from urllib import error as urllib_error
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
@@ -105,6 +105,11 @@ CLOCK_IMPLAUSIBLE_LABEL = "Hora nao ajustada"
 CLOCK_MIN_PLAUSIBLE_YEAR = 2024
 CLOCK_MAX_PLAUSIBLE_YEAR = 2100
 DISPLAY_TIMEZONE_NAME = "America/Sao_Paulo"
+CONNECTIVITY_INDICATOR_REFRESH_SEC = 5.0
+CONNECTIVITY_INDICATOR_TIMEOUT_SEC = 1
+CONNECTIVITY_INDICATOR_START = "<!-- dadooh-connectivity-indicator:start -->"
+CONNECTIVITY_INDICATOR_END = "<!-- dadooh-connectivity-indicator:end -->"
+MAX_SCREEN_ARTIFACTS = 64
 ACTIVE_SETTINGS_CONTEXT_MAX_AGE_SEC = 300
 TEXT_INPUT_MIN_RENDER_INTERVAL_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_RENDER_INTERVAL_SEC", "0.10"))
 TEXT_INPUT_REPEAT_DRAIN_SEC = float(os.environ.get("TOTEM_VISUAL_WIZARD_INPUT_REPEAT_DRAIN_SEC", "0.035"))
@@ -205,6 +210,12 @@ TEXT_RE = re.compile(r"<text\b([^>]*)>(.*?)</text>", re.IGNORECASE | re.DOTALL)
 TSPAN_RE = re.compile(r"<tspan\b([^>]*)>(.*?)</tspan>", re.IGNORECASE | re.DOTALL)
 SVG_RE = re.compile(r"<svg\b([^>]*)>", re.IGNORECASE)
 _CLOCK_LABEL_AUTO = object()
+_CONNECTIVITY_SNAPSHOT_AUTO = object()
+_CONNECTIVITY_RUNTIME_ENABLED = False
+_CONNECTIVITY_CACHE: dict[str, Any] | None = None
+_CONNECTIVITY_CACHE_AT = 0.0
+_CONNECTIVITY_REFRESH_CALLBACK: Callable[[], None] | None = None
+_CONNECTIVITY_NEXT_REFRESH_AT = 0.0
 
 
 class VisualWizardAbort(RuntimeError):
@@ -479,6 +490,155 @@ def header_note_position(layout: ScreenLayout) -> tuple[int, int]:
     if layout.portrait:
         return layout.width - layout.margin_x - 220, 58
     return layout.width - layout.margin_x - 156, 54
+
+
+def normalize_connectivity_snapshot(snapshot: dict[str, Any] | None) -> dict[str, str]:
+    raw = snapshot if isinstance(snapshot, dict) else {}
+    transport = str(raw.get("transport", "unknown")).strip().lower()
+    wifi_signal = str(raw.get("wifi_signal", "unknown")).strip().lower()
+    internet = str(raw.get("internet", "unknown")).strip().lower()
+    if transport not in {"ethernet", "wifi", "none", "unknown"}:
+        transport = "unknown"
+    if wifi_signal not in {"weak", "medium", "strong", "unknown"} or transport != "wifi":
+        wifi_signal = "unknown"
+    if internet not in {"online", "limited", "portal", "offline", "unknown"}:
+        internet = "unknown"
+    if transport == "none":
+        internet = "offline"
+    elif transport == "unknown" and internet == "online":
+        internet = "unknown"
+    return {
+        "transport": transport,
+        "wifi_signal": wifi_signal,
+        "internet": internet,
+    }
+
+
+def set_connectivity_indicator_runtime(enabled: bool) -> None:
+    global _CONNECTIVITY_RUNTIME_ENABLED, _CONNECTIVITY_CACHE, _CONNECTIVITY_CACHE_AT
+    _CONNECTIVITY_RUNTIME_ENABLED = bool(enabled)
+    _CONNECTIVITY_CACHE = None
+    _CONNECTIVITY_CACHE_AT = 0.0
+
+
+def set_connectivity_refresh_callback(callback: Callable[[], None] | None) -> None:
+    global _CONNECTIVITY_REFRESH_CALLBACK, _CONNECTIVITY_NEXT_REFRESH_AT
+    _CONNECTIVITY_REFRESH_CALLBACK = callback
+    _CONNECTIVITY_NEXT_REFRESH_AT = (
+        time.monotonic() + CONNECTIVITY_INDICATOR_REFRESH_SEC if callback is not None else 0.0
+    )
+
+
+def refresh_connectivity_if_due(now_monotonic: float | None = None) -> bool:
+    global _CONNECTIVITY_NEXT_REFRESH_AT
+    callback = _CONNECTIVITY_REFRESH_CALLBACK
+    if callback is None:
+        return False
+    now = time.monotonic() if now_monotonic is None else float(now_monotonic)
+    if now < _CONNECTIVITY_NEXT_REFRESH_AT:
+        return False
+    _CONNECTIVITY_NEXT_REFRESH_AT = now + CONNECTIVITY_INDICATOR_REFRESH_SEC
+    try:
+        callback()
+    except Exception:
+        return False
+    return True
+
+
+def current_connectivity_snapshot(now_monotonic: float | None = None) -> dict[str, str]:
+    global _CONNECTIVITY_CACHE, _CONNECTIVITY_CACHE_AT
+    if not _CONNECTIVITY_RUNTIME_ENABLED:
+        return normalize_connectivity_snapshot(None)
+    current = time.monotonic() if now_monotonic is None else float(now_monotonic)
+    if (
+        _CONNECTIVITY_CACHE is not None
+        and current >= _CONNECTIVITY_CACHE_AT
+        and current - _CONNECTIVITY_CACHE_AT < CONNECTIVITY_INDICATOR_REFRESH_SEC
+    ):
+        return dict(_CONNECTIVITY_CACHE)
+    try:
+        snapshot = wifi_adapter.collect_connectivity_indicator(
+            timeout_sec=CONNECTIVITY_INDICATOR_TIMEOUT_SEC,
+        )
+    except Exception:
+        snapshot = None
+    _CONNECTIVITY_CACHE = normalize_connectivity_snapshot(snapshot)
+    _CONNECTIVITY_CACHE_AT = current
+    return dict(_CONNECTIVITY_CACHE)
+
+
+def connectivity_indicator_position(layout: ScreenLayout) -> tuple[int, int]:
+    note_x, _ = header_note_position(layout)
+    return note_x - 88, 34
+
+
+def connectivity_indicator_svg(layout: ScreenLayout, snapshot: dict[str, Any] | None) -> str:
+    state = normalize_connectivity_snapshot(snapshot)
+    transport = state["transport"]
+    wifi_signal = state["wifi_signal"]
+    internet = state["internet"]
+    x, y = connectivity_indicator_position(layout)
+
+    if transport == "ethernet":
+        transport_svg = (
+            f'<rect x="{x + 9}" y="{y + 7}" width="28" height="19" rx="4" fill="#22d3ee"/>'
+            f'<rect x="{x + 12}" y="{y + 10}" width="22" height="10" rx="2" fill="#0f2533"/>'
+            + "".join(
+                f'<rect x="{x + 14 + index * 5}" y="{y + 10}" width="2" height="5" fill="#22d3ee"/>'
+                for index in range(4)
+            )
+            + f'<rect x="{x + 20}" y="{y + 25}" width="6" height="3" rx="1" fill="#22d3ee"/>'
+        )
+    else:
+        active_bars = {"weak": 1, "medium": 2, "strong": 4}.get(wifi_signal, 0) if transport == "wifi" else 0
+        heights = (6, 10, 14, 18)
+        transport_svg = "".join(
+            f'<rect x="{x + 9 + index * 7}" y="{y + 26 - height}" width="4" height="{height}" rx="2" '
+            f'fill="{"#22d3ee" if index < active_bars else "#334155"}"/>'
+            for index, height in enumerate(heights)
+        )
+
+    badge_color, badge_symbol = {
+        "online": ("#22c55e", "OK"),
+        "limited": ("#f59e0b", "!"),
+        "portal": ("#f59e0b", "!"),
+        "offline": ("#ef4444", "X"),
+        "unknown": ("#64748b", "?"),
+    }[internet]
+    badge_text_x = x + 54 if badge_symbol == "OK" else x + 58
+    badge_font_size = 10 if badge_symbol == "OK" else 14
+    return (
+        f'<g id="connectivity-indicator" data-transport="{transport}" '
+        f'data-wifi-signal="{wifi_signal}" data-internet="{internet}">'
+        f'<rect x="{x}" y="{y}" width="76" height="34" rx="8" fill="#172033"/>'
+        f'{transport_svg}'
+        f'<rect x="{x + 45}" y="{y + 7}" width="2" height="20" rx="1" fill="#334155"/>'
+        f'<rect x="{x + 51}" y="{y + 7}" width="20" height="20" rx="6" fill="{badge_color}"/>'
+        f'<text x="{badge_text_x}" y="{y + 22}" font-family="Arial, DejaVu Sans, sans-serif" '
+        f'font-size="{badge_font_size}" font-weight="700" fill="#07111f">{badge_symbol}</text>'
+        "</g>"
+    )
+
+
+def connectivity_indicator_block(layout: ScreenLayout, snapshot: dict[str, Any] | None) -> str:
+    return (
+        f"{CONNECTIVITY_INDICATOR_START}\n"
+        f"  {connectivity_indicator_svg(layout, snapshot)}\n"
+        f"  {CONNECTIVITY_INDICATOR_END}"
+    )
+
+
+def replace_connectivity_indicator(svg: str, snapshot: dict[str, Any] | None) -> str:
+    start = svg.find(CONNECTIVITY_INDICATOR_START)
+    end = svg.find(CONNECTIVITY_INDICATOR_END)
+    if start < 0 or end < start:
+        return svg
+    end += len(CONNECTIVITY_INDICATOR_END)
+    rotation_match = re.search(r'data-display-rotation-deg="(-?\d+)"', svg[:start])
+    if rotation_match is None:
+        return svg
+    layout = screen_layout(int(rotation_match.group(1)))
+    return svg[:start] + connectivity_indicator_block(layout, snapshot) + svg[end:]
 
 
 def step_indicator(
@@ -855,6 +1015,7 @@ def build_screen_svg(
     focus_area: str = "content",
     focused_step: int | None = None,
     clock_label: object = _CLOCK_LABEL_AUTO,
+    connectivity_snapshot: object = _CONNECTIVITY_SNAPSHOT_AUTO,
 ) -> str:
     layout = screen_layout(layout_rotation_deg)
     options_svg = (
@@ -892,6 +1053,17 @@ def build_screen_svg(
     if suppress_landscape_info_panel and not layout.portrait:
         safe_panel_items = []
     layout_note = header_note_label(clock_label)
+    if connectivity_snapshot is _CONNECTIVITY_SNAPSHOT_AUTO:
+        header_connectivity = current_connectivity_snapshot()
+    elif isinstance(connectivity_snapshot, dict):
+        header_connectivity = normalize_connectivity_snapshot(connectivity_snapshot)
+    else:
+        header_connectivity = None
+    connectivity_svg = (
+        connectivity_indicator_block(layout, header_connectivity)
+        if header_connectivity is not None
+        else ""
+    )
     panel_svg = info_panel(
         safe_panel_items,
         title=panel_title,
@@ -906,6 +1078,7 @@ def build_screen_svg(
   <rect x="{layout.margin_x}" y="32" width="120" height="38" rx="8" fill="{VISUAL["surface_active"]}" stroke="{accent}"/>
   <text x="{layout.margin_x + 18}" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="{VISUAL["text"]}">{BRAND}</text>
   <text x="{layout.margin_x + 140}" y="57" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="{VISUAL["text_dim"]}">{TITLE}</text>
+  {connectivity_svg}
   <text x="{note_x}" y="{note_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="{VISUAL["text_dim"]}">{escape_text(layout_note)}</text>
   {step_indicator(active_step, layout_rotation_deg=layout_rotation_deg, focused_step=focused_step, focus_area=focus_area)}
   <text x="{layout.margin_x}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="{VISUAL["text"]}">{escape_text(title)}</text>
@@ -1170,6 +1343,9 @@ class VisualDisplay:
         self.console_fd: int | None = None
         self.console_graphics_mode = False
         self.previous_signal_handlers: dict[int, Any] = {}
+        self.current_screen_id = ""
+        self.current_svg = ""
+        self.refresh_slot = 0
         prepare_private_dir(self.screens_dir)
         try:
             if enabled:
@@ -1232,7 +1408,14 @@ class VisualDisplay:
     def write_svg(self, screen_id: str, svg: str) -> pathlib.Path:
         safe_name = "".join(char if char.isalnum() or char in "._-" else "_" for char in screen_id)
         self.sequence += 1
-        path = self.screens_dir / f"{self.sequence:04d}-{safe_name}.svg"
+        slot = ((self.sequence - 1) % MAX_SCREEN_ARTIFACTS) + 1
+        path = self.screens_dir / f"{slot:04d}-{safe_name}.svg"
+        for stale_path in self.screens_dir.glob(f"{slot:04d}-*.svg"):
+            if stale_path != path:
+                try:
+                    stale_path.unlink()
+                except FileNotFoundError:
+                    pass
         atomic_write_private_text(path, svg, self.screens_dir)
         return path
 
@@ -1327,7 +1510,36 @@ class VisualDisplay:
             time.sleep(0.03)
         return False
 
+    def refresh_connectivity_header(self) -> bool:
+        if not self.current_svg or CONNECTIVITY_INDICATOR_START not in self.current_svg:
+            return False
+        refreshed_svg = replace_connectivity_indicator(
+            self.current_svg,
+            current_connectivity_snapshot(),
+        )
+        if refreshed_svg == self.current_svg:
+            return False
+        self.current_svg = refreshed_svg
+        if not self.enabled:
+            return True
+        if self.framebuffer is not None:
+            self.framebuffer.render(refreshed_svg)
+            return True
+
+        self.refresh_slot = (self.refresh_slot + 1) % 2
+        path = self.screens_dir / f"connectivity-refresh-{self.refresh_slot}.svg"
+        atomic_write_private_text(path, refreshed_svg, self.screens_dir)
+        if self.process is None:
+            self.ensure_started(path)
+        elif not self.send_command(["loadfile", str(path), "replace"]):
+            self._stop_mpv_process()
+            self.ensure_started(path)
+        self.wait_for_loaded_path(path)
+        return True
+
     def show(self, screen_id: str, svg: str) -> pathlib.Path:
+        self.current_screen_id = screen_id
+        self.current_svg = svg
         path = self.write_svg(screen_id, svg)
         if not self.enabled:
             return path
@@ -1381,9 +1593,19 @@ class RawKeyboard:
 
 
 def read_key(timeout_sec: float | None = None) -> str:
-    if timeout_sec is not None:
-        ready, _, _ = select.select([sys.stdin], [], [], max(0.0, timeout_sec))
-        if not ready:
+    deadline = None if timeout_sec is None else time.monotonic() + max(0.0, timeout_sec)
+    while True:
+        now = time.monotonic()
+        wait_sec = None if deadline is None else max(0.0, deadline - now)
+        if _CONNECTIVITY_REFRESH_CALLBACK is not None:
+            refresh_wait = max(0.0, _CONNECTIVITY_NEXT_REFRESH_AT - now)
+            wait_sec = refresh_wait if wait_sec is None else min(wait_sec, refresh_wait)
+        ready, _, _ = select.select([sys.stdin], [], [], wait_sec)
+        if ready:
+            break
+        now = time.monotonic()
+        refresh_connectivity_if_due(now)
+        if deadline is not None and now >= deadline:
             return "timeout"
     data = os.read(sys.stdin.fileno(), 1)
     if data in {b"\r", b"\n"}:
@@ -4660,6 +4882,8 @@ def run_visual_wizard(
     private_settings_context_path: pathlib.Path | None = None,
 ) -> dict[str, Any]:
     display = VisualDisplay(out_dir, mpv_bin=mpv_bin, enabled=True)
+    set_connectivity_indicator_runtime(True)
+    set_connectivity_refresh_callback(display.refresh_connectivity_header)
     c1523_phase("wizard_started")
     private_context = load_private_settings_context(private_settings_context_path) if private_settings_context_path else {}
     initial_rotation_deg = initial_rotation_from_context(private_context)
@@ -4888,7 +5112,11 @@ def run_visual_wizard(
                     active_step = int(exc.step)
                     entry_focus_area = exc.focus_area
     finally:
-        display.stop()
+        try:
+            set_connectivity_refresh_callback(None)
+            display.stop()
+        finally:
+            set_connectivity_indicator_runtime(False)
 
 
 def generate_preview_screens(out_dir: pathlib.Path) -> None:
@@ -5687,6 +5915,167 @@ def run_self_test() -> None:
             clock_label=CLOCK_IMPLAUSIBLE_LABEL,
         )
         assert_true(CLOCK_IMPLAUSIBLE_LABEL in clock_invalid_svg, "invalid clocks should render the approved fallback")
+        ethernet_online_svg = build_screen_svg(
+            active_step=1,
+            title="Wi-Fi",
+            subtitle="Escolha o Wi-Fi.",
+            footer="Enter confirma",
+            options=list(NETWORK_OPTIONS),
+            clock_label=fixed_clock,
+            connectivity_snapshot={"transport": "ethernet", "wifi_signal": "unknown", "internet": "online"},
+        )
+        assert_true('id="connectivity-indicator"' in ethernet_online_svg, "header should render connectivity")
+        assert_true('data-transport="ethernet"' in ethernet_online_svg, "Ethernet transport should be explicit")
+        assert_true('data-internet="online"' in ethernet_online_svg, "online state should be explicit")
+        assert_true('x="704" y="34" width="76" height="34"' in ethernet_online_svg, "landscape indicator should fit before the clock")
+        assert_true("#22c55e" in ethernet_online_svg and ">OK</text>" in ethernet_online_svg, "online should use color and text")
+        refreshed_offline_svg = replace_connectivity_indicator(
+            ethernet_online_svg,
+            {"transport": "none", "wifi_signal": "unknown", "internet": "offline"},
+        )
+        assert_true(
+            refreshed_offline_svg.count(CONNECTIVITY_INDICATOR_START) == 1
+            and refreshed_offline_svg.count(CONNECTIVITY_INDICATOR_END) == 1,
+            "periodic refresh should replace one indicator instead of accumulating markup",
+        )
+        assert_true(
+            'data-transport="none"' in refreshed_offline_svg
+            and 'data-internet="offline"' in refreshed_offline_svg,
+            "periodic refresh should replace the visible state",
+        )
+        wifi_limited_svg = build_screen_svg(
+            active_step=1,
+            title="Wi-Fi",
+            subtitle="Escolha o Wi-Fi.",
+            footer="Enter confirma",
+            options=list(NETWORK_OPTIONS),
+            layout_rotation_deg=90,
+            clock_label=fixed_clock,
+            connectivity_snapshot={"transport": "wifi", "wifi_signal": "medium", "internet": "limited"},
+        )
+        assert_true('data-transport="wifi"' in wifi_limited_svg, "Wi-Fi transport should be explicit")
+        assert_true('data-wifi-signal="medium"' in wifi_limited_svg, "Wi-Fi bucket should be explicit")
+        assert_true('data-internet="limited"' in wifi_limited_svg, "limited state should be explicit")
+        assert_true('x="412" y="34" width="76" height="34"' in wifi_limited_svg, "portrait indicator should fit before the clock")
+        assert_true("#f59e0b" in wifi_limited_svg and ">!</text>" in wifi_limited_svg, "limited should not rely on color alone")
+        offline_svg = connectivity_indicator_svg(
+            screen_layout(0),
+            {"transport": "none", "wifi_signal": "strong", "internet": "online"},
+        )
+        assert_true('data-transport="none"' in offline_svg, "absent transport should remain explicit")
+        assert_true('data-wifi-signal="unknown"' in offline_svg, "non-Wi-Fi transport must not claim signal")
+        assert_true('data-internet="offline"' in offline_svg, "absent transport must override stale online state")
+        assert_true("#ef4444" in offline_svg and ">X</text>" in offline_svg, "offline should not rely on color alone")
+        assert_true(
+            'id="connectivity-indicator"' not in build_screen_svg(
+                active_step=0,
+                title="Orientacao",
+                subtitle="Escolha a tela.",
+                footer="Enter confirma",
+                connectivity_snapshot=None,
+            ),
+            "explicit suppression should remain available to isolated renderer tests",
+        )
+        original_indicator_collector = wifi_adapter.collect_connectivity_indicator
+        indicator_calls: list[int] = []
+        try:
+            wifi_adapter.collect_connectivity_indicator = lambda timeout_sec: (
+                indicator_calls.append(timeout_sec)
+                or {"transport": "ethernet", "wifi_signal": "unknown", "internet": "online"}
+            )
+            set_connectivity_indicator_runtime(True)
+            first_snapshot = current_connectivity_snapshot(100.0)
+            second_snapshot = current_connectivity_snapshot(101.0)
+            refreshed_snapshot = current_connectivity_snapshot(106.0)
+            assert_true(first_snapshot == second_snapshot == refreshed_snapshot, "cache should preserve one bounded snapshot")
+            assert_true(len(indicator_calls) == 2, "indicator cache should refresh by replacement, not accumulate")
+            assert_true(CONNECTIVITY_INDICATOR_TIMEOUT_SEC == 1, "indicator reads should stay tightly bounded")
+            stale_calls = 0
+
+            def online_then_fail(timeout_sec: int) -> dict[str, str]:
+                nonlocal stale_calls
+                stale_calls += 1
+                if stale_calls == 1:
+                    return {"transport": "ethernet", "wifi_signal": "unknown", "internet": "online"}
+                raise TimeoutError("synthetic read timeout")
+
+            wifi_adapter.collect_connectivity_indicator = online_then_fail
+            set_connectivity_indicator_runtime(True)
+            assert_true(current_connectivity_snapshot(200.0)["internet"] == "online", "fresh proof may show online")
+            assert_true(
+                current_connectivity_snapshot(206.0)["internet"] == "unknown",
+                "expired positive cache must fail closed after a read timeout",
+            )
+
+            refresh_root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c20-connectivity-refresh-", dir="/tmp"))
+            refresh_display = VisualDisplay(refresh_root, enabled=False)
+            wifi_adapter.collect_connectivity_indicator = lambda timeout_sec: {
+                "transport": "ethernet",
+                "wifi_signal": "unknown",
+                "internet": "online",
+            }
+            set_connectivity_indicator_runtime(True)
+            refresh_display.show(
+                "bounded-refresh",
+                build_screen_svg(
+                    active_step=1,
+                    title="Wi-Fi",
+                    subtitle="Escolha o Wi-Fi.",
+                    footer="Enter confirma",
+                ),
+            )
+            wifi_adapter.collect_connectivity_indicator = lambda timeout_sec: {
+                "transport": "none",
+                "wifi_signal": "unknown",
+                "internet": "offline",
+            }
+            set_connectivity_indicator_runtime(True)
+            assert_true(refresh_display.refresh_connectivity_header(), "changed state should repaint the current screen")
+            assert_true(
+                'data-internet="offline"' in refresh_display.current_svg,
+                "repaint should expose the latest bounded snapshot",
+            )
+            assert_true(
+                len(list(refresh_display.screens_dir.glob("*.svg"))) == 1,
+                "periodic refresh must not create an unbounded screen history",
+            )
+            refresh_events: list[str] = []
+            set_connectivity_refresh_callback(lambda: refresh_events.append("refresh"))
+            scheduled_at = _CONNECTIVITY_NEXT_REFRESH_AT
+            assert_true(
+                not refresh_connectivity_if_due(scheduled_at - 0.01),
+                "refresh should not run before its fixed deadline",
+            )
+            assert_true(refresh_connectivity_if_due(scheduled_at), "refresh should run at its fixed deadline")
+            assert_true(
+                not refresh_connectivity_if_due(scheduled_at + 0.01),
+                "one deadline should trigger at most one refresh",
+            )
+            assert_true(len(refresh_events) == 1, "refresh scheduling should keep no event backlog")
+            shutil.rmtree(refresh_root, ignore_errors=True)
+
+            bounded_root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c20-screen-ring-", dir="/tmp"))
+            bounded_display = VisualDisplay(bounded_root, enabled=False)
+            for index in range(MAX_SCREEN_ARTIFACTS + 7):
+                bounded_display.show(
+                    f"screen-{index}",
+                    build_screen_svg(
+                        active_step=0,
+                        title="Tela temporaria",
+                        subtitle="Cache visual limitado.",
+                        footer="Enter continua",
+                        connectivity_snapshot=None,
+                    ),
+                )
+            assert_true(
+                len(list(bounded_display.screens_dir.glob("*.svg"))) == MAX_SCREEN_ARTIFACTS,
+                "temporary wizard screens should use a fixed-size ring",
+            )
+            shutil.rmtree(bounded_root, ignore_errors=True)
+        finally:
+            wifi_adapter.collect_connectivity_indicator = original_indicator_collector
+            set_connectivity_refresh_callback(None)
+            set_connectivity_indicator_runtime(False)
         assert_true(
             text_field_apply_key("abcdef", "backspace", max_length=128, error="")[0] == "abcde",
             "Backspace should remove one character semantically",

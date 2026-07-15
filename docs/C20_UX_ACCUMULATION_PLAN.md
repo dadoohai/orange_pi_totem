@@ -527,6 +527,39 @@ Conclusao funcional: os tres itens estao fechados. C21.13 permanece candidata
 acumulada de homologacao; `prod14` + C25B + C21.12 permanece a referencia de
 distribuicao e rollback ate promocao explicita.
 
+## Rodada C20.16 - Estado discreto de conectividade
+
+Objetivo: mostrar no cabecalho do wizard, ao lado da hora, o transporte atual e
+o estado de internet sem transformar a tela em painel tecnico.
+
+Contrato funcional:
+
+- Ethernet ou Wi-Fi sao mostrados por simbolo; Wi-Fi usa sinal fraco, medio ou
+  forte;
+- internet usa `OK`, `!`, `X` ou `?`, com cor e simbolo para nao depender so de
+  cor;
+- `online` exige a mesma interface conectada, ativa e usada pela rota, alem do
+  estado `full` cacheado pelo NetworkManager;
+- leitura ausente, inconsistente, expirada ou ambigua falha fechada para `?`;
+- nao ha probe externo, speedtest, rescan, SSID, credencial ou mudanca de rede.
+
+Contrato 24/7:
+
+- existe somente um snapshot em memoria, substituido a cada leitura;
+- o refresh ocorre a cada cinco segundos enquanto o wizard esta aberto, sem
+  thread, fila, historico ou persistencia;
+- o framebuffer nao gera arquivo por refresh; o fallback MPV reutiliza dois
+  arquivos temporarios;
+- os SVGs temporarios da sessao usam anel fixo de 64 arquivos.
+
+Estado em 2026-07-14: implementacao e galeria off-board aprovadas por auditorias
+independentes de semantica de rede e UX, sem blocker. Self-tests do adapter e do
+wizard, replay de 9 cenarios/24 assercoes, policy static e leitura read-only na
+placa passaram. A placa reportou `ethernet + online`, sem probe externo nem
+escrita. Falta somente empacotar como proxima candidata `totem-core`, exercitar
+apply/rollback e confirmar a captura real; isso nao promove stable nem altera a
+imagem de referencia.
+
 ## Rodada C25 - Estados Visiveis
 
 C25 continua o acumulo por `totem-core` com um contrato visual verdadeiro para

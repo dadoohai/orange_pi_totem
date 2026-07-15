@@ -4394,9 +4394,13 @@ exec "$C18_REAL_PYTHON3" "$@"
         self.assertLess(display_source.index("KD_GRAPHICS"), display_source.index("KD_TEXT"))
         self.assertIn("signal.SIGTERM", display_source)
         self.assertIn("signal.SIGHUP", display_source)
-        restart_branch = display_source[
-            display_source.index("if RESTART_MPV_PER_SCREEN:") :
-            display_source.index("if self.process is None:")
+        show_source = display_source[
+            display_source.index("    def show(") :
+            display_source.index("\n    def stop(")
+        ]
+        restart_branch = show_source[
+            show_source.index("if RESTART_MPV_PER_SCREEN:") :
+            show_source.index("if self.process is None:")
         ]
         self.assertIn("self._stop_mpv_process()", restart_branch)
         self.assertNotIn("self.stop()", restart_branch)
