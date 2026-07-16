@@ -1,0 +1,62 @@
+{
+  "artifact_id": "20260716T202728Z-c21-22-wifi-state-recovery-board-e2e",
+  "board_final": {
+    "current": "c21.22-wifi-state-recovery-20260716T194811Z-9526cf9",
+    "ethernet_connected": true,
+    "existing_wifi_connected": true,
+    "player_active": true,
+    "player_restarts": 0,
+    "previous": "c21.21-open-wifi-20260716T171724Z-4b294c8",
+    "settings_inactive": true,
+    "stable_policy_restored": true,
+    "timer_enabled_and_active": true
+  },
+  "candidate": {
+    "channel": "homologation",
+    "component": "totem-core",
+    "manifest_sha256": "9ee79d9cf98935d88fd245f092a6d84afcfee7204063d91074870a901af0983d",
+    "payload_sha256": "a98c3ad1eec78ccd21e520dc518517085d3e1b9c00da776319458cce1e523d60",
+    "source_commit": "9526cf932684e50cfc69837bae4c01be84d48cec",
+    "version": "c21.22-wifi-state-recovery-20260716T194811Z-9526cf9"
+  },
+  "checks": {
+    "board_preview_generation_passed": true,
+    "board_read_only_network_collection_passed": true,
+    "connectivity_transport_mismatch_fails_unknown": true,
+    "exact_package_release_gate_84_of_84": true,
+    "failure_copy_is_sanitized": true,
+    "generic_release_gate_84_of_84": true,
+    "governed_apply_rollback_reapply": true,
+    "installed_self_tests_passed": true,
+    "player_preserved_without_restart": true,
+    "post_docs_policy_static_81_of_81": true,
+    "post_reapply_observation_stable": true,
+    "public_artifacts_exclude_network_identifiers_and_credentials": true,
+    "replay_12_scenarios_53_assertions": true,
+    "stable_policy_blocked_homologation": true,
+    "visual_gallery_119_of_119": true
+  },
+  "independent_pre_board_audits": {
+    "board_operation": "go_conditioned",
+    "live_probe": "go_only_if_private_seed_absent",
+    "scope_review": "no_implementation_blocker"
+  },
+  "independent_final_audits": {
+    "code_and_claim_review": "go",
+    "evidence_initial_review": "go_with_archive_completeness_finding",
+    "evidence_reaudit": "go_no_blocker",
+    "unresolved_blockers": 0
+  },
+  "non_claims": [
+    "not_a_stable_promotion",
+    "not_a_public_release",
+    "not_a_new_reference_image",
+    "not_captive_portal_detection",
+    "not_captive_portal_browser",
+    "not_real_open_ap_association_proof",
+    "not_real_wifi_failure_injection",
+    "not_interactive_framebuffer_acceptance"
+  ],
+  "passed": true,
+  "schema": "dadooh.c20.wifi_state_recovery_candidate_closure.v1"
+}

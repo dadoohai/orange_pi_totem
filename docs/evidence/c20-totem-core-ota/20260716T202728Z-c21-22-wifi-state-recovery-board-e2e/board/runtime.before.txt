@@ -1,0 +1,15 @@
+utc=2026-07-16T20:28:16Z
+boot_id=41dd24dd-a601-462e-92af-64fd6f6a3def
+current=releases/c21.21-open-wifi-20260716T171724Z-4b294c8
+previous=releases/c21.20-wifi-product-flow-20260716T154014Z-1d36dd3
+player_active=active
+player_restarts=0
+settings_active=inactive
+timer_active=active
+timer_enabled=enabled
+agent_service_active=inactive
+update_lock_free=true
+settings_lock=absent
+drm_card0-HDMI-A-1=connected
+end0:ethernet:connected
+wlan0:wifi:connected

@@ -681,7 +681,8 @@ auto-pull publico.
 
 Estado: itens 1 e 2 fechados na placa pela C21.20. O item 3 foi implementado,
 empacotado e exercitado por OTA na C21.21; falta somente a prova de associacao
-em um AP aberto real.
+em um AP aberto real. Os itens 4, 5 e 6 foram fechados na candidata C21.22 com
+gates, replay, galeria, pacote instalado e roundtrip OTA.
 
 Objetivo: transformar a base transacional ja comprovada em uma jornada curta,
 verdadeira e utilizavel por cliente. A ordem abaixo prioriza maior valor com
@@ -773,6 +774,37 @@ Limite honesto: a placa nao trocou sua rede atual porque nao havia AP aberto
 disponivel. Assim, M9.3 esta pronta como candidata e validada no OTA, mas o
 aceite fisico final de associacao aberta permanece pendente. Isso nao bloqueia
 o inicio dos itens 4 e 5.
+
+### Rodada M9.4-6 - Estados, Verdade E Recuperacao
+
+Implementado:
+
+- lista vazia, cache anterior, atualizacao e indisponibilidade sao estados
+  visuais distintos;
+- Ethernet, Wi-Fi associado e acesso ao servico Dadooh usam estados
+  `online`, `limited`, `offline` e `unknown`;
+- uma prova observada pela rota default de um transporte nao e atribuida ao
+  outro;
+- autenticacao, timeout, rede indisponivel, sinal fraco, ausencia de IPv4,
+  dispositivo indisponivel e falha generica recebem copy segura;
+- retry direto preserva contexto quando a falha nao exige corrigir senha;
+- paisagem e retrato permanecem cobertos sem publicar identificadores de rede,
+  credenciais ou log bruto.
+
+Fechamento tecnico: C21.22 passou os dois gates `84/84`, replay com 12
+cenarios e 53 assertions, e galeria com 119/119 renders. A policy stable
+bloqueou a candidata com rc `41`; apply, rollback para C21.21 e reaplicacao
+passaram com rc `0`. Os self-tests e previews do pacote instalado passaram.
+Player, Ethernet, Wi-Fi, timer e policy terminaram saudaveis, sem restart.
+Evidencia:
+`docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/`.
+
+Limites honestos: portal cativo continua fora do contrato e normaliza para
+estado inconclusivo; o AP aberto fisico segue pendente; falhas Wi-Fi reais nao
+foram injetadas nesta rodada. O probe interativo de framebuffer nao foi rodado
+porque seu preflight encontrou uma seed privada de homologacao. A evidencia
+visual desta rodada e a galeria revisada mais os previews gerados pelo pacote
+instalado na placa.
 
 ## Criterio De Fechamento Da Frente
 

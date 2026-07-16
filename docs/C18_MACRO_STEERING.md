@@ -303,7 +303,7 @@ Plano de decisao e criterios:
 
 Status: em andamento desde 2026-07-16; itens 1 e 2 fechados na C21.20. O item
 3 esta implementado e validado no pacote/OTA C21.21, com associacao em AP
-aberto real ainda pendente.
+aberto real ainda pendente. Os itens 4, 5 e 6 fecharam na candidata C21.22.
 
 Valor: permitir que um usuario configure a conectividade local sem caminho
 impossivel, mensagem enganosa ou repeticao desnecessaria, preservando a rede
@@ -322,11 +322,12 @@ Ordem macro:
 1. tornar opcoes, cancelamento e mensagens fieis ao estado real;
 2. reduzir passos e preservar contexto em nova tentativa;
 3. suportar redes abertas comuns sem senha;
-4. corrigir estados visuais e explicar Ethernet, Wi-Fi e internet;
-5. diferenciar falhas recuperaveis sem expor diagnostico bruto;
-6. detectar portal cativo;
-7. adicionar navegador temporario e restrito somente para portal;
-8. fechar todos os caminhos na placa; logica/orquestracao segue por
+4. corrigir estados visuais;
+5. explicar Ethernet, Wi-Fi e acesso ao servico Dadooh;
+6. diferenciar falhas recuperaveis sem expor diagnostico bruto;
+7. detectar portal cativo;
+8. adicionar navegador temporario e restrito somente para portal;
+9. fechar todos os caminhos na placa; logica/orquestracao segue por
    `totem-core`, e eventual runtime novo de navegador entra explicitamente na
    proxima imagem.
 
@@ -353,6 +354,16 @@ terminou em C21.21, policy/timer stable e ambas as conexoes atuais preservadas.
 Falta somente repetir o fluxo com um AP aberto fisico; esse non-claim nao
 impede avancar estados visuais e estado real da conexao. Evidencia:
 `docs/evidence/c20-totem-core-ota/20260716T183703Z-c21-21-open-wifi-board-e2e/`.
+
+Fechamento M9.4-6 em 2026-07-16: C21.22 adicionou estados visuais completos,
+estado real de transporte/acesso ao servico Dadooh e diagnostico/retry
+sanitizado. Os gates passaram `84/84`; stable bloqueou com rc `41`; apply,
+rollback para C21.21 e reaplicacao passaram. O pacote instalado gerou previews
+e passou self-tests e coleta de rede somente leitura. A placa terminou em
+C21.22, com C21.21 como retorno, player sem restart, conexoes preservadas e
+policy/timer stable restaurados. Portal cativo e o proximo recorte; AP aberto
+fisico continua pendente sem contaminar este claim. Evidencia:
+`docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/`.
 
 ## Checklist Contra Hiperfoco
 

@@ -1,0 +1,25 @@
+{
+  "checks": {
+    "after_apply_exact": true,
+    "after_rollback_exact": true,
+    "apply_0": true,
+    "baseline_exact": true,
+    "final_exact": true,
+    "final_payload_exact": true,
+    "final_source_exact": true,
+    "final_stable": true,
+    "gallery_green": true,
+    "manifest_payload": true,
+    "manifest_source": true,
+    "package_gate_84": true,
+    "policy_restored_identical": true,
+    "post_docs_static_green": true,
+    "reapply_0": true,
+    "replay_green": true,
+    "rollback_0": true,
+    "source_gate_84": true,
+    "stable_block_41": true
+  },
+  "passed": true,
+  "schema": "dadooh.c21.22.closure_verification.v1"
+}

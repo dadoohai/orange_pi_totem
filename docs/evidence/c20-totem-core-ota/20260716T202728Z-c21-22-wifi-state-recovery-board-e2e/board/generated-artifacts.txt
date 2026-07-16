@@ -1,0 +1,23 @@
+screens/0001-01-orientation.svg 15145
+screens/0002-05-review-pending.svg 6503
+screens/0003-01-orientation-confirm-landscape.svg 13705
+screens/0004-01-orientation-confirm-portrait.svg 14670
+screens/0005-02-connection.svg 7624
+screens/0006-02-wifi-list-page-1.svg 8126
+screens/0007-02-wifi-list-page-2.svg 8138
+screens/0008-02-wifi-list-refreshing.svg 8110
+screens/0009-02-wifi-list-empty.svg 4961
+screens/0010-02-wifi-psk-hidden.svg 5633
+screens/0011-02-wifi-psk-visible.svg 5668
+screens/0012-03-environment.svg 6671
+screens/0013-03-environment-manual.svg 5445
+screens/0014-03-environment-pairing-wait.svg 51879
+screens/0015-03-environment-pairing-authorized.svg 5448
+screens/0016-03-environment-validating.svg 4514
+screens/0017-03-environment-empty-content.svg 4773
+screens/0018-03-environment-not-found.svg 4743
+screens/0019-05-review.svg 6236
+screens/0020-06-complete.svg 4544
+read_only
+status.json 1536
+summary.txt 703

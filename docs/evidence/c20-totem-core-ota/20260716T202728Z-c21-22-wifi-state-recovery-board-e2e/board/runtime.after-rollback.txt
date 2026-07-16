@@ -1,0 +1,8 @@
+utc=2026-07-16T20:31:36Z
+current=releases/c21.21-open-wifi-20260716T171724Z-4b294c8
+previous=releases/c21.22-wifi-state-recovery-20260716T194811Z-9526cf9
+player_active=active
+player_restarts=0
+timer_active=inactive
+end0:ethernet:connected
+wlan0:wifi:connected

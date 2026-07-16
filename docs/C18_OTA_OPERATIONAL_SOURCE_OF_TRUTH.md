@@ -833,3 +833,16 @@ podemos escolher entre:
     player sem restart, policy/timer stable e estado persistente inalterado
     pela sessao visual. Rede aberta permanece o item 3. Evidencia:
     `docs/evidence/c20-totem-core-ota/20260716T160720Z-c21-20-wifi-product-flow-board-e2e/`.
+14. M9 item 3 fechou tecnicamente na candidata C21.21: rede aberta sem senha,
+    IPv4 obrigatorio, rollback transacional e regressao WPA coberta. Gates,
+    bloqueio stable e roundtrip OTA passaram. A associacao em AP aberto fisico
+    continua como non-claim explicito. Evidencia:
+    `docs/evidence/c20-totem-core-ota/20260716T183703Z-c21-21-open-wifi-board-e2e/`.
+15. M9 itens 4, 5 e 6 fecharam na candidata C21.22: estados visuais,
+    transporte/acesso Dadooh verdadeiro e diagnostico/retry sanitizado. Gates
+    `84/84`, replay, galeria, testes instalados, bloqueio stable,
+    apply/rollback/reapply e estado final passaram. A placa terminou em C21.22
+    com C21.21 como previous, player sem restart, rede preservada e
+    policy/timer stable restaurados. Portal cativo e o proximo recorte.
+    Evidencia:
+    `docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/`.

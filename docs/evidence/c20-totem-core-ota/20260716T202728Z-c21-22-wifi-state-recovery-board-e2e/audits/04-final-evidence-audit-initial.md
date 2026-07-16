@@ -1,0 +1,22 @@
+**Findings**
+
+- **Médio:** a evidência visual completa não está arquivada na pasta. [gallery-summary.json](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/offboard/visual/gallery-summary.json:18) declara `119` telas/PNGs, mas a pasta contém só 14 PNGs e 14 SVGs selecionados. Também [generated-artifacts.txt](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/board/generated-artifacts.txt:1) lista 20 telas geradas no board, mas `board/preview/` arquiva só 3 SVGs. Isso limita auditoria visual independente do conjunto completo; não derruba o OTA E2E.
+- **Baixo:** o próprio resumo visual marca `human_review_required=true`, `hdmi_capture_required_for_final_perception=true` e P1/P2/P3 existentes em [gallery-summary.json](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/offboard/visual/gallery-summary.json:20). Portanto não há aceite físico/perceptual final.
+- **Baixo:** `state.updated_at` ficou stale em `2026-07-14T17:32:45Z` mesmo após apply/reapply; ver [status.final.json](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/board/status.final.json:47). Identidade e `last_operation` estão corretos, então é limitação de metadata.
+- **Baixo/operacional:** a pasta de evidência aparece untracked no worktree atual, e há docs modificados fora dela. Os gates limpos certificam source/package no momento do gate, não o estado Git final de registro.
+
+**Verificações**
+
+Hashes recomputados batem: manifest `9ee79d9c...af0983d` e payload `a98c3ad1...e523d60`, iguais aos declarados em [PACKAGE_SHA256SUMS.txt](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/package/PACKAGE_SHA256SUMS.txt:1) e [package.sha256.txt](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/board/package.sha256.txt:1). O manifest é `homologation`, `totem-core`, source `9526cf...`, sem stable evidence em [package-manifest.json](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/package/package-manifest.json:2).
+
+Gates: source e exact-package passaram 84/84; o package gate valida payload, allowlist, ausência de secret paths e source commit ancestral do commit de empacotamento em [package-release-gate.json](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/gates/package-release-gate.json:20).
+
+Board: stable policy bloqueou homologation com rc `41`; apply, rollback e reapply retornaram `0` em [summary.txt](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/board/summary.txt:3). Logs mostram payload staged com SHA correto, apply success, rollback para C21.21 e reapply success.
+
+Final runtime/status: current `c21.22`, previous `c21.21`, payload SHA correto, player active, `player_restarts=0`, Ethernet e Wi-Fi conectados, timer active/enabled em [runtime.final.txt](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/board/runtime.final.txt:3). Policy final voltou para `stable`, `allow_prerelease=false` em [policy.final.json](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/board/policy.final.json:3).
+
+Não encontrei segredo real ou identificador sensível publicado; a busca forte não teve hits, e os artefatos marcam `token_file_present=false` em [status.final.json](/home/builder/totem-os/orange_pi_totem/docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/board/status.final.json:49).
+
+**Veredito**
+
+**GO** para registrar C21.22 como **homologation validada**, com wording estritamente limitado. **NO-GO** para stable/public, aceite visual físico, prova de AP aberto real, injeção real de falhas Wi-Fi, captive portal/browser, power-cut ou timer público consumindo release.

@@ -1,0 +1,4 @@
+82814b9665f1f619e35d4fdf822a50d4bf9a31055a439ec3b09c7812bf568e99  /data/core/totem/current/bin/totem_setup_visual_wizard.py
+076d17aef80786435567ab3ef734fed599fcc5c343fe9fcf0ecefb3f9e79aaef  /data/core/totem/current/bin/totem_wifi_nm_adapter.py
+755 root:root 389416 /data/core/totem/current/bin/totem_setup_visual_wizard.py
+755 root:root 185975 /data/core/totem/current/bin/totem_wifi_nm_adapter.py

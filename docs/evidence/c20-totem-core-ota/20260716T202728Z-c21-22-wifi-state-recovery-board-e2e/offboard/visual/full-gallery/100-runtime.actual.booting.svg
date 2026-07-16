@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Dadooh: Preparando o totem" data-visual-system="c25-visible-state-ui.v1" data-layout-mode="landscape">
+  <rect width="1280" height="720" fill="#090c10"/>
+  <rect x="0" y="0" width="1280" height="8" fill="#22d3ee"/>
+  <rect x="0" y="646" width="1280" height="74" fill="#0d1116"/>
+  <text x="72" y="76" font-family="Arial, DejaVu Sans, sans-serif" font-size="32" font-weight="700" fill="#f8fafc">Dadooh</text>
+  <line x1="204" y1="48" x2="204" y2="82" stroke="#3a4652"/>
+  <text x="230" y="74" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#9aa4b2">Totem</text>
+
+  <text x="72" y="160" font-family="Arial, DejaVu Sans, sans-serif" font-size="19" font-weight="700" fill="#22d3ee">INICIALIZANDO</text>
+  <text x="72" y="242" font-family="Arial, DejaVu Sans, sans-serif" font-size="58" fill="#f8fafc" font-weight="700"><tspan x="72" dy="0">Preparando o totem</tspan></text>
+  <text x="72" y="328" font-family="Arial, DejaVu Sans, sans-serif" font-size="29" fill="#cbd5e1"><tspan x="72" dy="0">A exibição começa automaticamente em</tspan><tspan x="72" dy="39">instantes.</tspan></text>
+  <text x="72" y="439" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" fill="#9aa4b2"><tspan x="72" dy="0">Nenhuma ação é necessária.</tspan></text>
+  <rect x="72" y="505" width="96" height="5" rx="2" fill="#22d3ee"/>
+
+  <rect x="884" y="132" width="324" height="442" rx="8" fill="#12171d" stroke="#2a333d"/>
+  <rect x="884" y="132" width="6" height="442" rx="3" fill="#22d3ee"/>
+  <text x="922" y="190" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#9aa4b2">PROGRESSO</text>
+  <line x1="950" y1="274" x2="950" y2="330" stroke="#3a4652" stroke-width="4"/>
+  <circle cx="950" cy="256" r="15" fill="#22d3ee" stroke="#22d3ee" stroke-width="3"/>
+  <text x="988" y="264" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">Sistema</text>
+  <line x1="950" y1="366" x2="950" y2="422" stroke="#3a4652" stroke-width="4"/>
+  <circle cx="950" cy="348" r="15" fill="#181e25" stroke="#3a4652" stroke-width="3"/>
+  <text x="988" y="356" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#9aa4b2">Exibição</text>
+  <circle cx="950" cy="440" r="15" fill="#181e25" stroke="#3a4652" stroke-width="3"/>
+  <text x="988" y="448" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#9aa4b2">Conteúdo</text>
+  <line x1="922" y1="492" x2="1170" y2="492" stroke="#2a333d"/>
+  <text x="922" y="542" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#22d3ee">Inicializando</text>
+
+  <text x="72" y="677" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#cbd5e1">Inicializando</text>
+  <text x="1208" y="677" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" text-anchor="end" fill="#9aa4b2">Dadooh</text>
+</svg>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="1024" viewBox="0 0 768 1024" data-display-rotation-deg="90" data-layout-mode="portrait" role="img" aria-label="Dadooh setup visual wizard">
+  <rect width="768" height="1024" fill="#07111f"/>
+  <rect x="0" y="0" width="768" height="12" fill="#06b6d4"/>
+  <rect x="0" y="12" width="768" height="136" fill="#111827"/>
+  <rect x="48" y="32" width="120" height="38" rx="8" fill="#12324a" stroke="#06b6d4"/>
+  <text x="66" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#f8fafc">Dadooh</text>
+  <text x="188" y="57" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#94a3b8">Configuracao do Totem</text>
+  <!-- dadooh-connectivity-indicator:start -->
+  <g id="connectivity-indicator" data-transport="unknown" data-wifi-signal="unknown" data-internet="unknown"><rect x="412" y="34" width="76" height="34" rx="8" fill="#172033"/><rect x="421" y="54" width="4" height="6" rx="2" fill="#334155"/><rect x="428" y="50" width="4" height="10" rx="2" fill="#334155"/><rect x="435" y="46" width="4" height="14" rx="2" fill="#334155"/><rect x="442" y="42" width="4" height="18" rx="2" fill="#334155"/><rect x="457" y="41" width="2" height="20" rx="1" fill="#334155"/><rect x="463" y="41" width="20" height="20" rx="6" fill="#64748b"/><text x="470" y="56" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#07111f">?</text></g>
+  <!-- dadooh-connectivity-indicator:end -->
+  <text x="500" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">16/07/2026 17:42</text>
+  <rect x="48" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="60" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">1. Tela</text>
+  <rect x="180" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="192" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">2. Wi-Fi</text>
+  <rect x="312" y="86" width="124" height="42" rx="8" fill="#12324a" stroke="#164e63" stroke-width="1"/><rect x="312" y="86" width="6" height="42" rx="3" fill="#64748b"/><text x="324" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">3. Amb.</text>
+  <rect x="444" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="456" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">4. Revisao</text>
+  <rect x="576" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="588" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">5. Fim</text>
+  <text x="48" y="188" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="#f8fafc">Ambiente manual</text>
+  <text x="50" y="224" font-family="Arial, DejaVu Sans, sans-serif" font-size="19" fill="#cbd5e1"><tspan x="50" dy="0">Digite o ID do ambiente</tspan></text>
+  
+  
+  <rect x="56" y="368" width="672" height="142" rx="8" fill="#0a1628"/>
+  <rect x="48" y="360" width="672" height="142" rx="8" fill="#151d2a"/>
+  <rect x="48" y="360" width="8" height="142" rx="4" fill="#06b6d4"/>
+  <text x="84" y="406" font-family="Arial, DejaVu Sans, sans-serif" font-size="20" fill="#cbd5e1" font-weight="700"><tspan x="84" dy="0">ID do ambiente</tspan></text>
+  <text x="84" y="452" font-family="Arial, DejaVu Sans, sans-serif" font-size="26" fill="#f8fafc" font-weight="700"><tspan x="84" dy="0">11111111-2222-|4333-8444-555555555555</tspan></text>
+  <text x="84" y="534" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#94a3b8"><tspan x="84" dy="0">Entrada local.</tspan></text>
+
+  
+  <rect id="info-panel" x="48" y="590" width="672" height="300" rx="8" fill="#151d2a" stroke="#2f3d4a"/>
+  <rect x="48" y="590" width="7" height="300" rx="4" fill="#06b6d4"/>
+  <text x="80" y="630" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">Nesta etapa</text>
+  <rect x="79" y="635" width="10" height="10" rx="3" fill="#22d3ee"/><text x="104" y="648" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="104" dy="0">UUID do ambiente.</tspan></text> <rect x="79" y="689" width="10" height="10" rx="3" fill="#22d3ee"/><text x="104" y="702" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="104" dy="0">Backspace corrige.</tspan></text> <rect x="79" y="743" width="10" height="10" rx="3" fill="#22d3ee"/><text x="104" y="756" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="104" dy="0">Enter valida.</tspan></text>
+
+  
+  
+  <rect x="0" y="942" width="768" height="82" fill="#050b14"/>
+  <rect x="0" y="942" width="768" height="3" fill="#164e63"/>
+  <rect x="48" y="960" width="162" height="46" rx="8" fill="#22d3ee"/><text x="70" y="990" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#111827">Enter valida</text> <rect x="218" y="960" width="132" height="46" rx="8" fill="#12324a"/><text x="240" y="990" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#f8fafc">Esc volta</text>
+
+</svg>

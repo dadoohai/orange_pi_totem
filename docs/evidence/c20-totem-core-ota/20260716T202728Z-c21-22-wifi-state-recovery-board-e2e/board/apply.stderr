@@ -1,0 +1,6 @@
+2026-07-16T20:29:18Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-16T20:29:18Z INFO apply_start source=local:dadooh-totem-core-c21.22-wifi-state-recovery-20260716T194811Z-9526cf9.manifest.json manifest=/tmp/c21-22-package/dadooh-totem-core-c21.22-wifi-state-recovery-20260716T194811Z-9526cf9.manifest.json
+2026-07-16T20:29:18Z INFO local_payload_staged bytes=216891 sha256=a98c3ad1eec78ccd21e520dc518517085d3e1b9c00da776319458cce1e523d60
+2026-07-16T20:29:26Z INFO totem_core_health_check_starting
+2026-07-16T20:29:34Z INFO apply_success version=c21.22-wifi-state-recovery-20260716T194811Z-9526cf9
+2026-07-16T20:29:34Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c21.22-wifi-state-recovery-20260716T194811Z-9526cf9

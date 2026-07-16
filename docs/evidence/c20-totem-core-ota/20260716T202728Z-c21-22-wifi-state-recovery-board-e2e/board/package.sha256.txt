@@ -1,0 +1,2 @@
+9ee79d9cf98935d88fd245f092a6d84afcfee7204063d91074870a901af0983d  dadooh-totem-core-c21.22-wifi-state-recovery-20260716T194811Z-9526cf9.manifest.json
+a98c3ad1eec78ccd21e520dc518517085d3e1b9c00da776319458cce1e523d60  dadooh-totem-core-c21.22-wifi-state-recovery-20260716T194811Z-9526cf9.tar.gz

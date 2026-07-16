@@ -1,0 +1,29 @@
+Dadooh C9.6 wifi controlled
+
+schema_version: dadooh-c9.6-wifi-controlled-apply.v1
+generated_at_utc: 2026-07-16T20:30:34Z
+mode: read-only
+network_manager_available: True
+nmcli_available: True
+wifi_device_present: True
+ethernet_active: True
+wifi_active: True
+default_route_present: True
+resolver_configured: True
+connectivity: not_checked
+
+Guardrails:
+network_changed: false
+credentials_collected: false
+network_details_published: false
+address_details_published: false
+modifying_commands_called: false
+real_config_read: false
+real_config_written: false
+writer_called: false
+service_changed: false
+player_changed: false
+mpv_changed: false
+hotspot_created: false
+portal_created: false
+reboot_called: false

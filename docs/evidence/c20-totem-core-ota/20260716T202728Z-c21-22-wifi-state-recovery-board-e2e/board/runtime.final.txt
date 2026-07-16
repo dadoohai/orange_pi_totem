@@ -1,0 +1,21 @@
+utc=2026-07-16T20:32:35Z
+boot_id=41dd24dd-a601-462e-92af-64fd6f6a3def
+current=releases/c21.22-wifi-state-recovery-20260716T194811Z-9526cf9
+previous=releases/c21.21-open-wifi-20260716T171724Z-4b294c8
+player_active=active
+player_restarts=0
+settings_active=inactive
+settings_failed=inactive
+timer_active=active
+timer_enabled=enabled
+agent_service_active=inactive
+update_lock_free=true
+settings_lock=absent
+settings_request=absent
+drm_card0-HDMI-A-1=connected
+end0:ethernet:connected
+wlan0:wifi:connected
+NEXT                        LEFT          LAST                        PASSED       UNIT                     ACTIVATES
+Thu 2026-07-16 22:43:32 UTC 2h 10min left Thu 2026-07-16 16:36:19 UTC 3h 56min ago totem-update-agent.timer totem-update-agent.service
+1 timers listed.
+Pass --all to see loaded but inactive timers, too.

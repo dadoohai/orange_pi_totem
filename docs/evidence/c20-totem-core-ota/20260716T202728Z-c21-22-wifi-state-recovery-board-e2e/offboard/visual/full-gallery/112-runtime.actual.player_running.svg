@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Dadooh: Totem em operação" data-visual-system="c25-visible-state-ui.v1" data-layout-mode="landscape">
+  <rect width="1280" height="720" fill="#090c10"/>
+  <rect x="0" y="0" width="1280" height="8" fill="#22c55e"/>
+  <rect x="0" y="646" width="1280" height="74" fill="#0d1116"/>
+  <text x="72" y="76" font-family="Arial, DejaVu Sans, sans-serif" font-size="32" font-weight="700" fill="#f8fafc">Dadooh</text>
+  <line x1="204" y1="48" x2="204" y2="82" stroke="#3a4652"/>
+  <text x="230" y="74" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#9aa4b2">Totem</text>
+
+  <text x="72" y="160" font-family="Arial, DejaVu Sans, sans-serif" font-size="19" font-weight="700" fill="#22c55e">OPERAÇÃO NORMAL</text>
+  <text x="72" y="242" font-family="Arial, DejaVu Sans, sans-serif" font-size="58" fill="#f8fafc" font-weight="700"><tspan x="72" dy="0">Totem em operação</tspan></text>
+  <text x="72" y="328" font-family="Arial, DejaVu Sans, sans-serif" font-size="29" fill="#cbd5e1"><tspan x="72" dy="0">A exibição foi iniciada.</tspan></text>
+  <text x="72" y="400" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" fill="#9aa4b2"><tspan x="72" dy="0">Nenhuma ação necessária.</tspan></text>
+  <rect x="72" y="466" width="96" height="5" rx="2" fill="#22c55e"/>
+
+  <rect x="884" y="132" width="324" height="442" rx="8" fill="#12171d" stroke="#2a333d"/>
+  <rect x="884" y="132" width="6" height="442" rx="3" fill="#22c55e"/>
+  <circle cx="1046" cy="308" r="76" fill="#102a31" stroke="#22c55e" stroke-width="4"/>
+  <circle cx="1046" cy="308" r="34" fill="#22c55e"/>
+  <text x="1046" y="438" font-family="Arial, DejaVu Sans, sans-serif" font-size="27" font-weight="700" text-anchor="middle" fill="#f8fafc">Operação normal</text>
+  <text x="1046" y="482" font-family="Arial, DejaVu Sans, sans-serif" font-size="19" text-anchor="middle" fill="#cbd5e1">Operação normal</text>
+
+  <text x="72" y="677" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#cbd5e1">Operação normal</text>
+  <text x="1208" y="677" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" text-anchor="end" fill="#9aa4b2">Dadooh</text>
+</svg>

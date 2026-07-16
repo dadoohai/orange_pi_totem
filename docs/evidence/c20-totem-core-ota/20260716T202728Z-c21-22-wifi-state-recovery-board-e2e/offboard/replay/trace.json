@@ -1,0 +1,408 @@
+[
+  {
+    "key": "enter",
+    "result": "confirm_orientation",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "01-orientation",
+    "step": "orientation"
+  },
+  {
+    "key": "enter",
+    "result": "ethernet_current",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "02-connection",
+    "step": "connection"
+  },
+  {
+    "key": "type_uuid,enter",
+    "result": "valid_uuid",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "03-environment",
+    "step": "environment"
+  },
+  {
+    "key": "enter",
+    "result": "confirmed",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "03-environment-valid",
+    "step": "preflight"
+  },
+  {
+    "key": "enter",
+    "result": "candidate_ready",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "05-review",
+    "step": "review"
+  },
+  {
+    "key": "enter",
+    "result": "done",
+    "scenario": "happy_path_synthetic",
+    "screen_id": "06-complete",
+    "step": "complete"
+  },
+  {
+    "key": "enter",
+    "result": "preview_portrait",
+    "scenario": "back_navigation",
+    "screen_id": "01-orientation",
+    "step": "orientation"
+  },
+  {
+    "key": "escape",
+    "result": "back_to_orientation",
+    "scenario": "back_navigation",
+    "screen_id": "01-orientation-confirm",
+    "step": "orientation_confirm"
+  },
+  {
+    "key": "enter",
+    "result": "preview_corrected",
+    "scenario": "back_navigation",
+    "screen_id": "01-orientation",
+    "step": "orientation_again"
+  },
+  {
+    "key": "enter",
+    "result": "continue",
+    "scenario": "back_navigation",
+    "screen_id": "02-connection",
+    "step": "connection"
+  },
+  {
+    "key": "up",
+    "result": "focus_top_menu",
+    "scenario": "step_focus_pending_review",
+    "screen_id": "01-orientation",
+    "step": "orientation"
+  },
+  {
+    "key": "right,right,right,enter",
+    "result": "jump_to_review",
+    "scenario": "step_focus_pending_review",
+    "screen_id": "01-orientation-step-focus",
+    "step": "step_focus"
+  },
+  {
+    "key": "enter",
+    "result": "blocked_first_pending",
+    "scenario": "step_focus_pending_review",
+    "screen_id": "05-review-pending",
+    "step": "review_pending"
+  },
+  {
+    "key": "enter",
+    "result": "validation_error",
+    "scenario": "environment_invalid_uuid",
+    "screen_id": "03-environment",
+    "step": "environment"
+  },
+  {
+    "key": "escape",
+    "result": "stays_unsaved",
+    "scenario": "environment_invalid_uuid",
+    "screen_id": "03-environment-error",
+    "step": "environment_error"
+  },
+  {
+    "key": "left,backspace,4,enter",
+    "result": "corrected",
+    "scenario": "environment_edit_middle",
+    "screen_id": "03-environment-edit-middle",
+    "step": "environment_edit"
+  },
+  {
+    "key": "enter",
+    "result": "selected",
+    "scenario": "wifi_success_fake",
+    "screen_id": "02-wifi-list",
+    "step": "wifi_list"
+  },
+  {
+    "key": "enter",
+    "result": "connect",
+    "scenario": "wifi_success_fake",
+    "screen_id": "02-wifi-psk",
+    "step": "wifi_password"
+  },
+  {
+    "key": "wait",
+    "result": "connecting",
+    "scenario": "wifi_success_fake",
+    "screen_id": "02-wifi-applying",
+    "step": "wifi_progress"
+  },
+  {
+    "key": "enter_or_timeout",
+    "result": "connected",
+    "scenario": "wifi_success_fake",
+    "screen_id": "02-wifi-result",
+    "step": "wifi_success"
+  },
+  {
+    "key": "type_uuid,enter",
+    "result": "valid_uuid",
+    "scenario": "wifi_success_fake",
+    "screen_id": "03-environment",
+    "step": "environment"
+  },
+  {
+    "key": "enter",
+    "result": "confirmed",
+    "scenario": "wifi_success_fake",
+    "screen_id": "03-environment-valid",
+    "step": "preflight"
+  },
+  {
+    "key": "enter",
+    "result": "candidate_ready",
+    "scenario": "wifi_success_fake",
+    "screen_id": "05-review",
+    "step": "review"
+  },
+  {
+    "key": "enter",
+    "result": "done",
+    "scenario": "wifi_success_fake",
+    "screen_id": "06-complete",
+    "step": "complete"
+  },
+  {
+    "key": "enter",
+    "result": "selected",
+    "scenario": "wifi_wrong_password_fake",
+    "screen_id": "02-wifi-list",
+    "step": "wifi_list"
+  },
+  {
+    "key": "enter",
+    "result": "fake_failure",
+    "scenario": "wifi_wrong_password_fake",
+    "screen_id": "02-wifi-psk",
+    "step": "wifi_password"
+  },
+  {
+    "key": "enter",
+    "result": "retry",
+    "scenario": "wifi_wrong_password_fake",
+    "screen_id": "02-wifi-wrong-password",
+    "step": "wifi_error"
+  },
+  {
+    "key": "enter",
+    "result": "connect_without_password",
+    "scenario": "wifi_open_retry_fake",
+    "screen_id": "02-wifi-list",
+    "step": "wifi_list"
+  },
+  {
+    "key": "wait",
+    "result": "connecting",
+    "scenario": "wifi_open_retry_fake",
+    "screen_id": "02-wifi-open-applying-1",
+    "step": "wifi_progress"
+  },
+  {
+    "key": "enter",
+    "result": "retry_without_password",
+    "scenario": "wifi_open_retry_fake",
+    "screen_id": "02-wifi-open-failure",
+    "step": "wifi_failure"
+  },
+  {
+    "key": "wait",
+    "result": "connecting_again",
+    "scenario": "wifi_open_retry_fake",
+    "screen_id": "02-wifi-open-applying-2",
+    "step": "wifi_retry"
+  },
+  {
+    "key": "enter_or_timeout",
+    "result": "connected",
+    "scenario": "wifi_open_retry_fake",
+    "screen_id": "02-wifi-open-result",
+    "step": "wifi_success"
+  },
+  {
+    "key": "type_uuid,enter",
+    "result": "valid_uuid",
+    "scenario": "wifi_open_retry_fake",
+    "screen_id": "03-environment",
+    "step": "environment"
+  },
+  {
+    "key": "enter",
+    "result": "candidate_ready",
+    "scenario": "wifi_open_retry_fake",
+    "screen_id": "05-review",
+    "step": "review"
+  },
+  {
+    "key": "enter",
+    "result": "done",
+    "scenario": "wifi_open_retry_fake",
+    "screen_id": "06-complete",
+    "step": "complete"
+  },
+  {
+    "key": "r",
+    "result": "refresh",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-wifi-empty",
+    "step": "empty_list"
+  },
+  {
+    "key": "enter",
+    "result": "select_cached",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-wifi-cached",
+    "step": "cached_list"
+  },
+  {
+    "key": "wait",
+    "result": "ethernet_online",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-connectivity-ethernet_online",
+    "step": "connectivity"
+  },
+  {
+    "key": "wait",
+    "result": "wifi_online",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-connectivity-wifi_online",
+    "step": "connectivity"
+  },
+  {
+    "key": "wait",
+    "result": "wifi_limited",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-connectivity-wifi_limited",
+    "step": "connectivity"
+  },
+  {
+    "key": "wait",
+    "result": "offline",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-connectivity-offline",
+    "step": "connectivity"
+  },
+  {
+    "key": "wait",
+    "result": "unknown",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-connectivity-unknown",
+    "step": "connectivity"
+  },
+  {
+    "key": "enter",
+    "result": "continue",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-success-online",
+    "step": "success"
+  },
+  {
+    "key": "enter",
+    "result": "continue",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-success-limited",
+    "step": "success"
+  },
+  {
+    "key": "enter",
+    "result": "continue",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-success-offline",
+    "step": "success"
+  },
+  {
+    "key": "enter",
+    "result": "continue",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-success-unknown",
+    "step": "success"
+  },
+  {
+    "key": "enter",
+    "result": "retry",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-failure-auth",
+    "step": "failure"
+  },
+  {
+    "key": "enter",
+    "result": "retry",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-failure-timeout",
+    "step": "failure"
+  },
+  {
+    "key": "enter",
+    "result": "retry",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-failure-missing",
+    "step": "failure"
+  },
+  {
+    "key": "enter",
+    "result": "retry",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-failure-signal",
+    "step": "failure"
+  },
+  {
+    "key": "enter",
+    "result": "retry",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-failure-ip",
+    "step": "failure"
+  },
+  {
+    "key": "enter",
+    "result": "retry",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-failure-device",
+    "step": "failure"
+  },
+  {
+    "key": "enter",
+    "result": "retry",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-failure-generic_open",
+    "step": "failure"
+  },
+  {
+    "key": "escape",
+    "result": "back",
+    "scenario": "wifi_state_matrix_fake",
+    "screen_id": "02-failure-unknown",
+    "step": "failure"
+  },
+  {
+    "key": "enter",
+    "result": "valid_uuid",
+    "scenario": "api_unavailable_fake",
+    "screen_id": "03-environment",
+    "step": "environment"
+  },
+  {
+    "key": "enter",
+    "result": "operator_confirmed",
+    "scenario": "api_unavailable_fake",
+    "screen_id": "03-environment-api-unavailable",
+    "step": "api_unavailable"
+  },
+  {
+    "key": "enter",
+    "result": "keep_existing_configuration",
+    "scenario": "reopen_configured",
+    "screen_id": "05-review-retained",
+    "step": "review"
+  },
+  {
+    "key": "escape",
+    "result": "cancelled",
+    "scenario": "cancel_flow",
+    "screen_id": "01-welcome",
+    "step": "welcome"
+  }
+]
