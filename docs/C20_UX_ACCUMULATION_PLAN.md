@@ -1,6 +1,6 @@
 # C20 UX Accumulation Plan
 
-Estado: 2026-07-15.
+Estado: 2026-07-16.
 
 Objetivo: evoluir a experiencia visual e operacional do produto em rodadas
 pequenas de `totem-core`, validando cada uma na placa e acumulando o conjunto
@@ -48,15 +48,22 @@ Entra em `totem-core`:
 - telas publicas de status;
 - foco, paginacao, copy, estados visuais e cancelamento;
 - diagnostico publico read-only;
+- adapter Wi-Fi transacional e perfis protegidos/abertos;
+- deteccao e orquestracao visual de portal cativo;
 - evidencia, docs e checks de QA visual.
 
 Fora deste pacote:
 
 - `player-runtime`, MPV, playlist, timing ou comportamento de playback;
 - display/EDID/resolucao/kernel/ffmpeg/hwdecode/imagem;
-- Wi-Fi real persistente, NetworkManager real ou escrita de config real;
+- manipulacao manual de NetworkManager fora do adapter governado;
+- instalacao silenciosa de navegador, desktop ou dependencia nova de sistema;
 - midia, playlist, cache, dados de campo;
 - updater, timer, policy, publish/stable, salvo empacotamento final governado.
+
+Nota de evolucao: as verticais historicas abaixo preservam seus non-claims da
+epoca. Desde C21.19, Wi-Fi real transacional pertence ao escopo atual de M9,
+sem apagar o limite original das rodadas anteriores.
 
 ## Verticais C20
 
@@ -670,18 +677,88 @@ auditoria pre-flash sem delta inesperado. A pendencia e repetir o E2E na imagem
 gravada; C25B nao foi promovida para `stable` nem liberada como novo alvo de
 auto-pull publico.
 
-## Primeiras Rodadas Recomendadas
+## Fila Priorizada Atual - Wi-Fi De Produto
 
-1. V0: corrigir a sobreposicao painel/preview na orientacao.
-2. V1: revisar hierarquia/densidade das telas principais do wizard.
-3. V2: reforcar hierarquia de acao e produto visual.
-4. V3: revisar navegacao e cancelamento previsiveis.
-5. V8: criar manifesto minimo de QA visual por rodada.
+Estado: itens 1 e 2 implementados off-board em 2026-07-16 sobre a candidata
+C21.19; gate final, pacote e placa pendentes.
 
-Regras para todas:
+Objetivo: transformar a base transacional ja comprovada em uma jornada curta,
+verdadeira e utilizavel por cliente. A ordem abaixo prioriza maior valor com
+menor esforco e deve ser seguida sem transformar portal cativo em bloqueio para
+as entregas anteriores.
 
-- manter a correcao C19 da lista Wi-Fi;
-- nao mexer em Wi-Fi real;
-- nao mexer em display/EDID;
-- nao mexer em player;
-- validar em 1024x768 com capturas reais.
+1. **Corrigir opcoes e mensagens enganosas.**
+   Mostrar `Usar Wi-Fi ja configurado` somente quando o perfil estiver valido,
+   ocultar `modo de bancada` da superficie de producao e informar corretamente
+   o que ja foi aplicado quando o usuario volta ou cancela.
+2. **Simplificar o fluxo de conexao.**
+   Remover confirmacoes repetidas, unir senha e acao `Conectar`, avancar apos
+   sucesso e preservar rede/senha/contexto quando a tentativa falhar.
+3. **Suportar redes abertas comuns.**
+   Criar perfil sem WPA/PSK, conectar sem pedir senha, exigir endereco de rede e
+   manter o mesmo rollback transacional da rede protegida.
+4. **Corrigir estados visuais.**
+   Resolver item oculto no modo retrato, lista vazia, lista anterior/cache,
+   rodapes que prometem outra acao e capturas ausentes de conectando, sucesso,
+   falha e restauracao.
+5. **Explicar o estado real da conexao.**
+   Distinguir visualmente Ethernet, Wi-Fi associado, internet disponivel,
+   internet limitada, sem internet e estado inconclusivo.
+6. **Melhorar diagnostico e recuperacao.**
+   Mapear categorias seguras para senha/autenticacao, timeout, sinal/rede
+   indisponivel e ausencia de IPv4; cada falha deve oferecer retry direto sem
+   apagar contexto nem expor log bruto.
+7. **Detectar portal cativo.**
+   Depois da associacao local, identificar quando o acesso exige pagina de
+   autenticacao e separar esse estado de `sem internet`.
+8. **Adicionar navegador temporario para portal.**
+   Abrir uma sessao local restrita, sem downloads, historico ou senha salva;
+   monitorar a conectividade, fechar ao liberar internet e remover os dados
+   temporarios. Timeout ou cancelamento restaura a rede anterior. Antes de
+   implementar, auditar a imagem: se faltar runtime adequado, adiciona-lo pela
+   proxima imagem, nunca como dependencia de sistema escondida no `totem-core`.
+9. **Fechar na placa e por OTA.**
+   Validar rede atual, protegida, aberta, lista vazia/cache, falhas, portal,
+   paisagem/retrato, privacidade, retorno ao player, apply e rollback. Cada
+   recorte aprovado entra no pacote acumulado `totem-core` e na proxima imagem
+   de referencia.
+
+### Rodada M9.1-2 - Verdade E Fluxo Curto
+
+Implementado:
+
+- conexao atual so aparece quando Ethernet ou o perfil Wi-Fi dedicado estao
+  comprovadamente ativos;
+- modo de bancada fica oculto em producao;
+- lista vazia, rede aberta ainda nao suportada, cancelamento, rollback e Wi-Fi
+  aplicado usam mensagens distintas e verdadeiras;
+- rede protegida segue direto de lista para senha/conexao, avanca apos sucesso
+  e preserva lista, rede e senha mascarada para retry;
+- status de uma execucao antiga nao pode contaminar o cancelamento atual;
+- quatro redes ficam integralmente visiveis por pagina em retrato.
+
+Aceite local: self-tests, replay completo, galeria visual e verificacao de
+segredo verdes. Fechamento exige pacote homologacao, apply/rollback/reapply e
+captura real na placa. Rede aberta comum continua sendo o item 3.
+
+## Criterio De Fechamento Da Frente
+
+- nenhuma opcao selecionavel leva a caminho impossivel;
+- nenhuma mensagem contradiz o estado persistido;
+- retry nao obriga repetir toda a jornada;
+- redes protegidas e abertas preservam rollback;
+- portal e distinguido de falha comum de internet;
+- nenhum elemento fica oculto, sobreposto ou inacessivel;
+- senha, SSID e dados de portal nao aparecem em evidencia publica;
+- player volta saudavel, settings encerra limpo e testes existentes nao
+  regridem;
+- galeria visual auxilia, mas o aceite final depende de fluxo real na placa.
+
+Regras de escopo:
+
+- manter em `totem-core` a UI, o adapter e a orquestracao;
+- introduzir runtime novo de navegador somente pela imagem;
+- nao alterar `player-runtime`, MPV, kernel, display/EDID ou politica OTA;
+- nao reabrir C21.19 salvo regressao comprovada;
+- navegador para portal e vertical posterior e nao bloqueia o suporte a rede
+  aberta comum.

@@ -1402,6 +1402,18 @@ def dedicated_profile_active(
     return UNKNOWN
 
 
+def ethernet_active(
+    *,
+    timeout_sec: int,
+    command_runner: Callable[[list[str], int], CommandResult] = run_read_only_command,
+) -> bool | str:
+    args = ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]
+    result = command_runner(args, timeout_sec)
+    if result.status != "ok":
+        return UNKNOWN
+    return parse_device_status(result.stdout)["ethernet_active"]
+
+
 def build_preflight_apply(
     status: dict[str, Any],
     *,
@@ -2733,6 +2745,30 @@ def run_self_test() -> None:
     assert_true(
         malformed_device["wifi_active"] == UNKNOWN,
         "device rows with extra or missing fields must fail closed",
+    )
+    ethernet_commands: list[list[str]] = []
+
+    def ethernet_runner(args: list[str], timeout_sec: int) -> CommandResult:
+        ethernet_commands.append(args)
+        assert_true(timeout_sec == 2, "Ethernet availability probe should stay bounded")
+        return CommandResult("ok", "eth0:ethernet:connected\nwlan0:wifi:disconnected\n")
+
+    assert_true(
+        ethernet_active(timeout_sec=2, command_runner=ethernet_runner) is True,
+        "bounded Ethernet probe should recognize an active wired connection",
+    )
+    assert_true(
+        ethernet_commands
+        == [["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]],
+        "Ethernet availability probe should use the read-only allowlisted command",
+    )
+    assert_true(
+        ethernet_active(
+            timeout_sec=2,
+            command_runner=lambda args, timeout_sec: CommandResult("timeout"),
+        )
+        == UNKNOWN,
+        "failed Ethernet probe should remain unknown instead of claiming availability",
     )
 
     active_fixture = "\n".join(

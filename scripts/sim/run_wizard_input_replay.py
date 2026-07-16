@@ -29,6 +29,7 @@ SCENARIOS = [
     "step_focus_pending_review",
     "environment_invalid_uuid",
     "environment_edit_middle",
+    "wifi_success_fake",
     "wifi_wrong_password_fake",
     "api_unavailable_fake",
     "reopen_configured",
@@ -87,6 +88,15 @@ class Replay:
         self.events: list[ReplayEvent] = []
         self.assertions: list[ReplayAssertion] = []
         self.screen_paths: dict[tuple[str, str], pathlib.Path] = {}
+        self.external_process_calls: list[str] = []
+        self._original_popen = wizard.subprocess.Popen
+
+        def reject_external_process(*args: Any, **kwargs: Any) -> Any:
+            command = args[0] if args else kwargs.get("args", "<unknown>")
+            self.external_process_calls.append(repr(command))
+            raise AssertionError(f"replay attempted external process: {command!r}")
+
+        wizard.subprocess.Popen = reject_external_process
         self.display = wizard.VisualDisplay(out_dir, enabled=False)
 
     def screen(self, scenario: str, step: str, screen_id: str, svg: str, key: str, result: str) -> None:
@@ -131,6 +141,7 @@ class Replay:
         )
 
     def write_outputs(self) -> dict[str, Any]:
+        wizard.subprocess.Popen = self._original_popen
         all_passed = all(item.passed for item in self.assertions)
         scenario_count = len({event.scenario for event in self.events})
         summary = {
@@ -144,7 +155,8 @@ class Replay:
             "real_config_written": False,
             "ssh_used": False,
             "board_touched": False,
-            "networkmanager_touched": False,
+            "networkmanager_touched": bool(self.external_process_calls),
+            "external_process_calls_count": len(self.external_process_calls),
             "backend_called": False,
             "secrets_published": False,
             "uses_only_test_data": True,
@@ -212,14 +224,18 @@ def orientation_screen(selected_index: int = 0, layout_rotation_deg: int = 0) ->
 
 
 def connection_screen() -> str:
+    options = wizard.network_options_for_ui(
+        configured_wifi_available=False,
+        ethernet_available=True,
+    )
     return wizard.build_screen_svg(
         active_step=1,
         title="Wi-Fi",
-        subtitle="Escolha o Wi-Fi.",
+        subtitle="Continue com a conexao atual ou escolha outra rede.",
         footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
-        options=list(wizard.NETWORK_OPTIONS),
-        selected_index=2,
-        panel_items=["Lista local.", "Senha oculta.", "Sem portal."],
+        options=options,
+        selected_index=0,
+        panel_items=["Conexao atual verificada.", "Nova rede com rollback.", "Senha protegida."],
         layout_rotation_deg=90,
     )
 
@@ -245,17 +261,17 @@ def environment_screen(value: str, cursor: int | None = None, *, error: str = ""
     )
 
 
-def review_screen() -> str:
+def review_screen(network_label: str = "Ethernet atual") -> str:
     return wizard.build_screen_svg(
         active_step=3,
         title="Pronto para concluir",
         subtitle="Confira antes de concluir.",
         footer="Enter prepara candidata | Cima menu | Esc volta",
-        panel_items=["Nada aplicado ainda.", "Dados privados ocultos.", "Esc volta."],
+        panel_items=["Nenhum novo ajuste foi salvo.", "Dados privados ocultos.", "Esc volta."],
         extra_svg=wizard.summary_rows_svg(
             [
                 ("Tela", "Retrato para direita (Confirmado)", "confirmed"),
-                ("Wi-Fi", "Bancada", "confirmed"),
+                ("Wi-Fi", network_label, "confirmed"),
                 ("Ambiente", "Validado", "confirmed"),
             ],
             layout_rotation_deg=90,
@@ -319,11 +335,10 @@ def review_retained_screen(state: Any) -> str:
         subtitle="Concluir prepara a candidata.",
         footer="Enter prepara candidata | Cima menu | Esc volta",
         panel_title="Antes de salvar",
-        panel_items=[
-            "A configuracao final ainda nao foi salva.",
-            "O Wi-Fi selecionado pode ja estar ativo.",
-            "Esc volta.",
-        ],
+        panel_items=wizard.review_network_change_items(
+            state.network,
+            rotation_status=state.rotation_status,
+        ),
         extra_svg=wizard.summary_rows_svg(
             [
                 ("Tela", f"{state.rotation['label']} ({wizard.step_status_label(state, 0)})", "neutral"),
@@ -364,7 +379,7 @@ def complete_screen() -> str:
 def replay_happy_path(r: Replay) -> None:
     scenario = "happy_path_synthetic"
     r.screen(scenario, "orientation", "01-orientation", orientation_screen(), "enter", "confirm_orientation")
-    r.screen(scenario, "connection", "02-connection", connection_screen(), "down,down,enter", "bench_mode")
+    r.screen(scenario, "connection", "02-connection", connection_screen(), "enter", "ethernet_current")
     r.screen(scenario, "environment", "03-environment", environment_screen(TEST_ENV_UUID, len(TEST_ENV_UUID)), "type_uuid,enter", "valid_uuid")
     r.render_standard_screen(
         scenario,
@@ -467,9 +482,9 @@ def replay_wifi_wrong_password(r: Replay) -> None:
         "02-wifi-psk",
         wizard.build_screen_svg(
             active_step=1,
-            title="Senha Wi-Fi",
-            subtitle="Digite a senha da rede.",
-            footer="Enter confirma | Esc volta | F2 mostra",
+            title="Conectar ao Wi-Fi",
+            subtitle="TEST_WIFI_STRONG",
+            footer="Enter conecta | Esc troca rede | F2 mostra",
             field_label="Senha Wi-Fi",
             field_value_hint=wizard.text_field_display_hint("TEST_PASSWORD", hidden=True, show_plain_value=False),
             field_note="Senha oculta por padrao.",
@@ -486,16 +501,113 @@ def replay_wifi_wrong_password(r: Replay) -> None:
         key="enter",
         result="retry",
         active_step=1,
-        title="Nao conectou",
-        subtitle="A senha pode estar incorreta.",
-        footer="Enter tenta novamente | Esc volta",
-        panel_items=["Confira a senha.", "Tente novamente.", "Nada foi salvo."],
+        title="Nova rede nao conectada",
+        subtitle="A rede anterior foi restaurada.",
+        footer="Enter corrige senha | Esc troca rede",
+        panel_items=["Rede anterior restaurada.", "Senha mantida para corrigir.", "Ethernet nao foi alterado."],
         layout_rotation_deg=90,
         accent="#ef4444",
     )
     password_svg = r.screen_paths[(scenario, "02-wifi-psk")].read_text(encoding="utf-8")
     r.assert_true(scenario, "password_value_not_rendered", "TEST_PASSWORD" not in password_svg)
     r.assert_true(scenario, "retry_path_available", True)
+
+
+def replay_wifi_success(r: Replay) -> None:
+    scenario = "wifi_success_fake"
+    password = "TEST_PASSWORD"
+    networks = [{"ssid": "TEST_WIFI_STRONG", "signal_percent": 96, "signal_bucket": "strong", "security_present": True}]
+    r.screen(
+        scenario,
+        "wifi_list",
+        "02-wifi-list",
+        wizard.wifi_list_screen_svg(
+            networks=networks,
+            selected_index=0,
+            list_status="ok",
+            updated_age_sec=0,
+            refresh_message="Dados sinteticos.",
+            layout_rotation_deg=90,
+        ),
+        "enter",
+        "selected",
+    )
+    r.screen(
+        scenario,
+        "wifi_password",
+        "02-wifi-psk",
+        wizard.build_screen_svg(
+            active_step=1,
+            title="Conectar ao Wi-Fi",
+            subtitle="TEST_WIFI_STRONG",
+            footer="Enter conecta | Esc troca rede | F2 mostra",
+            field_label="Senha Wi-Fi",
+            field_value_hint=wizard.text_field_display_hint(password, hidden=True, show_plain_value=False),
+            field_note="Senha oculta por padrao.",
+            panel_items=["Oculta por padrao.", "F2 mostra.", "Nao aparece em logs."],
+            layout_rotation_deg=90,
+        ),
+        "enter",
+        "connect",
+    )
+    r.screen(
+        scenario,
+        "wifi_progress",
+        "02-wifi-applying",
+        wizard.wifi_connecting_screen_svg(layout_rotation_deg=90),
+        "wait",
+        "connecting",
+    )
+    r.screen(
+        scenario,
+        "wifi_success",
+        "02-wifi-result",
+        wizard.wifi_success_screen_svg(layout_rotation_deg=90),
+        "enter_or_timeout",
+        "connected",
+    )
+    r.screen(
+        scenario,
+        "environment",
+        "03-environment",
+        environment_screen(TEST_ENV_UUID, len(TEST_ENV_UUID)),
+        "type_uuid,enter",
+        "valid_uuid",
+    )
+    r.render_standard_screen(
+        scenario,
+        step="preflight",
+        screen_id="03-environment-valid",
+        key="enter",
+        result="confirmed",
+        active_step=2,
+        title="Ambiente validado",
+        subtitle="Cadastro confirmado.",
+        footer="Enter continua | Esc volta",
+        panel_items=["Cadastro encontrado.", "Sem dados privados.", "Pode revisar."],
+        layout_rotation_deg=90,
+        accent="#22c55e",
+    )
+    r.screen(
+        scenario,
+        "review",
+        "05-review",
+        review_screen("Nova rede Wi-Fi confirmada"),
+        "enter",
+        "candidate_ready",
+    )
+    r.screen(scenario, "complete", "06-complete", complete_screen(), "enter", "done")
+    password_svg = r.screen_paths[(scenario, "02-wifi-psk")].read_text(encoding="utf-8")
+    progress_svg = r.screen_paths[(scenario, "02-wifi-applying")].read_text(encoding="utf-8")
+    success_svg = r.screen_paths[(scenario, "02-wifi-result")].read_text(encoding="utf-8")
+    review_svg = r.screen_paths[(scenario, "05-review")].read_text(encoding="utf-8")
+    r.assert_true(scenario, "password_value_not_rendered", password not in password_svg)
+    r.assert_true(scenario, "progress_is_visible", "Conectando ao Wi-Fi" in progress_svg)
+    r.assert_true(scenario, "success_is_visible", "Wi-Fi conectado" in success_svg)
+    r.assert_true(scenario, "wifi_result_reaches_environment", "Ambiente" in r.screen_paths[(scenario, "03-environment")].read_text(encoding="utf-8"))
+    r.assert_true(scenario, "wifi_result_reaches_review", "Nova rede Wi-Fi confirmada" in review_svg)
+    r.assert_true(scenario, "wifi_result_reaches_completion", (scenario, "06-complete") in r.screen_paths)
+    r.assert_true(scenario, "networkmanager_not_called_by_replay", not r.external_process_calls)
 
 
 def replay_api_unavailable(r: Replay) -> None:
@@ -603,6 +715,7 @@ SCENARIO_RUNNERS: dict[str, Callable[[Replay], None]] = {
     "step_focus_pending_review": replay_step_focus_pending_review,
     "environment_invalid_uuid": replay_environment_invalid_uuid,
     "environment_edit_middle": replay_environment_edit_middle,
+    "wifi_success_fake": replay_wifi_success,
     "wifi_wrong_password_fake": replay_wifi_wrong_password,
     "api_unavailable_fake": replay_api_unavailable,
     "reopen_configured": replay_reopen_configured,

@@ -97,9 +97,15 @@ PAIRING_REAL_TERMINAL_STATES = frozenset(
     {"expired", "denied", "backend_unavailable", "already_used", "empty_environment_list", "local_timeout"}
 )
 WIFI_TIMEOUT_SEC = 45
+NETWORK_OPTION_PROBE_TIMEOUT_SEC = 2
+WIFI_SUCCESS_AUTO_ADVANCE_SEC = 1.5
 WIFI_LIST_REFRESH_SEC = 10.0
 WIFI_LIST_TIMEOUT_SEC = 4
-WIFI_LIST_PAGE_SIZE = 5
+WIFI_LIST_PAGE_SIZE = 4
+_WIFI_APPLIED_IN_SESSION = False
+_WIFI_NETWORK_CHANGED_IN_SESSION = False
+_WIFI_NMCLI_CALLED_IN_SESSION = False
+_WIFI_PREVIOUS_PROFILE_RESTORED_IN_SESSION = False
 WIFI_LIST_LANDSCAPE_PAGE_SIZE = 4
 MAX_PANEL_ITEMS = 3
 CLOCK_IMPLAUSIBLE_LABEL = "Hora nao ajustada"
@@ -311,23 +317,50 @@ def wifi_list_page_size(layout_rotation_deg: int = 0) -> int:
     return WIFI_LIST_PAGE_SIZE if screen_layout(layout_rotation_deg).portrait else WIFI_LIST_LANDSCAPE_PAGE_SIZE
 
 
-NETWORK_OPTIONS = (
-    Option(
-        "configured_wifi",
-        "Usar Wi-Fi ja configurado",
-        "Mantem o perfil atual do produto.",
-    ),
-    Option(
-        "wifi_select",
-        "Selecionar rede Wi-Fi",
-        "Escolhe uma rede na lista local.",
-    ),
-    Option(
-        "bench_mock",
-        "Continuar em modo de bancada",
-        "Segue sem alterar a rede.",
-    ),
+CONFIGURED_WIFI_OPTION = Option(
+    "configured_wifi",
+    "Continuar com Wi-Fi atual",
+    "Usa o perfil ativo deste totem.",
 )
+ETHERNET_OPTION = Option(
+    "ethernet",
+    "Continuar com Ethernet",
+    "Mantem o cabo conectado.",
+)
+WIFI_SELECT_OPTION = Option(
+    "wifi_select",
+    "Escolher outra rede Wi-Fi",
+    "Abre a lista de redes locais.",
+)
+BENCH_OPTION = Option(
+    "bench_mock",
+    "Continuar em modo de bancada",
+    "Segue sem alterar a rede.",
+)
+# Compatibility surface for offline callers. Runtime choices are always built
+# by network_options_for_ui() from verified device state.
+NETWORK_OPTIONS = (
+    CONFIGURED_WIFI_OPTION,
+    ETHERNET_OPTION,
+    WIFI_SELECT_OPTION,
+)
+
+
+def network_options_for_ui(
+    *,
+    configured_wifi_available: bool,
+    ethernet_available: bool,
+    homologation_mode: bool = False,
+) -> list[Option]:
+    options: list[Option] = []
+    if ethernet_available:
+        options.append(ETHERNET_OPTION)
+    if configured_wifi_available:
+        options.append(CONFIGURED_WIFI_OPTION)
+    options.append(WIFI_SELECT_OPTION)
+    if homologation_mode:
+        options.append(BENCH_OPTION)
+    return options
 
 ENVIRONMENT_ENTRY_OPTIONS = (
     Option(
@@ -1140,7 +1173,7 @@ def build_screen_svg(
         elif extra_svg:
             panel_y = 650 if active_step == 3 else 770
         else:
-            panel_y = 760 if options and len(options) >= 5 else 650
+            panel_y = 760 if options and len(options) >= 4 else 650
         title_y = 188
         subtitle_y = 224
         subtitle_width = 46
@@ -1644,10 +1677,17 @@ class VisualDisplay:
         self.current_svg = refreshed_svg
         return True
 
-    def show(self, screen_id: str, svg: str) -> pathlib.Path:
+    def show(
+        self,
+        screen_id: str,
+        svg: str,
+        *,
+        artifact_svg: str | None = None,
+    ) -> pathlib.Path:
         self.current_screen_id = screen_id
-        self.current_svg = svg
-        path = self.write_svg(screen_id, svg)
+        safe_svg = artifact_svg if artifact_svg is not None else svg
+        self.current_svg = svg if self.framebuffer is not None else safe_svg
+        path = self.write_svg(screen_id, safe_svg)
         if not self.enabled:
             return path
         if self.framebuffer is not None:
@@ -1680,6 +1720,8 @@ class VisualDisplay:
                 self.framebuffer.close()
                 self.framebuffer = None
         finally:
+            self.current_svg = ""
+            self.current_screen_id = ""
             self._restore_console_and_signals()
 
 
@@ -1846,6 +1888,19 @@ def wait_enter_or_cancel() -> None:
         if key == "enter":
             return
         if key in {"escape", "quit"}:
+            raise VisualWizardAbort("setup visual cancelado pelo operador")
+
+
+def wait_enter_or_timeout(timeout_sec: float) -> None:
+    deadline = time.monotonic() + max(0.0, float(timeout_sec))
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return
+        key = read_key(timeout_sec=remaining)
+        if key in {"enter", "timeout"}:
+            return
+        if key in {"q", "Q"}:
             raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
@@ -2251,6 +2306,7 @@ def read_text_field(
     reveal_hidden_value = False
     focus_area = "steps" if initial_focus_area == "steps" else "content"
     focused_step = active_step
+    hidden_toggle_available = bool(hidden and allow_hidden_toggle and display.framebuffer is not None)
     needs_render = True
     force_render = True
     last_render_at = 0.0
@@ -2301,7 +2357,7 @@ def read_text_field(
                                     force_render = True
                                     break
                             return candidate
-                        if hidden and allow_hidden_toggle and is_secret_toggle_key(drained_key):
+                        if hidden_toggle_available and is_secret_toggle_key(drained_key):
                             reveal_hidden_value = not reveal_hidden_value
                             if error:
                                 error = ""
@@ -2332,7 +2388,9 @@ def read_text_field(
                     continue
                 continue
 
-            effective_show_plain_value = show_plain_value or bool(hidden and allow_hidden_toggle and reveal_hidden_value)
+            effective_show_plain_value = show_plain_value or bool(
+                hidden_toggle_available and reveal_hidden_value
+            )
             hint = text_field_display_hint(
                 value,
                 hidden=hidden,
@@ -2343,29 +2401,48 @@ def read_text_field(
             footer = custom_footer or "Enter confirma | Esc cancela"
             if allow_back:
                 footer = custom_footer or "Enter confirma | Esc volta"
-            if hidden and allow_hidden_toggle:
-                toggle_label = "oculta" if reveal_hidden_value else "mostra"
-                footer = f"Enter confirma | Esc volta | F2 {toggle_label}"
+            if hidden_toggle_available:
+                toggle_label = "oculta" if effective_show_plain_value else "mostra"
+                footer = (
+                    custom_footer.replace("{toggle}", toggle_label)
+                    if custom_footer
+                    else f"Enter confirma | Esc volta | F2 {toggle_label}"
+                )
+            elif hidden and allow_hidden_toggle and custom_footer:
+                footer = custom_footer.replace(" | F2 {toggle}", "").replace("F2 {toggle} | ", "")
             if focus_area == "steps":
                 footer = option_footer(focus_area=focus_area, primary="Enter edita", allow_back=allow_back)
             visual_state = (hint, note, reveal_hidden_value, cursor, focus_area, focused_step)
             if visual_state != last_visual_state:
+                screen_kwargs = {
+                    "active_step": active_step,
+                    "title": title,
+                    "subtitle": subtitle,
+                    "footer": footer,
+                    "focused_step": focused_step,
+                    "focus_area": focus_area,
+                    "field_label": label,
+                    "field_value_hint": hint,
+                    "field_note": note,
+                    "panel_items": panel_items,
+                    "accent": "#ef4444" if error else "#06b6d4",
+                    "layout_rotation_deg": layout_rotation_deg,
+                }
+                display_svg = build_screen_svg(**screen_kwargs)
+                artifact_svg = None
+                if hidden and effective_show_plain_value:
+                    artifact_kwargs = dict(screen_kwargs)
+                    artifact_kwargs["field_value_hint"] = text_field_display_hint(
+                        value,
+                        hidden=True,
+                        show_plain_value=False,
+                    )
+                    artifact_kwargs["field_note"] = error or "Senha oculta."
+                    artifact_svg = build_screen_svg(**artifact_kwargs)
                 display.show(
                     screen_id,
-                    build_screen_svg(
-                        active_step=active_step,
-                        title=title,
-                        subtitle=subtitle,
-                        footer=footer,
-                        focused_step=focused_step,
-                        focus_area=focus_area,
-                        field_label=label,
-                        field_value_hint=hint,
-                        field_note=note,
-                        panel_items=panel_items,
-                        accent="#ef4444" if error else "#06b6d4",
-                        layout_rotation_deg=layout_rotation_deg,
-                    ),
+                    display_svg,
+                    artifact_svg=artifact_svg,
                 )
                 last_render_at = time.monotonic()
                 last_visual_state = visual_state
@@ -2409,7 +2486,7 @@ def read_text_field(
                         force_render = True
                         break
                 return candidate
-            if hidden and allow_hidden_toggle and is_secret_toggle_key(drained_key):
+            if hidden_toggle_available and is_secret_toggle_key(drained_key):
                 reveal_hidden_value = not reveal_hidden_value
                 error = ""
                 needs_render = True
@@ -2829,14 +2906,23 @@ def initial_wizard_state(
     )
 
 
-def network_option_index_for_step(network_step: str | None) -> int:
+def network_option_index_for_step(
+    network_step: str | None,
+    options: list[Option] | tuple[Option, ...] | None = None,
+) -> int:
     key_by_step = {
         "existing_configured_wifi": "configured_wifi",
-        "wifi_persistent": "wifi_select",
+        "existing_ethernet": "ethernet",
         "bench_mock": "bench_mock",
     }
-    key = key_by_step.get(str(network_step or ""), "configured_wifi")
-    for index, option in enumerate(NETWORK_OPTIONS):
+    available_options = list(options if options is not None else NETWORK_OPTIONS)
+    if str(network_step or "") == "wifi_persistent":
+        for preferred_key in ("configured_wifi", "wifi_select"):
+            for index, option in enumerate(available_options):
+                if option.key == preferred_key:
+                    return index
+    key = key_by_step.get(str(network_step or ""), "")
+    for index, option in enumerate(available_options):
         if option.key == key:
             return index
     return 0
@@ -2847,6 +2933,7 @@ def network_review_note(network: dict[str, Any] | None, status: str = "pending")
         return "Pendente"
     base = {
         "existing_configured_wifi": "Wi-Fi atual",
+        "existing_ethernet": "Ethernet atual",
         "wifi_persistent": "Wi-Fi dedicado",
         "bench_mock": "Bancada",
     }.get(str(network.get("network_step", "")), "Rede")
@@ -2936,23 +3023,42 @@ def dedicated_profile_present() -> bool | str:
         return "unknown"
 
 
-def dedicated_profile_active() -> bool | str:
+def dedicated_profile_active(timeout_sec: int = WIFI_TIMEOUT_SEC) -> bool | str:
     try:
         return wifi_adapter.dedicated_profile_active(
             profile_name=WIFI_PERSISTENT_PROFILE_NAME,
-            timeout_sec=WIFI_TIMEOUT_SEC,
+            timeout_sec=timeout_sec,
         )
     except Exception:
         return "unknown"
 
 
+def active_ethernet_present(timeout_sec: int = NETWORK_OPTION_PROBE_TIMEOUT_SEC) -> bool | str:
+    try:
+        return wifi_adapter.ethernet_active(timeout_sec=timeout_sec)
+    except Exception:
+        return "unknown"
+
+
+def current_network_options() -> list[Option]:
+    configured_wifi_available = (
+        dedicated_profile_active(timeout_sec=NETWORK_OPTION_PROBE_TIMEOUT_SEC) is True
+    )
+    ethernet_available = active_ethernet_present() is True
+    return network_options_for_ui(
+        configured_wifi_available=configured_wifi_available,
+        ethernet_available=ethernet_available,
+        homologation_mode=HOMOLOGATION_MODE,
+    )
+
+
 def use_configured_wifi_network() -> dict[str, Any]:
     present = dedicated_profile_present()
     if present is not True:
-        raise VisualWizardError("wifi dedicado nao encontrado")
+        raise VisualWizardError("O Wi-Fi salvo nao esta disponivel agora.")
     active = dedicated_profile_active()
     if active is not True:
-        raise VisualWizardError("wifi dedicado nao esta ativo")
+        raise VisualWizardError("O Wi-Fi salvo nao esta ativo agora.")
     return network_defaults(
         network_step="existing_configured_wifi",
         label="Wi-Fi ja configurado",
@@ -2962,6 +3068,21 @@ def use_configured_wifi_network() -> dict[str, Any]:
         read_only_check=True,
         dedicated_profile_present_final=True,
         dedicated_profile_persistent=True,
+        commands_executed=True,
+        nmcli_called=True,
+    )
+
+
+def use_ethernet_network() -> dict[str, Any]:
+    if active_ethernet_present() is not True:
+        raise VisualWizardError("O cabo de rede nao esta conectado agora.")
+    return network_defaults(
+        network_step="existing_ethernet",
+        label="Ethernet conectado",
+        connectivity="unknown",
+        connected="yes",
+        connection_type="ethernet",
+        read_only_check=True,
         commands_executed=True,
         nmcli_called=True,
     )
@@ -3009,7 +3130,7 @@ def security_label(value: Any) -> str:
     if value is True:
         return "Protegida"
     if value is False:
-        return "Aberta"
+        return "Aberta | Indisponivel"
     return "Seguranca desconhecida"
 
 
@@ -3126,9 +3247,16 @@ def wifi_list_screen_svg(
     if networks:
         position = f"Mostrando {page_start + 1}-{page_end} de {len(networks)}"
         selected_line = f"Rede {selected_index + 1} de {len(networks)}"
+        selected_network = networks[max(0, min(len(networks) - 1, selected_index))]
+        primary_action = (
+            "Enter detalhes"
+            if selected_network.get("security_present") is False
+            else "Enter escolhe"
+        )
     else:
         position = "Nenhuma rede encontrada"
         selected_line = "Use R para atualizar"
+        primary_action = "Enter atualiza"
     updated_line = "Atualizando..." if refreshing else f"Atualizado ha {max(0, updated_age_sec)}s"
     panel_items = [
         position,
@@ -3139,12 +3267,46 @@ def wifi_list_screen_svg(
         active_step=1,
         title="Selecionar Wi-Fi",
         subtitle=f"{updated_line}. Sinal e seguranca.",
-        footer="Enter escolhe | Setas rolam | R atualiza | Esc volta",
+        footer=f"{primary_action} | Setas rolam | R atualiza | Esc volta",
         options=options,
         selected_index=selected_on_page,
         panel_title="Lista local",
         panel_items=panel_items,
         accent="#f59e0b" if refreshing else ("#ef4444" if not networks else "#06b6d4"),
+        layout_rotation_deg=layout_rotation_deg,
+    )
+
+
+def wifi_connecting_screen_svg(*, layout_rotation_deg: int) -> str:
+    return build_screen_svg(
+        active_step=1,
+        title="Conectando ao Wi-Fi",
+        subtitle="Testando e salvando a rede.",
+        footer="Aguarde...",
+        panel_title="Em andamento",
+        panel_items=[
+            "Perfil protegido.",
+            "Rollback automatico.",
+            "Senha fora dos logs.",
+        ],
+        accent="#f59e0b",
+        layout_rotation_deg=layout_rotation_deg,
+    )
+
+
+def wifi_success_screen_svg(*, layout_rotation_deg: int) -> str:
+    return build_screen_svg(
+        active_step=1,
+        title="Wi-Fi conectado",
+        subtitle="A rede foi salva neste totem.",
+        footer="Avancando... | Enter continua",
+        panel_title="Pronto",
+        panel_items=[
+            "Endereco de rede recebido.",
+            "Reconexao automatica ativa.",
+            "Perfil de rede salvo.",
+        ],
+        accent="#22c55e",
         layout_rotation_deg=layout_rotation_deg,
     )
 
@@ -3173,15 +3335,27 @@ def choose_wifi_network(
     display: VisualDisplay,
     *,
     layout_rotation_deg: int,
+    initial_networks: list[dict[str, Any]] | None = None,
+    initial_selected_ssid: str = "",
 ) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
-    networks, list_status = wifi_adapter.list_wifi_networks_for_local_ui(
-        timeout_sec=WIFI_LIST_TIMEOUT_SEC,
-        rescan=True,
-    )
+    if initial_networks is None:
+        networks, list_status = wifi_adapter.list_wifi_networks_for_local_ui(
+            timeout_sec=WIFI_LIST_TIMEOUT_SEC,
+            rescan=True,
+        )
+        refresh_message = ""
+    else:
+        networks = list(initial_networks)
+        list_status = "ok"
+        refresh_message = "Lista anterior mantida."
     page_size = wifi_list_page_size(layout_rotation_deg)
     selected_index = 0
+    if initial_selected_ssid:
+        for index, network in enumerate(networks):
+            if str(network.get("ssid", "")) == initial_selected_ssid:
+                selected_index = index
+                break
     last_refresh = time.monotonic()
-    refresh_message = ""
     needs_render = True
     while True:
         now = time.monotonic()
@@ -3277,7 +3451,29 @@ def choose_wifi_network(
             continue
         if key == "enter":
             if networks:
-                return networks[selected_index], networks
+                selected_network = networks[selected_index]
+                if selected_network.get("security_present") is False:
+                    display.show(
+                        "02-wifi-open-unavailable",
+                        build_screen_svg(
+                            active_step=1,
+                            title="Rede aberta",
+                            subtitle="Esta versao ainda nao conecta redes sem senha.",
+                            footer="Enter volta para a lista",
+                            panel_title="Ainda indisponivel",
+                            panel_items=[
+                                "Nada foi alterado.",
+                                "Escolha uma rede protegida.",
+                                "Suporte entra na proxima etapa.",
+                            ],
+                            accent="#f59e0b",
+                            layout_rotation_deg=layout_rotation_deg,
+                        ),
+                    )
+                    read_advertised_action("enter")
+                    needs_render = True
+                    continue
+                return selected_network, networks
             display.show(
                 "02-wifi-list-refreshing",
                 wifi_list_screen_svg(
@@ -3310,43 +3506,19 @@ def choose_wifi_network(
             raise VisualWizardAbort("setup visual cancelado pelo operador")
 
 
-def collect_wifi_credentials(
+def collect_wifi_password(
     display: VisualDisplay,
     *,
+    selected_network: dict[str, Any],
     layout_rotation_deg: int,
-) -> tuple[pathlib.Path, dict[str, Any]] | None:
-    selected = choose_wifi_network(display, layout_rotation_deg=layout_rotation_deg)
-    if selected is None:
-        return None
-    selected_network, networks = selected
-    ssid = str(selected_network["ssid"])
-    display.show(
-        "02-wifi-selected",
-        build_screen_svg(
-            active_step=1,
-            title="Rede selecionada",
-            subtitle=local_display_value(ssid, max_chars=56),
-            footer="Enter continua | Esc volta",
-            panel_title="Proximo",
-            panel_items=[
-                "Digite a senha.",
-                "Ela inicia oculta.",
-                "Pode voltar.",
-            ],
-            layout_rotation_deg=layout_rotation_deg,
-        ),
-    )
-    key = read_advertised_action("enter", "b", "B", "back", "escape")
-    if key in {"b", "B", "back", "escape"}:
-        return None
-
-    selection_metadata = wifi_adapter.wifi_selection_public_metadata(networks, selected_network)
-    psk = read_text_field(
+    initial_value: str = "",
+) -> str | None:
+    return read_text_field(
         display,
         screen_id="02-wifi-psk",
         active_step=1,
-        title="Senha Wi-Fi",
-        subtitle="Digite a senha da rede.",
+        title="Conectar ao Wi-Fi",
+        subtitle=local_display_value(str(selected_network["ssid"]), max_chars=56),
         label="Senha Wi-Fi",
         hidden=True,
         min_length=8,
@@ -3358,29 +3530,9 @@ def collect_wifi_credentials(
         ],
         allow_hidden_toggle=True,
         layout_rotation_deg=layout_rotation_deg,
+        initial_value=initial_value,
+        custom_footer="Enter conecta | Esc troca rede | F2 {toggle}",
     )
-    if psk is None:
-        return None
-    display.show(
-        "02-wifi-confirm",
-        build_screen_svg(
-            active_step=1,
-            title="Aplicar Wi-Fi",
-            subtitle="Vamos testar o perfil dedicado.",
-            footer="Enter aplica | Esc volta",
-            panel_title="Atencao",
-            panel_items=[
-                "SSH pode oscilar.",
-                "Console local fica ativo.",
-                "Pode voltar.",
-            ],
-            layout_rotation_deg=layout_rotation_deg,
-        ),
-    )
-    key = read_advertised_action("enter", "b", "B", "back", "escape")
-    if key in {"b", "B", "back", "escape"}:
-        return None
-    return write_wifi_secrets_file(prepare_wifi_secrets_dir(), ssid, psk), selection_metadata
 
 
 def wifi_network_from_status(
@@ -3421,20 +3573,28 @@ def wifi_network_from_status(
     )
 
 
-def run_wifi_persistent(
+def apply_wifi_persistent_attempt(
     display: VisualDisplay,
     out_dir: pathlib.Path,
     *,
+    ssid: str,
+    psk: str,
+    selection_metadata: dict[str, Any],
     layout_rotation_deg: int,
-) -> dict[str, Any] | None:
-    c1523_phase("wifi_step_entered", mode="persistent")
-    collected = collect_wifi_credentials(display, layout_rotation_deg=layout_rotation_deg)
-    if collected is None:
-        return None
-    secrets_path, selection_metadata = collected
+) -> dict[str, Any]:
     wifi_out_dir = require_tmp_dir(str(out_dir / WIFI_APPLY_DIRNAME))
     prepare_private_dir(wifi_out_dir)
     stdout_path = wifi_out_dir / "apply-stdout.json"
+    status_path = wifi_out_dir / wifi_adapter.STATUS_FILENAME
+    if status_path.is_symlink():
+        raise VisualWizardError("arquivo temporario indisponivel")
+    try:
+        status_path.unlink()
+    except FileNotFoundError:
+        pass
+    if stdout_path.exists() and stdout_path.is_symlink():
+        raise VisualWizardError("arquivo temporario indisponivel")
+    secrets_path = write_wifi_secrets_file(prepare_wifi_secrets_dir(), ssid, psk)
     command = [
         sys.executable,
         str(ADAPTER_SCRIPT),
@@ -3458,33 +3618,34 @@ def run_wifi_persistent(
         "--out-dir",
         str(wifi_out_dir),
     ]
-    if stdout_path.exists() and stdout_path.is_symlink():
-        raise VisualWizardError("arquivo temporario indisponivel")
-    with stdout_path.open("w", encoding="utf-8") as stdout_handle:
-        os.chmod(stdout_path, setup.PRIVATE_FILE_MODE)
-        process = subprocess.Popen(command, stdout=stdout_handle, stderr=subprocess.DEVNULL, text=True)
-        while process.poll() is None:
+    rc = 1
+    try:
+        with stdout_path.open("w", encoding="utf-8") as stdout_handle:
+            os.chmod(stdout_path, setup.PRIVATE_FILE_MODE)
             display.show(
                 "02-wifi-applying",
-                build_screen_svg(
-                    active_step=1,
-                    title="Salvando Wi-Fi",
-                    subtitle="Testando o perfil dedicado.",
-                    footer="Aguarde...",
-                    panel_title="Em andamento",
-                    panel_items=[
-                        "Sem dados na tela.",
-                        "Timeout curto ativo.",
-                        "Perfil dedicado.",
-                    ],
-                    layout_rotation_deg=layout_rotation_deg,
-                ),
+                wifi_connecting_screen_svg(layout_rotation_deg=layout_rotation_deg),
             )
-            time.sleep(1)
-        rc = process.wait()
-    status_path = wifi_out_dir / wifi_adapter.STATUS_FILENAME
+            process = subprocess.Popen(command, stdout=stdout_handle, stderr=subprocess.DEVNULL, text=True)
+            while process.poll() is None:
+                display.show(
+                    "02-wifi-applying",
+                    wifi_connecting_screen_svg(layout_rotation_deg=layout_rotation_deg),
+                )
+                time.sleep(1)
+            rc = process.wait()
+    except OSError:
+        rc = 1
+    finally:
+        try:
+            if secrets_path.exists() and not secrets_path.is_symlink():
+                secrets_path.unlink()
+        except OSError:
+            pass
     try:
         adapter_status = json.loads(status_path.read_text(encoding="utf-8"))
+        if not isinstance(adapter_status, dict):
+            raise ValueError("invalid adapter status")
     except Exception:
         adapter_status = {
             "wifi_activation_attempted": False,
@@ -3493,57 +3654,103 @@ def run_wifi_persistent(
             "rollback_after_test": False,
             "rollback_status": "not_run",
         }
-    if secrets_path.exists() and not secrets_path.is_symlink():
-        try:
-            secrets_path.unlink()
-        except OSError:
-            pass
     if rc != 0 and adapter_status.get("wifi_activation_result") == "success":
         adapter_status["wifi_activation_result"] = "unknown"
     network = wifi_network_from_status(adapter_status, secrets_path, selection_metadata)
-    if network["wifi_link_ready"]:
-        display.show(
-            "02-wifi-result",
-            build_screen_svg(
-                active_step=1,
-                title="Wi-Fi conectado",
-                subtitle="A rede foi salva neste totem.",
-                footer="Enter continua",
-                panel_title="Pronto",
-                panel_items=[
-                    "Endereco de rede recebido.",
-                    "Reconexao automatica ativa.",
-                    "Senha temporaria removida.",
-                ],
-                layout_rotation_deg=layout_rotation_deg,
-            ),
-        )
-        read_advertised_action("enter")
-        return network
+    record_wifi_attempt_in_session(network)
+    return network
 
-    restored = bool(network["previous_profile_restored"])
-    display.show(
-        "02-wifi-result",
-        build_screen_svg(
-            active_step=1,
-            title="Nova rede nao conectada" if restored else "Wi-Fi nao conectado",
-            subtitle="A rede anterior foi preservada." if restored else "Verifique a rede e tente novamente.",
-            footer="Enter escolhe outra rede | Esc volta",
-            panel_title="Sem conexao",
-            panel_items=(
-                ["Rede anterior restaurada.", "Confira a nova senha.", "Ethernet nao foi alterado."]
-                if restored
-                else ["Confira a senha.", "Confira o nome da rede.", "Ethernet nao foi alterado."]
-            ),
-            accent="#ef4444",
+
+def run_wifi_persistent(
+    display: VisualDisplay,
+    out_dir: pathlib.Path,
+    *,
+    layout_rotation_deg: int,
+) -> dict[str, Any] | None:
+    c1523_phase("wifi_step_entered", mode="persistent")
+    networks: list[dict[str, Any]] | None = None
+    selected_ssid = ""
+    psk = ""
+    while True:
+        selected = choose_wifi_network(
+            display,
             layout_rotation_deg=layout_rotation_deg,
-        ),
-    )
-    read_advertised_action("enter", "b", "B", "back", "escape")
-    return None
+            initial_networks=networks,
+            initial_selected_ssid=selected_ssid,
+        )
+        if selected is None:
+            return None
+        selected_network, networks = selected
+        next_ssid = str(selected_network["ssid"])
+        if next_ssid != selected_ssid:
+            psk = ""
+        selected_ssid = next_ssid
+        selection_metadata = wifi_adapter.wifi_selection_public_metadata(networks, selected_network)
+
+        while True:
+            entered_psk = collect_wifi_password(
+                display,
+                selected_network=selected_network,
+                layout_rotation_deg=layout_rotation_deg,
+                initial_value=psk,
+            )
+            if entered_psk is None:
+                break
+            psk = entered_psk
+            network = apply_wifi_persistent_attempt(
+                display,
+                out_dir,
+                ssid=selected_ssid,
+                psk=psk,
+                selection_metadata=selection_metadata,
+                layout_rotation_deg=layout_rotation_deg,
+            )
+            if network["wifi_link_ready"]:
+                display.show(
+                    "02-wifi-result",
+                    wifi_success_screen_svg(layout_rotation_deg=layout_rotation_deg),
+                )
+                wait_enter_or_timeout(WIFI_SUCCESS_AUTO_ADVANCE_SEC)
+                return network
+
+            restored = bool(network["previous_profile_restored"])
+            display.show(
+                "02-wifi-result",
+                build_screen_svg(
+                    active_step=1,
+                    title="Nova rede nao conectada" if restored else "Wi-Fi nao conectado",
+                    subtitle=(
+                        "A rede anterior foi restaurada."
+                        if restored
+                        else "Confira a senha ou escolha outra rede."
+                    ),
+                    footer="Enter corrige senha | Esc troca rede",
+                    panel_title="Sem conexao",
+                    panel_items=(
+                        ["Rede anterior restaurada.", "Senha mantida para corrigir.", "Ethernet nao foi alterado."]
+                        if restored
+                        else ["Senha mantida para corrigir.", "Pode escolher outra rede.", "Ethernet nao foi alterado."]
+                    ),
+                    accent="#ef4444",
+                    layout_rotation_deg=layout_rotation_deg,
+                ),
+            )
+            action = read_advertised_action("enter", "b", "B", "back", "escape")
+            if action == "enter":
+                continue
+            break
 
 
 def resolve_network_scripted(network_step: str) -> dict[str, Any]:
+    if network_step in {"ethernet", "existing_ethernet"}:
+        return network_defaults(
+            network_step="existing_ethernet",
+            label="Ethernet conectado",
+            connectivity="unknown",
+            connected="yes",
+            connection_type="ethernet",
+            read_only_check=True,
+        )
     if network_step in {"configured_wifi", "existing_configured_wifi", "existing_connection"}:
         return network_defaults(
             network_step="existing_configured_wifi",
@@ -4012,29 +4219,69 @@ def write_visual_artifacts(
 
 
 def cancelled_wifi_observation(out_dir: pathlib.Path) -> dict[str, bool]:
-    status_path = out_dir / WIFI_APPLY_DIRNAME / wifi_adapter.STATUS_FILENAME
-    defaults = {
-        "network_changed": False,
-        "nmcli_called": False,
-        "previous_profile_restored": False,
-    }
-    if status_path.is_symlink() or not status_path.is_file():
-        return defaults
-    try:
-        data = json.loads(status_path.read_text(encoding="utf-8"))
-    except Exception:
-        return defaults
-    if not isinstance(data, dict):
-        return defaults
+    del out_dir
     return {
-        "network_changed": bool(data.get("network_changed", False)),
-        "nmcli_called": bool(
-            data.get("wifi_profile_created", False)
-            or data.get("wifi_activation_attempted", False)
-            or data.get("network_changed", False)
-        ),
-        "previous_profile_restored": bool(data.get("previous_profile_restored", False)),
+        "network_changed": _WIFI_NETWORK_CHANGED_IN_SESSION,
+        "nmcli_called": _WIFI_NMCLI_CALLED_IN_SESSION,
+        "previous_profile_restored": _WIFI_PREVIOUS_PROFILE_RESTORED_IN_SESSION,
+        "wifi_applied_in_session": _WIFI_APPLIED_IN_SESSION,
     }
+
+
+def wifi_applied_in_session() -> bool:
+    return _WIFI_APPLIED_IN_SESSION
+
+
+def reset_wifi_session_state() -> None:
+    global _WIFI_APPLIED_IN_SESSION
+    global _WIFI_NETWORK_CHANGED_IN_SESSION
+    global _WIFI_NMCLI_CALLED_IN_SESSION
+    global _WIFI_PREVIOUS_PROFILE_RESTORED_IN_SESSION
+    _WIFI_APPLIED_IN_SESSION = False
+    _WIFI_NETWORK_CHANGED_IN_SESSION = False
+    _WIFI_NMCLI_CALLED_IN_SESSION = False
+    _WIFI_PREVIOUS_PROFILE_RESTORED_IN_SESSION = False
+
+
+def record_wifi_attempt_in_session(network: dict[str, Any]) -> None:
+    global _WIFI_APPLIED_IN_SESSION
+    global _WIFI_NETWORK_CHANGED_IN_SESSION
+    global _WIFI_NMCLI_CALLED_IN_SESSION
+    global _WIFI_PREVIOUS_PROFILE_RESTORED_IN_SESSION
+    _WIFI_NETWORK_CHANGED_IN_SESSION = bool(
+        _WIFI_NETWORK_CHANGED_IN_SESSION or network.get("network_changed", False)
+    )
+    _WIFI_NMCLI_CALLED_IN_SESSION = bool(
+        _WIFI_NMCLI_CALLED_IN_SESSION or network.get("nmcli_called", False)
+    )
+    _WIFI_PREVIOUS_PROFILE_RESTORED_IN_SESSION = bool(
+        _WIFI_PREVIOUS_PROFILE_RESTORED_IN_SESSION
+        or network.get("previous_profile_restored", False)
+    )
+    if network.get("wifi_link_ready", False):
+        _WIFI_APPLIED_IN_SESSION = True
+
+
+def record_wifi_applied_in_session(out_dir: pathlib.Path) -> None:
+    del out_dir
+    global _WIFI_APPLIED_IN_SESSION
+    global _WIFI_NETWORK_CHANGED_IN_SESSION
+    global _WIFI_NMCLI_CALLED_IN_SESSION
+    _WIFI_APPLIED_IN_SESSION = True
+    _WIFI_NETWORK_CHANGED_IN_SESSION = True
+    _WIFI_NMCLI_CALLED_IN_SESSION = True
+
+
+def preserve_wifi_session_change(
+    network: dict[str, Any] | None,
+    out_dir: pathlib.Path,
+) -> dict[str, Any] | None:
+    del out_dir
+    if network is None or not wifi_applied_in_session():
+        return network
+    preserved = dict(network)
+    preserved["network_changed"] = True
+    return preserved
 
 
 def write_cancelled_artifact(out_dir: pathlib.Path) -> None:
@@ -4053,6 +4300,7 @@ def write_cancelled_artifact(out_dir: pathlib.Path) -> None:
             "writer_called": False,
             "network_changed": wifi["network_changed"],
             "wifi_changed": wifi["network_changed"],
+            "wifi_applied_in_session": wifi["wifi_applied_in_session"],
             "previous_profile_restored": wifi["previous_profile_restored"],
             "display_changed": False,
             "player_started": False,
@@ -4090,6 +4338,26 @@ def write_failed_artifact(out_dir: pathlib.Path, reason: str) -> None:
     atomic_write_private_json(out_dir / FAILED_FILENAME, status, out_dir)
 
 
+def review_network_change_items(
+    network: dict[str, Any] | None,
+    *,
+    rotation_status: str,
+) -> list[str]:
+    if network is not None and bool(network.get("network_changed", False)):
+        return [
+            "O Wi-Fi ja foi aplicado.",
+            "Tela e ambiente aguardam salvar.",
+            "Esc volta; o Wi-Fi permanece.",
+        ]
+    if rotation_status == "default":
+        return ["Tela usa default atual.", "Dados privados ocultos.", "Esc volta."]
+    return [
+        "Nenhum novo ajuste foi salvo.",
+        "Revise antes de continuar.",
+        "Esc volta.",
+    ]
+
+
 def review_and_confirm(
     display: VisualDisplay,
     environment_id: str,
@@ -4122,19 +4390,13 @@ def review_and_confirm(
             primary = "Enter prepara candidata"
         title = "Pronto para concluir"
         panel_title = "Antes de salvar"
-        panel_items = [
-            "A configuracao final ainda nao foi salva.",
-            "O Wi-Fi selecionado pode ja estar ativo.",
-            "Esc volta.",
-        ]
+        panel_items = review_network_change_items(network, rotation_status=rotation_status)
         if not ready:
             title = "Pendencias antes de concluir"
             subtitle = "Complete os itens pendentes antes de salvar."
             primary = "Enter corrige"
             panel_title = "Bloqueado"
             panel_items = ["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."]
-        elif rotation_status == "default":
-            panel_items = ["Tela usa default atual.", "Dados privados ocultos.", "Esc volta."]
         footer = "Enter abre | Esc volta" if focus_area == "steps" else f"{primary} | Cima menu | Esc volta"
         display.show(
             "05-review",
@@ -5001,13 +5263,26 @@ def build_completion_screen_svg(status: dict[str, Any]) -> str:
     rotation_deg = int(status.get("validation", {}).get("rotation_degrees", 0))
     if APPLY_CONTEXT == "real-write":
         title = "Pronto para salvar"
-        subtitle = "Confirme para gravar a configuracao final."
+        network_changed = bool(status.get("network", {}).get("network_changed", False))
+        subtitle = (
+            "Confirme para salvar tela e ambiente."
+            if network_changed
+            else "Confirme para gravar a configuracao final."
+        )
         footer = "Enter salva | Esc cancela"
-        panel_items = [
-            "Tela, Wi-Fi e ambiente revisados.",
-            "A configuracao final ainda nao foi salva.",
-            "Esc cancela sem gravar.",
-        ]
+        panel_items = (
+            [
+                "O Wi-Fi ja foi aplicado.",
+                "Tela e ambiente aguardam salvar.",
+                "Esc cancela os ajustes pendentes.",
+            ]
+            if network_changed
+            else [
+                "Tela, rede e ambiente revisados.",
+                "Nenhum novo ajuste foi salvo.",
+                "Esc cancela os ajustes pendentes.",
+            ]
+        )
     elif APPLY_CONTEXT == "dry-run":
         title = "Pronto para validar"
         subtitle = "Ao continuar, a candidata sera validada."
@@ -5038,6 +5313,42 @@ def build_completion_screen_svg(status: dict[str, Any]) -> str:
     )
 
 
+def build_cancelled_screen_svg(
+    observation: dict[str, bool],
+    *,
+    layout_rotation_deg: int,
+) -> str:
+    wifi_applied = bool(
+        observation.get(
+            "wifi_applied_in_session",
+            observation.get("network_changed", False)
+            and not observation.get("previous_profile_restored", False),
+        )
+    )
+    if wifi_applied:
+        subtitle = "O Wi-Fi aplicado foi mantido."
+        panel_items = ["A rede permanece ativa.", "Outros ajustes nao foram salvos.", "O player voltara agora."]
+    elif observation.get("previous_profile_restored", False):
+        subtitle = "A rede anterior foi restaurada."
+        panel_items = ["Nenhum novo Wi-Fi ficou ativo.", "Outros ajustes nao foram salvos.", "O player voltara agora."]
+    elif observation.get("network_changed", False):
+        subtitle = "Nenhum novo Wi-Fi foi confirmado."
+        panel_items = ["A tentativa foi encerrada.", "Outros ajustes nao foram salvos.", "O player voltara agora."]
+    else:
+        subtitle = "Nenhum novo ajuste foi salvo."
+        panel_items = ["A configuracao anterior foi mantida.", "Nada novo foi aplicado.", "O player voltara agora."]
+    return build_screen_svg(
+        active_step=1,
+        title="Configuracao encerrada",
+        subtitle=subtitle,
+        footer="Voltando ao player...",
+        panel_title="Estado final",
+        panel_items=panel_items,
+        accent="#94a3b8",
+        layout_rotation_deg=layout_rotation_deg,
+    )
+
+
 def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
     display.show("06-complete", build_completion_screen_svg(status))
     wait_enter_or_cancel()
@@ -5050,6 +5361,7 @@ def run_visual_wizard(
     public_orientation_path: pathlib.Path | None = None,
     private_settings_context_path: pathlib.Path | None = None,
 ) -> dict[str, Any]:
+    reset_wifi_session_state()
     display = VisualDisplay(out_dir, mpv_bin=mpv_bin, enabled=True)
     set_connectivity_indicator_runtime(True)
     set_connectivity_refresh_callback(display.refresh_connectivity_header)
@@ -5083,21 +5395,30 @@ def run_visual_wizard(
 
                     if active_step == 1:
                         c1523_phase("wifi_step_entered", mode="selection")
+                        network_options = current_network_options()
+                        has_verified_current = any(
+                            option.key in {"configured_wifi", "ethernet"} for option in network_options
+                        )
                         selected_network = choose_option(
                             display,
                             screen_id="02-connection",
                             active_step=1,
                             title="Wi-Fi",
-                            subtitle="Escolha o Wi-Fi.",
-                            options=list(NETWORK_OPTIONS),
+                            subtitle=(
+                                "Continue com a conexao atual ou escolha outra rede."
+                                if has_verified_current
+                                else "Escolha uma rede Wi-Fi para conectar."
+                            ),
+                            options=network_options,
                             panel_items=[
-                                "Lista local.",
-                                "Senha oculta.",
-                                "Sem portal.",
+                                "Conexao atual verificada." if has_verified_current else "Lista de redes locais.",
+                                "Nova rede com rollback.",
+                                "Senha protegida.",
                             ],
                             layout_rotation_deg=layout_rotation_deg,
                             initial_selected_index=network_option_index_for_step(
-                                state.network.get("network_step") if state.network else None
+                                state.network.get("network_step") if state.network else None,
+                                network_options,
                             ),
                             initial_focus_area=entry_focus_area,
                         )
@@ -5109,6 +5430,9 @@ def run_visual_wizard(
                             if selected_network.key == "configured_wifi":
                                 state.network = use_configured_wifi_network()
                                 c1523_phase("wifi_step_done", network_step="existing_configured_wifi")
+                            elif selected_network.key == "ethernet":
+                                state.network = use_ethernet_network()
+                                c1523_phase("wifi_step_done", network_step="existing_ethernet")
                             elif selected_network.key == "wifi_select":
                                 maybe_network = run_wifi_persistent(display, out_dir, layout_rotation_deg=layout_rotation_deg)
                                 if maybe_network is None:
@@ -5119,9 +5443,11 @@ def run_visual_wizard(
                                     network_step=state.network["network_step"],
                                     wifi_activation_result=state.network["wifi_activation_result"],
                                 )
-                            else:
+                            elif selected_network.key == "bench_mock" and HOMOLOGATION_MODE:
                                 state.network = network_defaults()
                                 c1523_phase("wifi_step_done", network_step=state.network["network_step"])
+                            else:
+                                raise VisualWizardError("Esta opcao de conexao nao esta disponivel.")
                             state.network_status = "confirmed"
                             active_step = 2
                             entry_focus_area = "content"
@@ -5136,9 +5462,9 @@ def run_visual_wizard(
                                     footer="Enter volta | Esc cancela",
                                     panel_title="Tente de novo",
                                     panel_items=[
-                                        "Nada foi salvo.",
-                                        "Escolha outro caminho.",
-                                        "Pode cancelar.",
+                                        "A conexao anterior foi mantida.",
+                                        "Escolha outra opcao.",
+                                        "Pode tentar novamente.",
                                     ],
                                     accent="#ef4444",
                                     layout_rotation_deg=layout_rotation_deg,
@@ -5250,6 +5576,7 @@ def run_visual_wizard(
                         continue
 
                     if active_step == 3:
+                        state.network = preserve_wifi_session_change(state.network, out_dir)
                         confirmed = review_and_confirm(
                             display,
                             state.environment_id,
@@ -5280,6 +5607,20 @@ def run_visual_wizard(
                 except VisualWizardStepJump as exc:
                     active_step = int(exc.step)
                     entry_focus_area = exc.focus_area
+    except VisualWizardAbort:
+        try:
+            observation = cancelled_wifi_observation(out_dir)
+            display.show(
+                "07-cancelled",
+                build_cancelled_screen_svg(
+                    observation,
+                    layout_rotation_deg=int(state.rotation["rotation_deg"]),
+                ),
+            )
+            time.sleep(1.2)
+        except Exception:
+            pass
+        raise
     finally:
         try:
             set_connectivity_refresh_callback(None)
@@ -5363,11 +5704,14 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         build_screen_svg(
             active_step=1,
             title="Wi-Fi",
-            subtitle="Escolha o Wi-Fi.",
+            subtitle="Continue com a conexao atual ou escolha outra rede.",
             footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
-            options=list(NETWORK_OPTIONS),
+            options=network_options_for_ui(
+                configured_wifi_available=True,
+                ethernet_available=True,
+            ),
             selected_index=0,
-            panel_items=["Lista local.", "Senha oculta.", "Sem portal."],
+            panel_items=["Conexao atual verificada.", "Nova rede com rollback.", "Senha protegida."],
             layout_rotation_deg=90,
         ),
     )
@@ -5421,9 +5765,9 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         "02-wifi-psk-hidden",
         build_screen_svg(
             active_step=1,
-            title="Senha Wi-Fi",
-            subtitle="Digite a senha da rede.",
-            footer="Enter confirma | Esc volta | F2 mostra",
+            title="Conectar ao Wi-Fi",
+            subtitle="TEST_WIFI_STRONG",
+            footer="Enter conecta | Esc troca rede | F2 mostra",
             field_label="Senha Wi-Fi",
             field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
             field_note="Senha oculta por padrao.",
@@ -5435,13 +5779,13 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         "02-wifi-psk-visible",
         build_screen_svg(
             active_step=1,
-            title="Senha Wi-Fi",
-            subtitle="Digite a senha da rede.",
-            footer="Enter confirma | Esc volta | F2 oculta",
+            title="Conectar ao Wi-Fi",
+            subtitle="TEST_WIFI_STRONG",
+            footer="Enter conecta | Esc troca rede | F2 oculta",
             field_label="Senha Wi-Fi",
-            field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=True),
-            field_note="Valor visivel apenas no HDMI local.",
-            panel_items=["Visivel so localmente.", "F2 oculta.", "Nao aparece em logs."],
+            field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
+            field_note="Artefato mascarado; F2 revela so no HDMI real.",
+            panel_items=["Artefato sem senha.", "F2 oculta no uso real.", "Nao aparece em logs."],
             layout_rotation_deg=90,
         ),
     )
@@ -5660,9 +6004,9 @@ def show_wifi_list_preview(
             "02-wifi-psk-preview-hidden",
             build_screen_svg(
                 active_step=1,
-                title="Senha Wi-Fi",
-                subtitle="Digite a senha da rede.",
-                footer="Enter confirma | Esc volta | F2 mostra",
+                title="Conectar ao Wi-Fi",
+                subtitle="TEST_WIFI_STRONG",
+                footer="Enter conecta | Esc troca rede | F2 mostra",
                 field_label="Senha Wi-Fi",
                 field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
                 field_note="Senha oculta por padrao.",
@@ -5674,13 +6018,13 @@ def show_wifi_list_preview(
             "02-wifi-psk-preview-visible",
             build_screen_svg(
                 active_step=1,
-                title="Senha Wi-Fi",
-                subtitle="Digite a senha da rede.",
-                footer="Enter confirma | Esc volta | F2 oculta",
+                title="Conectar ao Wi-Fi",
+                subtitle="TEST_WIFI_STRONG",
+                footer="Enter conecta | Esc troca rede | F2 oculta",
                 field_label="Senha Wi-Fi",
-                field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=True),
-                field_note="Valor visivel apenas no HDMI local.",
-                panel_items=["Visivel so localmente.", "F2 oculta.", "Nao aparece em logs."],
+                field_value_hint=text_field_display_hint("preview-password", hidden=True, show_plain_value=False),
+                field_note="Artefato mascarado; F2 revela so no HDMI real.",
+                panel_items=["Artefato sem senha.", "F2 oculta no uso real.", "Nao aparece em logs."],
                 layout_rotation_deg=layout_rotation_deg,
             ),
         )
@@ -5838,6 +6182,41 @@ def run_self_test() -> None:
         "canonical UUID environment should pass",
     )
     assert_raises(lambda: resolve_display_selection("diagonal"), "unknown display option should fail")
+    production_options = network_options_for_ui(
+        configured_wifi_available=False,
+        ethernet_available=False,
+    )
+    assert_true(
+        [option.key for option in production_options] == ["wifi_select"],
+        "production should show only the actionable Wi-Fi path when no current connection is proven",
+    )
+    verified_options = network_options_for_ui(
+        configured_wifi_available=True,
+        ethernet_available=True,
+    )
+    assert_true(
+        [option.key for option in verified_options] == ["ethernet", "configured_wifi", "wifi_select"],
+        "verified current connections should be offered before selecting another Wi-Fi",
+    )
+    assert_true(
+        "bench_mock" not in {option.key for option in verified_options},
+        "bench mode must stay out of the production surface",
+    )
+    homologation_options = network_options_for_ui(
+        configured_wifi_available=False,
+        ethernet_available=False,
+        homologation_mode=True,
+    )
+    assert_true(
+        [option.key for option in homologation_options] == ["wifi_select", "bench_mock"],
+        "bench mode should remain available only through the explicit homologation flag",
+    )
+    assert_true(
+        network_option_index_for_step("existing_ethernet", verified_options) == 0
+        and network_option_index_for_step("existing_configured_wifi", verified_options) == 1
+        and network_option_index_for_step("wifi_persistent", verified_options) == 1,
+        "dynamic connection options should retain the current verified choice",
+    )
 
     root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c9-9-visual-wizard-self-test-", dir="/tmp"))
     try:
@@ -5867,6 +6246,35 @@ def run_self_test() -> None:
         assert_true(
             text_field_display_hint("abcd", hidden=False, show_plain_value=True, cursor_index=2) == "ab|cd",
             "cursor should render inside visible environment field",
+        )
+        password_retry_display = VisualDisplay(root / "password-retry", enabled=False)
+        original_password_read_key = globals()["read_key"]
+        try:
+            globals()["read_key"] = lambda timeout_sec=None: "enter"
+            retained_password = collect_wifi_password(
+                password_retry_display,
+                selected_network={"ssid": synthetic_ssid},
+                layout_rotation_deg=0,
+                initial_value=synthetic_password,
+            )
+        finally:
+            globals()["read_key"] = original_password_read_key
+            password_retry_display.stop()
+        assert_true(
+            retained_password == synthetic_password,
+            "failed Wi-Fi retry should reopen with the in-memory password intact",
+        )
+        retained_password_svg = next((root / "password-retry" / "screens").glob("*-02-wifi-psk.svg")).read_text(
+            encoding="utf-8"
+        )
+        assert_true(
+            synthetic_password not in retained_password_svg
+            and "*" * len(synthetic_password) in retained_password_svg,
+            "retained retry password should remain masked on the local screen",
+        )
+        assert_true(
+            "Enter conecta" in retained_password_svg and "Esc troca rede" in retained_password_svg,
+            "password screen should combine credential entry with the connect action",
         )
         original_profile_present = globals()["dedicated_profile_present"]
         try:
@@ -5915,6 +6323,91 @@ def run_self_test() -> None:
         finally:
             globals()["dedicated_profile_present"] = original_profile_present
 
+        retry_display = VisualDisplay(root / "wifi-retry-flow", enabled=False)
+        original_choose_wifi_network = globals()["choose_wifi_network"]
+        original_collect_wifi_password = globals()["collect_wifi_password"]
+        original_apply_wifi_attempt = globals()["apply_wifi_persistent_attempt"]
+        original_read_advertised_action = globals()["read_advertised_action"]
+        original_wait_enter_or_timeout = globals()["wait_enter_or_timeout"]
+        retry_password_inputs: list[str] = []
+        retry_apply_count = 0
+        retry_networks = [
+            {
+                "ssid": synthetic_ssid,
+                "signal_percent": 88,
+                "signal_bucket": "strong",
+                "security_present": True,
+            }
+        ]
+
+        def fake_choose_wifi_network(
+            display: VisualDisplay,
+            *,
+            layout_rotation_deg: int,
+            initial_networks: list[dict[str, Any]] | None = None,
+            initial_selected_ssid: str = "",
+        ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+            del display, layout_rotation_deg, initial_networks, initial_selected_ssid
+            return retry_networks[0], retry_networks
+
+        def fake_collect_wifi_password(
+            display: VisualDisplay,
+            *,
+            selected_network: dict[str, Any],
+            layout_rotation_deg: int,
+            initial_value: str = "",
+        ) -> str:
+            del display, selected_network, layout_rotation_deg
+            retry_password_inputs.append(initial_value)
+            return synthetic_password
+
+        def fake_apply_wifi_persistent_attempt(
+            display: VisualDisplay,
+            out_dir: pathlib.Path,
+            *,
+            ssid: str,
+            psk: str,
+            selection_metadata: dict[str, Any],
+            layout_rotation_deg: int,
+        ) -> dict[str, Any]:
+            nonlocal retry_apply_count
+            del display, out_dir, selection_metadata, layout_rotation_deg
+            assert_true(ssid == synthetic_ssid and psk == synthetic_password, "retry should preserve local credentials")
+            retry_apply_count += 1
+            return network_defaults(
+                network_step="wifi_persistent",
+                wifi_link_ready=retry_apply_count == 2,
+                previous_profile_restored=retry_apply_count == 1,
+                network_changed=True,
+            )
+
+        try:
+            globals()["choose_wifi_network"] = fake_choose_wifi_network
+            globals()["collect_wifi_password"] = fake_collect_wifi_password
+            globals()["apply_wifi_persistent_attempt"] = fake_apply_wifi_persistent_attempt
+            globals()["read_advertised_action"] = lambda *keys: "enter"
+            globals()["wait_enter_or_timeout"] = lambda timeout_sec: None
+            retried_network = run_wifi_persistent(
+                retry_display,
+                root / "wifi-retry-output",
+                layout_rotation_deg=0,
+            )
+        finally:
+            globals()["choose_wifi_network"] = original_choose_wifi_network
+            globals()["collect_wifi_password"] = original_collect_wifi_password
+            globals()["apply_wifi_persistent_attempt"] = original_apply_wifi_attempt
+            globals()["read_advertised_action"] = original_read_advertised_action
+            globals()["wait_enter_or_timeout"] = original_wait_enter_or_timeout
+            retry_display.stop()
+        assert_true(
+            retried_network is not None and retried_network["wifi_link_ready"] is True,
+            "direct retry should advance after the corrected attempt succeeds",
+        )
+        assert_true(
+            retry_apply_count == 2 and retry_password_inputs == ["", synthetic_password],
+            "failed Wi-Fi retry should not force the user to repeat selection or password entry",
+        )
+
         cancelled_root = require_tmp_dir(str(root / "cancelled-after-wifi"))
         wifi_status_dir = cancelled_root / WIFI_APPLY_DIRNAME
         prepare_private_dir(wifi_status_dir)
@@ -5927,6 +6420,15 @@ def run_self_test() -> None:
                 "previous_profile_restored": False,
             },
             wifi_status_dir,
+        )
+        reset_wifi_session_state()
+        record_wifi_attempt_in_session(
+            {
+                "network_changed": True,
+                "nmcli_called": True,
+                "previous_profile_restored": False,
+                "wifi_link_ready": False,
+            }
         )
         write_cancelled_artifact(cancelled_root)
         cancelled_status = json.loads((cancelled_root / CANCELLED_FILENAME).read_text(encoding="utf-8"))
@@ -5942,6 +6444,66 @@ def run_self_test() -> None:
             cancelled_status["guardrails"]["nmcli_called"] is True,
             "cancellation after Wi-Fi apply must disclose NetworkManager use",
         )
+        reset_wifi_session_state()
+        stale_observation = cancelled_wifi_observation(cancelled_root)
+        assert_true(
+            stale_observation
+            == {
+                "network_changed": False,
+                "nmcli_called": False,
+                "previous_profile_restored": False,
+                "wifi_applied_in_session": False,
+            },
+            "a new wizard session must ignore persisted Wi-Fi status from an earlier run",
+        )
+        session_root = require_tmp_dir(str(root / "wifi-session-change"))
+        prepare_private_dir(session_root)
+        reset_wifi_session_state()
+        record_wifi_applied_in_session(session_root)
+        assert_true(
+            wifi_applied_in_session(),
+            "successful Wi-Fi apply should remain known for the current wizard process",
+        )
+        preserved_network = preserve_wifi_session_change(
+            network_defaults(network_step="existing_ethernet"),
+            session_root,
+        )
+        assert_true(
+            preserved_network is not None and preserved_network["network_changed"] is True,
+            "returning to the network menu must not erase an earlier Wi-Fi change",
+        )
+        session_status_dir = session_root / WIFI_APPLY_DIRNAME
+        prepare_private_dir(session_status_dir)
+        atomic_write_private_json(
+            session_status_dir / wifi_adapter.STATUS_FILENAME,
+            {
+                "network_changed": True,
+                "wifi_activation_attempted": True,
+                "wifi_activation_result": "failure",
+                "previous_profile_restored": True,
+            },
+            session_status_dir,
+        )
+        record_wifi_attempt_in_session(
+            {
+                "network_changed": True,
+                "nmcli_called": True,
+                "previous_profile_restored": True,
+                "wifi_link_ready": False,
+            }
+        )
+        session_observation = cancelled_wifi_observation(session_root)
+        assert_true(
+            session_observation["wifi_applied_in_session"] is True
+            and session_observation["previous_profile_restored"] is True,
+            "a later failed attempt must not erase a successful Wi-Fi change from the same session",
+        )
+        assert_true(
+            "O Wi-Fi aplicado foi mantido."
+            in build_cancelled_screen_svg(session_observation, layout_rotation_deg=0),
+            "cancel copy should describe the final session state, not only the latest retry",
+        )
+        reset_wifi_session_state()
         assert_true(adjacent_navigable_step(0, 1) == 1, "right on focused steps should move to connection")
         assert_true(adjacent_navigable_step(0, -1) == 3, "left on focused steps should wrap to review")
         try:
@@ -6012,6 +6574,55 @@ def run_self_test() -> None:
             globals()["read_key"] = original_review_escape_key
             review_escape_display.stop()
         assert_true(review_escape is None, "Escape on review should be distinct from Enter correcting pending items")
+        assert_true(
+            review_network_change_items(
+                network_defaults(network_changed=True),
+                rotation_status="confirmed",
+            )
+            == [
+                "O Wi-Fi ja foi aplicado.",
+                "Tela e ambiente aguardam salvar.",
+                "Esc volta; o Wi-Fi permanece.",
+            ],
+            "review should distinguish already-applied Wi-Fi from pending settings",
+        )
+        assert_true(
+            "Nenhum novo ajuste foi salvo."
+            in review_network_change_items(network_defaults(), rotation_status="confirmed"),
+            "review should remain truthful when no network write occurred",
+        )
+        assert_true(
+            "A rede anterior foi restaurada."
+            in build_cancelled_screen_svg(
+                {"network_changed": True, "previous_profile_restored": True},
+                layout_rotation_deg=0,
+            ),
+            "cancel screen should disclose rollback instead of claiming a new Wi-Fi",
+        )
+        assert_true(
+            "O Wi-Fi aplicado foi mantido."
+            in build_cancelled_screen_svg(
+                {
+                    "network_changed": True,
+                    "previous_profile_restored": False,
+                    "wifi_applied_in_session": True,
+                },
+                layout_rotation_deg=0,
+            ),
+            "cancel screen should disclose a persistent Wi-Fi change",
+        )
+        assert_true(
+            "Nenhum novo Wi-Fi foi confirmado."
+            in build_cancelled_screen_svg(
+                {
+                    "network_changed": True,
+                    "previous_profile_restored": False,
+                    "wifi_applied_in_session": False,
+                },
+                layout_rotation_deg=0,
+            ),
+            "a failed attempt without rollback evidence must not claim that Wi-Fi remained active",
+        )
         navigation_state = initial_wizard_state(270, "")
         assert_true(navigation_state.rotation_status == "default", "initial orientation should be a default")
         assert_true(not wizard_can_commit(navigation_state), "empty navigation state should not commit")
@@ -6057,10 +6668,33 @@ def run_self_test() -> None:
                 {"state": "config_candidate_ready", "validation": {"rotation_degrees": 0}}
             )
             assert_true("Pronto para salvar" in completion_svg, "real write should stop before claiming success")
-            assert_true("ainda nao foi salva" in completion_svg, "real write should disclose the pending write")
+            assert_true(
+                "Nenhum novo ajuste" in completion_svg and "foi salvo" in completion_svg,
+                "real write should disclose that the pending settings are not persisted",
+            )
             assert_true("Enter salva" in completion_svg, "final confirmation should name the write action")
             assert_true("Esc cancela" in completion_svg, "final confirmation should disclose cancel")
             assert_true("Configuracao salva" not in completion_svg, "wizard should not claim writer success")
+            wifi_applied_completion_svg = build_completion_screen_svg(
+                {
+                    "state": "config_candidate_ready",
+                    "validation": {"rotation_degrees": 0},
+                    "network": {"network_changed": True},
+                }
+            )
+            assert_true(
+                "O Wi-Fi ja foi" in wifi_applied_completion_svg and "aplicado" in wifi_applied_completion_svg,
+                "final confirmation should disclose an already-persisted Wi-Fi change",
+            )
+            assert_true(
+                "Tela e ambiente" in wifi_applied_completion_svg
+                and "aguardam salvar" in wifi_applied_completion_svg,
+                "final confirmation should separate pending settings from applied Wi-Fi",
+            )
+            assert_true(
+                "Esc cancela sem gravar" not in wifi_applied_completion_svg,
+                "cancel copy must not claim that nothing was written after Wi-Fi apply",
+            )
             globals()["APPLY_CONTEXT"] = "candidate"
             candidate_svg = build_completion_screen_svg(
                 {"state": "config_candidate_ready", "validation": {"rotation_degrees": 0}}
@@ -6863,6 +7497,72 @@ def run_self_test() -> None:
         )
         assert_true(not is_secret_toggle_key("v") and not is_secret_toggle_key("V"), "printable V/v must not toggle password display")
         assert_true(is_secret_toggle_key("f2") and is_secret_toggle_key("toggle_secret"), "F2 and Ctrl+P should toggle password display")
+        secret_value = "TEST_PASSWORD_SHOULD_STAY_IN_MEMORY"
+
+        class SecretDisplayProbe:
+            framebuffer = object()
+
+            def __init__(self) -> None:
+                self.screens: list[tuple[str, str, str]] = []
+
+            def show(
+                self,
+                screen_id: str,
+                svg: str,
+                *,
+                artifact_svg: str | None = None,
+            ) -> None:
+                self.screens.append((screen_id, svg, artifact_svg if artifact_svg is not None else svg))
+
+        secret_display = SecretDisplayProbe()
+        original_secret_read_key = globals()["read_key"]
+        try:
+            secret_keys = iter(("f2", "escape"))
+            globals()["read_key"] = lambda timeout_sec=None: next(secret_keys)
+            secret_result = read_text_field(
+                secret_display,  # type: ignore[arg-type]
+                screen_id="secret-redaction",
+                active_step=1,
+                title="Conectar ao Wi-Fi",
+                subtitle="TEST_WIFI",
+                label="Senha Wi-Fi",
+                hidden=True,
+                min_length=8,
+                max_length=128,
+                panel_items=["Senha local."],
+                allow_hidden_toggle=True,
+                initial_value=secret_value,
+                custom_footer="Enter conecta | Esc troca rede | F2 {toggle}",
+            )
+        finally:
+            globals()["read_key"] = original_secret_read_key
+        assert_true(secret_result is None, "Escape should leave the password field after the reveal probe")
+        assert_true(
+            any(secret_value in displayed for _name, displayed, _artifact in secret_display.screens),
+            "framebuffer reveal should remain available to the local operator",
+        )
+        assert_true(
+            all(secret_value not in artifact for _name, _displayed, artifact in secret_display.screens),
+            "revealed passwords must stay out of persisted SVG artifacts",
+        )
+        revealed_screen = next(
+            (displayed, artifact)
+            for _name, displayed, artifact in secret_display.screens
+            if secret_value in displayed
+        )
+        persisted_secret_display = VisualDisplay(root / "secret-artifact", enabled=False)
+        try:
+            persisted_path = persisted_secret_display.show(
+                "secret-redaction",
+                revealed_screen[0],
+                artifact_svg=revealed_screen[1],
+            )
+        finally:
+            persisted_secret_display.stop()
+        assert_true(
+            secret_value not in persisted_path.read_text(encoding="utf-8"),
+            "VisualDisplay should write only the redacted password artifact",
+        )
         backspace_render_count = estimate_debounced_input_render_count(
             "x" * 20,
             ["backspace"] * 20,
@@ -7010,23 +7710,59 @@ def run_self_test() -> None:
         assert_true(local_metadata["selected_network_signal_bucket"] == "strong", "signal bucket should be public")
         assert_true(local_metadata["selected_network_security_present"] is True, "security presence should be public")
         assert_true(synthetic_ssid not in json.dumps(local_metadata), "Wi-Fi metadata should not leak SSID")
+        open_network_display = VisualDisplay(root / "open-network-block", enabled=False)
+        original_wifi_list = wifi_adapter.list_wifi_networks_for_local_ui
+        original_open_network_key = globals()["read_key"]
+        open_network_keys = iter(("enter", "enter", "escape"))
+        try:
+            wifi_adapter.list_wifi_networks_for_local_ui = lambda timeout_sec, rescan: (
+                [
+                    {
+                        "ssid": "TEST_OPEN_NETWORK",
+                        "signal_percent": 72,
+                        "signal_bucket": "strong",
+                        "security_present": False,
+                    }
+                ],
+                "ok",
+            )
+            globals()["read_key"] = lambda timeout_sec=None: next(open_network_keys)
+            open_selection = choose_wifi_network(open_network_display, layout_rotation_deg=0)
+        finally:
+            wifi_adapter.list_wifi_networks_for_local_ui = original_wifi_list
+            globals()["read_key"] = original_open_network_key
+            open_network_display.stop()
+        assert_true(open_selection is None, "unsupported open Wi-Fi should return to the list instead of asking for a password")
+        open_network_text = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (root / "open-network-block" / "screens").glob("*.svg")
+        )
+        assert_true(
+            "Esta versao ainda nao conecta redes sem senha" in open_network_text
+            and "Senha Wi-Fi" not in open_network_text,
+            "open Wi-Fi should fail visibly before entering an impossible credential path",
+        )
         page_fixture = [
             {"ssid": f"PAGE_TEST_{index:02d}", "signal_percent": 100 - index, "signal_bucket": "strong", "security_present": True}
             for index in range(18)
         ]
-        page_1, start_1, end_1, _, _ = page_items(page_fixture, 0, 8)
-        page_2, start_2, end_2, _, _ = page_items(page_fixture, 8, 8)
-        page_3, start_3, end_3, _, _ = page_items(page_fixture, 16, 8)
-        assert_true((start_1, end_1, len(page_1)) == (0, 8, 8), "pagination page 1 should show 1-8")
-        assert_true((start_2, end_2, len(page_2)) == (8, 16, 8), "pagination page 2 should show 9-16")
-        assert_true((start_3, end_3, len(page_3)) == (16, 18, 2), "pagination page 3 should show 17-18")
+        portrait_page_size = wifi_list_page_size(90)
+        page_1, start_1, end_1, _, _ = page_items(page_fixture, 0, portrait_page_size)
+        page_2, start_2, end_2, _, _ = page_items(page_fixture, 4, portrait_page_size)
+        page_3, start_3, end_3, _, _ = page_items(page_fixture, 8, portrait_page_size)
+        page_5, start_5, end_5, _, _ = page_items(page_fixture, 16, portrait_page_size)
+        assert_true((start_1, end_1, len(page_1)) == (0, 4, 4), "pagination page 1 should show 1-4")
+        assert_true((start_2, end_2, len(page_2)) == (4, 8, 4), "pagination page 2 should show 5-8")
+        assert_true((start_3, end_3, len(page_3)) == (8, 12, 4), "pagination page 3 should show 9-12")
+        assert_true((start_5, end_5, len(page_5)) == (16, 18, 2), "pagination final page should show 17-18")
         assert_true(wifi_list_page_size(0) == 4, "landscape Wi-Fi list should show 4 networks")
-        assert_true(wifi_list_page_size(90) == 5, "portrait Wi-Fi list should keep 5 networks")
+        assert_true(wifi_list_page_size(90) == 4, "portrait Wi-Fi list should keep all rows visible")
         landscape_footer_y = screen_layout(0).height - 82
         landscape_last_card_bottom = 266 + (wifi_list_page_size(0) - 1) * (82 + 14) + 82
         assert_true(landscape_last_card_bottom < landscape_footer_y, "landscape Wi-Fi cards should not touch footer")
         portrait_footer_y = screen_layout(90).height - 82
         portrait_last_card_bottom = 314 + (wifi_list_page_size(90) - 1) * (98 + 14) + 98
+        assert_true(portrait_last_card_bottom < 760, "portrait Wi-Fi cards should not touch the info panel")
         assert_true(portrait_last_card_bottom < portrait_footer_y, "portrait Wi-Fi cards should not touch footer")
         preserved_index, preserved = refresh_selected_index(page_fixture[:3], [page_fixture[2], page_fixture[1]], 1)
         assert_true(preserved and preserved_index == 1, "refresh should preserve selected SSID")
@@ -7097,11 +7833,15 @@ def run_self_test() -> None:
         wifi_preview_page = next((preview_dir / "screens").glob("*-02-wifi-list-page-1.svg"))
         wifi_preview_text = wifi_preview_page.read_text(encoding="utf-8")
         assert_true("TEST_WIFI_STRONG" in wifi_preview_text, "synthetic Wi-Fi preview should show local SSID")
-        assert_true("Mostrando 1-5 de" in wifi_preview_text, "Wi-Fi preview should show pagination position")
+        assert_true("Mostrando 1-4 de" in wifi_preview_text, "Wi-Fi preview should show pagination position")
         assert_true("96%" in wifi_preview_text and "Forte" in wifi_preview_text, "Wi-Fi preview should show signal clarity")
         assert_true(any((preview_dir / "screens").glob("*-02-wifi-list-empty.svg")), "Wi-Fi preview should include empty state")
         assert_true(any((preview_dir / "screens").glob("*-02-wifi-psk-hidden.svg")), "Wi-Fi preview should include hidden password")
         assert_true(any((preview_dir / "screens").glob("*-02-wifi-psk-visible.svg")), "Wi-Fi preview should include visible password")
+        assert_true(
+            "preview-password" not in output_text(preview_dir / "screens"),
+            "persisted preview screens must mask the synthetic password even for the reveal state",
+        )
         assert_true(file_mode(preview_dir / "screens") == setup.PRIVATE_DIR_MODE, "preview screens should be 0700")
 
         wifi_preview_dir = require_tmp_dir(str(root / "wifi-preview"))
@@ -7137,6 +7877,10 @@ def run_self_test() -> None:
         assert_true(wifi_preview_status["paginated_wifi_list"] is True, "Wi-Fi list preview should be paginated")
         assert_true(wifi_preview_status["password_show_toggle_key"] == "F2", "password toggle should use F2")
         assert_true(wifi_preview_status["password_show_toggle_fallback_key"] == "Ctrl+P", "password fallback should use Ctrl+P")
+        assert_true(
+            "preview-password" not in output_text(wifi_preview_dir / "screens"),
+            "persisted Wi-Fi preview artifacts must never contain the revealed password",
+        )
         for forbidden in (synthetic_ssid, synthetic_password, "TEST_WIFI_STRONG", "preview-password"):
             assert_true(forbidden not in wifi_preview_public_text, "Wi-Fi preview status should stay sanitized")
 

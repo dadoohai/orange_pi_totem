@@ -1,6 +1,6 @@
 # C18 Macro Steering
 
-Estado inicial: 2026-07-05. Atualizado em 2026-07-15.
+Estado inicial: 2026-07-05. Atualizado em 2026-07-16.
 
 Este documento e o cerne direcionador da fase atual. Ele existe para impedir que
 rodadas longas, auditorias e tarefas tecnicas desviem o trabalho do objetivo de
@@ -299,6 +299,42 @@ Este marco fecha quando:
 Plano de decisao e criterios:
 `docs/product/198_C24_PLAYER_SOURCE_AND_SCALE_DECISION.md`.
 
+### M9 - Wi-Fi De Produto E UX De Conexao
+
+Status: em andamento desde 2026-07-16.
+
+Valor: permitir que um usuario configure a conectividade local sem caminho
+impossivel, mensagem enganosa ou repeticao desnecessaria, preservando a rede
+anterior quando a tentativa falhar.
+
+Base ja fechada:
+
+- C21.19 provou substituicao transacional do perfil Wi-Fi;
+- sucesso exige ativacao e endereco IPv4;
+- falha restaura o perfil anterior exato ou falha fechada;
+- senha e identificadores privados nao entram em evidencia publica;
+- player, Ethernet e demais servicos permanecem preservados.
+
+Ordem macro:
+
+1. tornar opcoes, cancelamento e mensagens fieis ao estado real;
+2. reduzir passos e preservar contexto em nova tentativa;
+3. suportar redes abertas comuns sem senha;
+4. corrigir estados visuais e explicar Ethernet, Wi-Fi e internet;
+5. diferenciar falhas recuperaveis sem expor diagnostico bruto;
+6. detectar portal cativo;
+7. adicionar navegador temporario e restrito somente para portal;
+8. fechar todos os caminhos na placa; logica/orquestracao segue por
+   `totem-core`, e eventual runtime novo de navegador entra explicitamente na
+   proxima imagem.
+
+Fila detalhada e criterios de aceite:
+`docs/C20_UX_ACCUMULATION_PLAN.md`.
+
+Este marco nao reabre a mecanica transacional fechada em C21.19 salvo regressao
+comprovada. Portal cativo e uma vertical posterior dentro do mesmo marco e nao
+deve bloquear redes abertas comuns, copy correta e simplificacao do fluxo.
+
 ## Checklist Contra Hiperfoco
 
 Antes de abrir ou continuar uma tarefa, responder:
@@ -309,7 +345,7 @@ Antes de abrir ou continuar uma tarefa, responder:
 4. Ela esta tentando resolver roadmap antes do minimo produtivo?
 5. Se esta tarefa travar, qual vertical pode avancar em paralelo?
 
-Se nenhuma resposta apontar para M2, M3, M4, M5 ou M8, a tarefa deve ser
+Se nenhuma resposta apontar para M2, M3, M4, M5, M8 ou M9, a tarefa deve ser
 pausada ou rebaixada.
 
 ## Proxima Decisao Padrao
@@ -400,3 +436,11 @@ Enquanto nada mudar, a ordem de execucao e:
     nao foi incluido por inferencia no pacote. C21.12/prod14 continua a
     referencia publica. Evidencia:
     `docs/evidence/c20-totem-core-ota/20260715T161137Z-c21-19-wifi-transactional-board-e2e/`.
+15. Rodada atual: executar M9 pela fila priorizada registrada em
+    `docs/C20_UX_ACCUMULATION_PLAN.md`. Os itens 1 e 2 estao implementados
+    off-board: opcoes e cancelamento refletem somente o estado comprovado da
+    sessao atual, e rede protegida usa fluxo curto com retry direto. Falta
+    fechar gate, pacote e placa. Rede aberta comum permanece como item 3;
+    estados, diagnostico, portal cativo e navegador restrito avancam depois,
+    sem reabrir a base transacional C21.19. Cada recorte fechado entra no
+    acumulo `totem-core` e na proxima imagem de referencia.

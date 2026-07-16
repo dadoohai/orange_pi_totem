@@ -101,6 +101,8 @@ SECRET_MARKERS = (
     "ssid real",
     "senha real",
     "wifi password real",
+    "test_" "password",
+    "preview-" "password",
     "192" ".168.",
 )
 
@@ -198,7 +200,7 @@ def synthetic_wifi_networks(count: int) -> list[dict[str, Any]]:
     for index in range(count):
         ssid = labels[index] if index < len(labels) else f"TEST_WIFI_{index + 1:02d}"
         signal = max(12, 96 - index * 4)
-        security = "" if "OPEN" in ssid or index % 7 == 0 else "WPA2"
+        security = "" if "OPEN" in ssid or (index > 0 and index % 7 == 0) else "WPA2"
         rows.append(f"{ssid}:{signal}:{security}")
     return wizard.wifi_adapter.parse_wifi_network_list("\n".join(rows))
 
@@ -305,7 +307,10 @@ def add_splash_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
 
 def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> None:
     display_options = [wizard.Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in wizard.DISPLAY_OPTIONS]
-    network_options = list(wizard.NETWORK_OPTIONS)
+    network_options = wizard.network_options_for_ui(
+        configured_wifi_available=True,
+        ethernet_available=True,
+    )
     pending_state = wizard.initial_wizard_state(0, "")
     wifi3 = synthetic_wifi_networks(3)
     wifi18 = synthetic_wifi_networks(18)
@@ -447,7 +452,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             screen_type="wizard",
             orientation="portrait",
             function="Escolher caminho de conexao.",
-            operator_task="Escolher usar Wi-Fi atual, selecionar Wi-Fi ou bancada.",
+            operator_task="Continuar com uma conexao comprovada ou escolher outro Wi-Fi.",
             primary_action="Enter confirma",
             secondary_action="Esc cancela",
             message_main="Wi-Fi",
@@ -459,8 +464,8 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             error_state_needed=True,
             preview_covered=True,
             title="Wi-Fi",
-            subtitle="Escolha o Wi-Fi.",
-            body_items=["Lista local.", "Senha oculta.", "Sem portal."],
+            subtitle="Continue com a conexao atual ou escolha outra rede.",
+            body_items=["Conexao atual verificada.", "Nova rede com rollback.", "Senha protegida."],
             footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
             option_text=wizard_option_text(network_options),
             back_applicable=False,
@@ -469,11 +474,11 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
         wizard.build_screen_svg(
             active_step=1,
             title="Wi-Fi",
-            subtitle="Escolha o Wi-Fi.",
+            subtitle="Continue com a conexao atual ou escolha outra rede.",
             footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
             options=network_options,
             selected_index=0,
-            panel_items=["Lista local.", "Senha oculta.", "Sem portal."],
+            panel_items=["Conexao atual verificada.", "Nova rede com rollback.", "Senha protegida."],
             layout_rotation_deg=90,
         ),
     )
@@ -489,6 +494,29 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
     ):
         title = "Selecionar Wi-Fi"
         subtitle = "Atualizando..." if refreshing else "Lista local ordenada por sinal."
+        selected_network = networks[selected] if networks else None
+        visible_networks, page_start, _page_end, _page_index, _page_count = wizard.page_items(
+            networks,
+            selected,
+            wizard.wifi_list_page_size(90),
+        )
+        selected_is_open = bool(
+            selected_network is not None and selected_network.get("security_present") is False
+        )
+        primary_action = (
+            "Enter atualiza"
+            if selected_network is None
+            else ("Enter detalhes" if selected_is_open else "Enter escolhe")
+        )
+        next_step_expected = (
+            "Atualizar a lista local."
+            if selected_network is None
+            else (
+                "Explicar que rede aberta ainda nao esta disponivel."
+                if selected_is_open
+                else "Ir para senha da rede selecionada."
+            )
+        )
         add_screen(
             specs,
             gallery_dir,
@@ -499,11 +527,11 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 orientation="portrait",
                 function="Listar, atualizar e selecionar rede Wi-Fi local.",
                 operator_task="Navegar pela lista e escolher a rede.",
-                primary_action="Enter escolhe",
+                primary_action=primary_action,
                 secondary_action="R atualiza | Esc volta",
                 message_main=title,
                 system_state="wizard_wifi_list",
-                next_step_expected="Ir para senha da rede selecionada.",
+                next_step_expected=next_step_expected,
                 confusion_risk="medium" if "eighteen" in screen_id else "low",
                 dependencies=["nmcli read-only list", "keyboard"],
                 dynamic_feedback_needed=True,
@@ -512,8 +540,11 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 title=title,
                 subtitle=subtitle,
                 body_items=["Mostra posicao.", "Sinal claro.", refresh_message],
-                footer="Setas rolam | Enter escolhe | R atualiza/Esc volta",
-                option_text=[wizard.wifi_option_for_network(index, network).label for index, network in enumerate(networks[: wizard.WIFI_LIST_PAGE_SIZE])],
+                footer=f"Setas rolam | {primary_action} | R atualiza/Esc volta",
+                option_text=[
+                    wizard.wifi_option_for_network(page_start + index, network).label
+                    for index, network in enumerate(visible_networks)
+                ],
                 status_feedback=True,
                 back_applicable=True,
                 error_recovery_available=True,
@@ -538,36 +569,108 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 journey="wizard",
                 screen_type="wizard",
                 orientation="portrait",
-                function="Coletar senha Wi-Fi no HDMI local.",
+                function=(
+                    "Representar o estado de senha revelada sem persistir o valor."
+                    if visible
+                    else "Coletar senha Wi-Fi no HDMI local."
+                ),
                 operator_task="Digitar senha e opcionalmente alternar visibilidade.",
-                primary_action="Enter confirma",
-                secondary_action="Esc volta | F2 alterna",
-                message_main="Senha Wi-Fi",
+                primary_action="Enter conecta",
+                secondary_action="Esc troca rede | F2 alterna",
+                message_main="Conectar ao Wi-Fi",
                 system_state="wizard_wifi_password",
-                next_step_expected="Confirmar aplicacao Wi-Fi.",
+                next_step_expected="Testar a conexao e avancar apos sucesso.",
                 confusion_risk="medium" if visible else "low",
                 dependencies=["keyboard raw mode"],
                 dynamic_feedback_needed=False,
                 error_state_needed=True,
                 preview_covered=True,
-                title="Senha Wi-Fi",
-                subtitle="Digite a senha da rede.",
+                title="Conectar ao Wi-Fi",
+                subtitle="TEST_WIFI_STRONG",
                 body_items=["Oculta por padrao.", "F2 mostra.", "Nao aparece em logs."],
-                footer="Enter confirma | Esc volta | F2 oculta" if visible else "Enter confirma | Esc volta | F2 mostra",
+                footer="Enter conecta | Esc troca rede | F2 oculta" if visible else "Enter conecta | Esc troca rede | F2 mostra",
                 option_text=[],
                 back_applicable=True,
                 error_recovery_available=True,
             ),
             wizard.build_screen_svg(
                 active_step=1,
-                title="Senha Wi-Fi",
-                subtitle="Digite a senha da rede.",
-                footer="Enter confirma | Esc volta | F2 oculta" if visible else "Enter confirma | Esc volta | F2 mostra",
+                title="Conectar ao Wi-Fi",
+                subtitle="TEST_WIFI_STRONG",
+                footer="Enter conecta | Esc troca rede | F2 oculta" if visible else "Enter conecta | Esc troca rede | F2 mostra",
                 field_label="Senha Wi-Fi",
-                field_value_hint=wizard.text_field_display_hint("TEST_PASSWORD_VISIBLE", hidden=True, show_plain_value=visible),
-                field_note="Valor visivel apenas no HDMI local." if visible else "Senha oculta por padrao.",
-                panel_items=["Oculta por padrao.", "F2 mostra.", "Nao aparece em logs."],
+                field_value_hint=wizard.text_field_display_hint(
+                    "TEST_PASSWORD_VISIBLE",
+                    hidden=True,
+                    show_plain_value=False,
+                ),
+                field_note=(
+                    "Artefato mascarado; F2 revela so no HDMI real."
+                    if visible
+                    else "Senha oculta por padrao."
+                ),
+                panel_items=(
+                    ["Artefato sem senha.", "F2 oculta no uso real.", "Nao aparece em logs."]
+                    if visible
+                    else ["Oculta por padrao.", "F2 mostra.", "Nao aparece em logs."]
+                ),
                 layout_rotation_deg=90,
+            ),
+        )
+
+    for screen_id, title, subtitle, footer, panel_title, panel_items, accent in (
+        (
+            "wizard.wifi.connecting",
+            "Conectando ao Wi-Fi",
+            "Testando e salvando a rede.",
+            "Aguarde...",
+            "Em andamento",
+            ["Perfil protegido.", "Rollback automatico.", "Senha fora dos logs."],
+            "#f59e0b",
+        ),
+        (
+            "wizard.wifi.success",
+            "Wi-Fi conectado",
+            "A rede foi salva neste totem.",
+            "Avancando... | Enter continua",
+            "Pronto",
+            ["Endereco de rede recebido.", "Reconexao automatica ativa.", "Perfil de rede salvo."],
+            "#22c55e",
+        ),
+    ):
+        add_screen(
+            specs,
+            gallery_dir,
+            ScreenSpec(
+                screen_id=screen_id,
+                journey="wizard",
+                screen_type="wizard",
+                orientation="portrait",
+                function="Mostrar progresso da conexao." if screen_id.endswith("connecting") else "Confirmar conexao aplicada.",
+                operator_task="Aguardar." if screen_id.endswith("connecting") else "Continuar para o ambiente.",
+                primary_action="Aguardar" if screen_id.endswith("connecting") else "Enter continua",
+                secondary_action="Nenhuma.",
+                message_main=title,
+                system_state="wizard_wifi_connecting" if screen_id.endswith("connecting") else "wizard_wifi_connected",
+                next_step_expected="Mostrar resultado." if screen_id.endswith("connecting") else "Avancar para ambiente.",
+                confusion_risk="low",
+                dependencies=["adapter Wi-Fi governado"],
+                dynamic_feedback_needed=True,
+                error_state_needed=screen_id.endswith("connecting"),
+                preview_covered=True,
+                title=title,
+                subtitle=subtitle,
+                body_items=panel_items,
+                footer=footer,
+                option_text=[],
+                status_feedback=True,
+                back_applicable=False,
+                error_recovery_available=screen_id.endswith("connecting"),
+            ),
+            (
+                wizard.wifi_connecting_screen_svg(layout_rotation_deg=90)
+                if screen_id.endswith("connecting")
+                else wizard.wifi_success_screen_svg(layout_rotation_deg=90)
             ),
         )
 
@@ -591,8 +694,8 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             "",
             "",
             [
-                "A configuracao final ainda nao foi salva.",
-                "O Wi-Fi selecionado pode ja estar ativo.",
+                "Nenhum novo ajuste foi salvo.",
+                "Revise antes de continuar.",
                 "Esc volta.",
             ],
         ),
@@ -865,8 +968,8 @@ def add_c16_2_state_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) 
             "next_step_expected": "Wi-Fi ou ambiente.",
             "confusion_risk": "low",
             "title": "Wi-Fi",
-            "subtitle": "Escolha o Wi-Fi.",
-            "items": ["Selecionar rede Wi-Fi", "Usar Wi-Fi atual", "Continuar sem internet"],
+            "subtitle": "Continue com a conexao atual ou escolha outra rede.",
+            "items": ["Continuar com Ethernet", "Continuar com Wi-Fi atual", "Escolher outra rede Wi-Fi"],
             "footer": "Cima menu | Baixo escolhe | Enter confirma | Esc volta",
             "accent": "#06b6d4",
             "back_applicable": True,
@@ -898,16 +1001,16 @@ def add_c16_2_state_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) 
             "journey": "E",
             "function": "Digitar senha sem expor valor.",
             "operator_task": "Digitar senha.",
-            "primary_action": "Enter confirma",
-            "secondary_action": "Esc volta | F2 mostra/oculta.",
+            "primary_action": "Enter conecta",
+            "secondary_action": "Esc troca rede | F2 mostra/oculta.",
             "message_main": "Senha Wi-Fi",
             "system_state": "wifi_password_hidden",
             "next_step_expected": "Teste de conexao.",
             "confusion_risk": "low",
-            "title": "Senha Wi-Fi",
+            "title": "Conectar ao Wi-Fi",
             "subtitle": "Digite a senha da rede selecionada.",
             "items": ["Senha oculta por padrao.", "F2 alterna visibilidade local."],
-            "footer": "Enter confirma | Esc volta | F2 mostra",
+            "footer": "Enter conecta | Esc troca rede | F2 mostra",
             "accent": "#06b6d4",
             "back_applicable": True,
         },
@@ -916,16 +1019,16 @@ def add_c16_2_state_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) 
             "journey": "E",
             "function": "Mostrar senha apenas no HDMI local.",
             "operator_task": "Conferir digitacao local.",
-            "primary_action": "Enter confirma",
-            "secondary_action": "Esc volta | F2 oculta.",
+            "primary_action": "Enter conecta",
+            "secondary_action": "Esc troca rede | F2 oculta.",
             "message_main": "Senha Wi-Fi",
             "system_state": "wifi_password_visible",
             "next_step_expected": "Teste de conexao.",
             "confusion_risk": "medium",
-            "title": "Senha Wi-Fi",
+            "title": "Conectar ao Wi-Fi",
             "subtitle": "Visivel apenas nesta tela local.",
-            "items": ["TEST_PASSWORD nao e dado real.", "Nada e gravado antes de concluir."],
-            "footer": "Enter confirma | Esc volta | F2 oculta",
+            "items": ["Valor mascarado no artefato.", "Enter conecta e salva a rede."],
+            "footer": "Enter conecta | Esc troca rede | F2 oculta",
             "accent": "#f59e0b",
             "back_applicable": True,
         },
@@ -934,16 +1037,16 @@ def add_c16_2_state_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) 
             "journey": "E",
             "function": "Explicar erro de senha ou associacao.",
             "operator_task": "Tentar novamente.",
-            "primary_action": "Enter tenta novamente",
-            "secondary_action": "Esc volta para redes.",
+            "primary_action": "Enter corrige senha",
+            "secondary_action": "Esc troca rede.",
             "message_main": "Nao conectou",
             "system_state": "wifi_wrong_password",
             "next_step_expected": "Retornar ao campo de senha.",
             "confusion_risk": "high",
-            "title": "Nao conectou",
-            "subtitle": "A senha pode estar incorreta.",
-            "items": ["Confira letras maiusculas.", "Tente novamente ou escolha outra rede."],
-            "footer": "Enter tenta novamente | Esc volta",
+            "title": "Nova rede nao conectada",
+            "subtitle": "A rede anterior foi restaurada.",
+            "items": ["Rede anterior restaurada.", "Senha mantida para corrigir.", "Ethernet nao foi alterado."],
+            "footer": "Enter corrige senha | Esc troca rede",
             "accent": "#ef4444",
             "error_recovery_available": True,
         },
@@ -1399,7 +1502,7 @@ def add_c25_actual_runtime_state_screens(specs: list[ScreenSpec], gallery_dir: p
             preview_covered=True,
             title="Pronto para salvar",
             subtitle="Confirme para gravar a configuracao final.",
-            body_items=["Validacao concluida.", "Ainda nao foi salva.", "Esc cancela sem gravar."],
+            body_items=["Tela, rede e ambiente revisados.", "Nenhum novo ajuste foi salvo.", "Esc cancela os ajustes pendentes."],
             footer="Enter salva | Esc cancela",
             option_text=[],
             status_feedback=True,
@@ -1439,7 +1542,7 @@ def add_c25_actual_runtime_state_screens(specs: list[ScreenSpec], gallery_dir: p
             preview_covered=True,
             title="Pronto para salvar",
             subtitle="Confirme para gravar a configuracao final.",
-            body_items=["Validacao concluida.", "Ainda nao foi salva.", "Esc cancela sem gravar."],
+            body_items=["Tela, rede e ambiente revisados.", "Nenhum novo ajuste foi salvo.", "Esc cancela os ajustes pendentes."],
             footer="Enter salva | Esc cancela",
             option_text=[],
             status_feedback=True,
@@ -2030,9 +2133,11 @@ def run_interaction_stress() -> dict[str, Any]:
         {"ssid": f"TEST_WIFI_STRESS_{index:02d}", "signal_percent": 100 - index, "signal_bucket": "strong", "security_present": True}
         for index in range(18)
     ]
-    page_1, start_1, end_1, _, _ = wizard.page_items(page_fixture, 0, 8)
-    page_2, start_2, end_2, _, _ = wizard.page_items(page_fixture, 8, 8)
-    page_3, start_3, end_3, _, _ = wizard.page_items(page_fixture, 16, 8)
+    page_size = wizard.wifi_list_page_size(90)
+    page_1, start_1, end_1, _, _ = wizard.page_items(page_fixture, 0, page_size)
+    page_2, start_2, end_2, _, _ = wizard.page_items(page_fixture, 4, page_size)
+    page_3, start_3, end_3, _, _ = wizard.page_items(page_fixture, 8, page_size)
+    page_5, start_5, end_5, _, _ = wizard.page_items(page_fixture, 16, page_size)
     preserved_index, preserved = wizard.refresh_selected_index(page_fixture[:5], [page_fixture[0], page_fixture[3], page_fixture[4]], 3)
     hidden = wizard.text_field_display_hint("TEST_PASSWORD_VISIBLE", hidden=True, show_plain_value=False)
     visible = wizard.text_field_display_hint("TEST_PASSWORD_VISIBLE", hidden=True, show_plain_value=True)
@@ -2050,6 +2155,7 @@ def run_interaction_stress() -> dict[str, Any]:
         "wifi_pagination_18_page_1": {"start": start_1 + 1, "end": end_1, "count": len(page_1)},
         "wifi_pagination_18_page_2": {"start": start_2 + 1, "end": end_2, "count": len(page_2)},
         "wifi_pagination_18_page_3": {"start": start_3 + 1, "end": end_3, "count": len(page_3)},
+        "wifi_pagination_18_final_page": {"start": start_5 + 1, "end": end_5, "count": len(page_5)},
         "wifi_refresh_selection_preserved": preserved and preserved_index == 1,
         "splash_modes_previewed": all(mode in splash.MESSAGES for mode in SPLASH_ORDER),
     }

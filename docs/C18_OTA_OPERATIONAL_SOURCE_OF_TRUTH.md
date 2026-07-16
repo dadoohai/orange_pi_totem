@@ -1,6 +1,6 @@
 # C18 OTA - fonte da verdade operacional
 
-Estado em 2026-07-14. Este documento e o radar curto para decidir os proximos
+Estado em 2026-07-16. Este documento e o radar curto para decidir os proximos
 passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
@@ -819,3 +819,14 @@ podemos escolher entre:
     fluxo visual sem escrita, reboot e playback passaram. A referencia publica
     continua `prod14` + C25B + C21.12. O summary `c075a55` fica marcado como
     entrada obrigatoria da proxima imagem, nao como parte do pacote C21.19.
+12. A proxima frente e M9, Wi-Fi de produto. A ordem canonica de execucao esta
+    em `docs/C20_UX_ACCUMULATION_PLAN.md`: verdade das opcoes/mensagens,
+    simplificacao, redes abertas, estados, diagnostico, portal cativo,
+    navegador restrito e fechamento por placa/OTA. Se o navegador exigir
+    runtime novo, a dependencia entra na proxima imagem. Nao criar fila
+    paralela.
+13. Em 2026-07-16, M9 itens 1 e 2 ficaram verdes off-board: opcoes dinamicas,
+    cancelamento limitado a sessao atual, rede protegida sem confirmacoes
+    repetidas, retry direto e lista retrato sem item oculto. O recorte ainda nao
+    e claim de placa nem release: falta gate final, pacote homologacao e
+    apply/rollback/reapply com evidencia real. Rede aberta permanece o item 3.
