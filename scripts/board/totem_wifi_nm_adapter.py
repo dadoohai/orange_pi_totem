@@ -59,6 +59,9 @@ DEFAULT_PROFILE_NAME = "dadooh-c9-6-wifi-test"
 DEFAULT_PERSISTENT_PROFILE_NAME = "dadooh-c9-8-wifi-persistent"
 ALLOWED_PROFILE_PREFIXES = ("dadooh-c9-6-", "dadooh-c9-8-", "dadooh-product-wifi-")
 PERSISTENT_PROFILE_PREFIXES = ("dadooh-c9-8-", "dadooh-product-wifi-")
+WIFI_SECURITY_OPEN = "open"
+WIFI_SECURITY_WPA_PSK = "wpa-psk"
+SUPPORTED_WIFI_SECURITY_TYPES = frozenset({WIFI_SECURITY_OPEN, WIFI_SECURITY_WPA_PSK})
 
 ALLOWED_READ_ONLY_COMMANDS = {
     ("ip", "-j", "-4", "route", "show", "table", "main", "default"),
@@ -91,6 +94,7 @@ SENSITIVE_MARKERS = (
     "11:22:33:44:55:66",
     "fake-hostname",
     "Fake product wifi",
+    "FAKE-OPEN-WIFI",
     "fake-uuid-value",
     "fake-token-value",
     "fake-api-key",
@@ -748,7 +752,7 @@ def parse_wifi_network_list(stdout: str, *, limit: int | None = None) -> list[di
     Callers must not write these dictionaries to public status or evidence.
     """
 
-    by_ssid: dict[str, dict[str, Any]] = {}
+    by_network: dict[tuple[str, bool | str], dict[str, Any]] = {}
     for raw_line in stdout.splitlines():
         if not raw_line.strip():
             continue
@@ -769,11 +773,12 @@ def parse_wifi_network_list(stdout: str, *, limit: int | None = None) -> list[di
             "security_present": security_present(security),
             "_signal_value": signal_value,
         }
-        previous = by_ssid.get(ssid)
+        network_key = (ssid, item["security_present"])
+        previous = by_network.get(network_key)
         if previous is None or signal_value > int(previous.get("_signal_value", -1)):
-            by_ssid[ssid] = item
+            by_network[network_key] = item
 
-    networks = sorted(by_ssid.values(), key=lambda item: int(item.get("_signal_value", -1)), reverse=True)
+    networks = sorted(by_network.values(), key=lambda item: int(item.get("_signal_value", -1)), reverse=True)
     public_safe: list[dict[str, Any]] = []
     limited_networks = networks if limit is None else networks[: max(0, int(limit))]
     for item in limited_networks:
@@ -1558,10 +1563,19 @@ def load_wifi_secrets(secrets_file: str) -> dict[str, str]:
         raise AdapterError("secrets-file invalid") from exc
     if not isinstance(payload, dict):
         raise AdapterError("secrets-file invalid")
-    return {
+    security_type = payload.get("security_type", WIFI_SECURITY_WPA_PSK)
+    if not isinstance(security_type, str) or security_type not in SUPPORTED_WIFI_SECURITY_TYPES:
+        raise AdapterError("secrets-file invalid")
+    loaded = {
         "ssid": validate_secret_text(payload.get("ssid"), field="ssid"),
-        "psk": validate_secret_text(payload.get("psk"), field="psk"),
+        "security_type": security_type,
     }
+    if security_type == WIFI_SECURITY_OPEN:
+        if "psk" in payload:
+            raise AdapterError("secrets-file invalid")
+        return loaded
+    loaded["psk"] = validate_secret_text(payload.get("psk"), field="psk")
+    return loaded
 
 
 def keyfile_value(value: str) -> str:
@@ -1575,22 +1589,32 @@ def keyfile_ssid_value(value: str) -> str:
 
 
 def nmconnection_text(profile_name: str, secrets: dict[str, str], *, autoconnect: bool = False) -> str:
-    return "\n".join(
+    security_type = secrets.get("security_type", WIFI_SECURITY_WPA_PSK)
+    if security_type not in SUPPORTED_WIFI_SECURITY_TYPES:
+        raise AdapterError("secrets-file invalid")
+    lines = [
+        "[connection]",
+        f"id={profile_name}",
+        f"uuid={deterministic_profile_uuid(profile_name)}",
+        "type=wifi",
+        f"autoconnect={'true' if autoconnect else 'false'}",
+        "",
+        "[wifi]",
+        "mode=infrastructure",
+        f"ssid={keyfile_ssid_value(secrets['ssid'])}",
+        "",
+    ]
+    if security_type == WIFI_SECURITY_WPA_PSK:
+        lines.extend(
+            [
+                "[wifi-security]",
+                "key-mgmt=wpa-psk",
+                f"psk={keyfile_value(secrets['psk'])}",
+                "",
+            ]
+        )
+    lines.extend(
         [
-            "[connection]",
-            f"id={profile_name}",
-            f"uuid={deterministic_profile_uuid(profile_name)}",
-            "type=wifi",
-            f"autoconnect={'true' if autoconnect else 'false'}",
-            "",
-            "[wifi]",
-            "mode=infrastructure",
-            f"ssid={keyfile_ssid_value(secrets['ssid'])}",
-            "",
-            "[wifi-security]",
-            "key-mgmt=wpa-psk",
-            f"psk={keyfile_value(secrets['psk'])}",
-            "",
             "[ipv4]",
             "method=auto",
             "",
@@ -1599,6 +1623,7 @@ def nmconnection_text(profile_name: str, secrets: dict[str, str], *, autoconnect
             "",
         ]
     )
+    return "\n".join(lines)
 
 
 def write_private_nmconnection(
@@ -1977,6 +2002,7 @@ def build_apply_status(
     profile_source_retained_during_activation: bool,
     persistent_product_wifi: bool,
     autoconnect_enabled: bool,
+    credentials_collected: bool = True,
 ) -> dict[str, Any]:
     network_changed = (
         profile_create_result != "not_attempted"
@@ -1990,7 +2016,7 @@ def build_apply_status(
     )
     privacy = public_privacy_flags()
     privacy["network_changed"] = network_changed
-    privacy["credentials_collected"] = True
+    privacy["credentials_collected"] = credentials_collected
     privacy["nmcli_modify_called"] = network_changed
     return {
         "schema_version": SCHEMA_VERSION,
@@ -2108,6 +2134,7 @@ def apply_wifi_controlled(
             profile_source_retained_during_activation=False,
             persistent_product_wifi=persistent_product_wifi,
             autoconnect_enabled=False,
+            credentials_collected=False,
         )
         write_apply_artifacts(out_dir, status, preflight, rollback)
         raise AdapterError("preflight blocked real wifi apply")
@@ -2214,6 +2241,7 @@ def apply_wifi_controlled(
         profile_source_retained_during_activation=profile_source_path is not None,
         persistent_product_wifi=persistent_product_wifi,
         autoconnect_enabled=autoconnect_enabled,
+        credentials_collected="psk" in secrets,
     )
     write_apply_artifacts(out_dir, status, preflight, rollback)
     return status
@@ -2852,6 +2880,14 @@ def run_self_test() -> None:
     assert_true(
         [item["ssid"] for item in spaced_wifi_list] == ["EDGE SSID  ", "EDGE SSID"],
         "SSID boundary spaces must be preserved and must not collapse distinct networks",
+    )
+    mixed_security_same_ssid = parse_wifi_network_list(
+        "SHARED_NAME:91:\nSHARED_NAME:85:WPA2\nSHARED_NAME:50:\nSHARED_NAME:45:WPA2\n"
+    )
+    assert_true(
+        len(mixed_security_same_ssid) == 2
+        and {item["security_present"] for item in mixed_security_same_ssid} == {False, True},
+        "the same SSID advertised as open and protected must remain two explicit choices",
     )
     public_wifi_meta = wifi_selection_public_metadata(parsed_wifi_list, parsed_wifi_list[0])
     assert_true(public_wifi_meta["wifi_networks_found_count"] == 3, "wifi count should be public")
@@ -3757,6 +3793,10 @@ def run_self_test() -> None:
         os.chmod(safe_secret, PRIVATE_FILE_MODE)
         loaded = load_wifi_secrets(str(safe_secret))
         assert_true(loaded["ssid"] == "FAKE-STORE-WIFI", "safe secrets should load internally")
+        assert_true(
+            loaded["security_type"] == WIFI_SECURITY_WPA_PSK,
+            "legacy secrets files should remain WPA-PSK compatible",
+        )
 
         spaced_secret = secrets_parent / "wifi-spaced.json"
         spaced_secret.write_text(
@@ -3773,6 +3813,61 @@ def run_self_test() -> None:
             "SSID should use an exact byte-list keyfile representation",
         )
         assert_true("ssid=EDGE SSID" not in spaced_keyfile, "SSID must not use an ambiguous plain keyfile value")
+        assert_true(
+            "[wifi-security]" in spaced_keyfile
+            and "key-mgmt=wpa-psk" in spaced_keyfile
+            and "psk= replacement-pass " in spaced_keyfile,
+            "protected Wi-Fi keyfiles must retain WPA-PSK security",
+        )
+
+        open_secret = secrets_parent / "wifi-open.json"
+        open_secret.write_text(
+            json.dumps({"ssid": "FAKE-OPEN-WIFI", "security_type": WIFI_SECURITY_OPEN}),
+            encoding="utf-8",
+        )
+        os.chmod(open_secret, PRIVATE_FILE_MODE)
+        open_loaded = load_wifi_secrets(str(open_secret))
+        assert_true(
+            open_loaded == {"ssid": "FAKE-OPEN-WIFI", "security_type": WIFI_SECURITY_OPEN},
+            "open Wi-Fi should load without a password",
+        )
+        open_keyfile = nmconnection_text(DEFAULT_PERSISTENT_PROFILE_NAME, open_loaded, autoconnect=True)
+        assert_true(
+            f"ssid={keyfile_ssid_value('FAKE-OPEN-WIFI')}" in open_keyfile,
+            "open Wi-Fi should retain exact SSID bytes",
+        )
+        assert_true(
+            "[wifi-security]" not in open_keyfile
+            and "key-mgmt=" not in open_keyfile
+            and "psk=" not in open_keyfile,
+            "open Wi-Fi keyfiles must omit the security setting and credential",
+        )
+        contradictory_open_secret = secrets_parent / "wifi-open-with-psk.json"
+        contradictory_open_secret.write_text(
+            json.dumps(
+                {
+                    "ssid": "FAKE-OPEN-WIFI",
+                    "security_type": WIFI_SECURITY_OPEN,
+                    "psk": "fake-password",
+                }
+            ),
+            encoding="utf-8",
+        )
+        os.chmod(contradictory_open_secret, PRIVATE_FILE_MODE)
+        assert_raises(
+            lambda: load_wifi_secrets(str(contradictory_open_secret)),
+            "open Wi-Fi must reject contradictory credentials",
+        )
+        unknown_security_secret = secrets_parent / "wifi-unknown-security.json"
+        unknown_security_secret.write_text(
+            json.dumps({"ssid": "FAKE-OPEN-WIFI", "security_type": "unknown"}),
+            encoding="utf-8",
+        )
+        os.chmod(unknown_security_secret, PRIVATE_FILE_MODE)
+        assert_raises(
+            lambda: load_wifi_secrets(str(unknown_security_secret)),
+            "unknown Wi-Fi security must fail closed",
+        )
         assert_raises(
             lambda: validate_secret_text(" " * 4, field="ssid"),
             "all-space SSIDs should remain unsupported by the local product UI",
@@ -4002,6 +4097,95 @@ def run_self_test() -> None:
             persistent_source.read_text(encoding="utf-8") == source_before_no_ip,
             "missing IPv4 must restore the exact previous keyfile",
         )
+
+        source_before_open_failure = persistent_source.read_text(encoding="utf-8")
+        open_no_ip_out = require_tmp_dir(str(root / "persistent-open-replacement-no-ip"))
+        open_no_ip_status = apply_wifi_controlled(
+            out_dir=open_no_ip_out,
+            timeout_sec=1,
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file=str(open_secret),
+            profile_name=DEFAULT_PERSISTENT_PROFILE_NAME,
+            rollback_after_test=False,
+            keep_dedicated_profile=True,
+            persistent_product_wifi=True,
+            confirm_keep_dedicated_profile=CONFIRM_KEEP_DEDICATED_PROFILE,
+            cleanup_secrets_file=False,
+            allow_ssh_risk_with_local_console_confirmed=False,
+            local_console_confirmed=False,
+            system_connection_dir=root / "system-connections",
+            command_runner=no_ip_runner,
+            file_reader=fake_reader,
+            nmcli_path="/usr/bin/nmcli",
+        )
+        assert_true(
+            open_no_ip_status["wifi_activation_result"] == "failure",
+            "open Wi-Fi without IPv4 must fail",
+        )
+        assert_true(
+            open_no_ip_status["previous_profile_restored"] is True,
+            "failed open Wi-Fi must restore the prior network",
+        )
+        assert_true(
+            open_no_ip_status["privacy_flags"]["credentials_collected"] is False,
+            "open Wi-Fi must not claim credential collection",
+        )
+        assert_true(
+            persistent_source.read_text(encoding="utf-8") == source_before_open_failure,
+            "failed open Wi-Fi must restore the exact previous protected keyfile",
+        )
+
+        open_profile_name = "dadooh-product-wifi-open-test"
+        open_persistent_out = require_tmp_dir(str(root / "persistent-open-success"))
+        open_persistent_status = apply_wifi_controlled(
+            out_dir=open_persistent_out,
+            timeout_sec=1,
+            enable_real_apply=True,
+            confirmation=CONFIRM_REAL_WIFI_APPLY,
+            secrets_file=str(open_secret),
+            profile_name=open_profile_name,
+            rollback_after_test=False,
+            keep_dedicated_profile=True,
+            persistent_product_wifi=True,
+            confirm_keep_dedicated_profile=CONFIRM_KEEP_DEDICATED_PROFILE,
+            cleanup_secrets_file=False,
+            allow_ssh_risk_with_local_console_confirmed=False,
+            local_console_confirmed=False,
+            system_connection_dir=root / "open-system-connections",
+            command_runner=fake_runner,
+            file_reader=fake_reader,
+            nmcli_path="/usr/bin/nmcli",
+        )
+        open_persistent_source = (
+            root / "open-system-connections" / dedicated_profile_filename(open_profile_name)
+        )
+        assert_true(
+            open_persistent_status["wifi_activation_result"] == "success"
+            and open_persistent_status["wifi_link_ready"] is True,
+            "open Wi-Fi with activation and IPv4 should succeed",
+        )
+        assert_true(
+            open_persistent_status["profile_retained"] is True
+            and open_persistent_status["autoconnect_enabled"] is True,
+            "successful open Wi-Fi should retain the dedicated autoconnect profile",
+        )
+        assert_true(
+            open_persistent_status["privacy_flags"]["credentials_collected"] is False,
+            "successful open Wi-Fi must not claim credential collection",
+        )
+        assert_true(
+            "[wifi-security]" not in open_persistent_source.read_text(encoding="utf-8"),
+            "retained open Wi-Fi profile must remain passwordless",
+        )
+        assert_artifact_permissions(
+            open_persistent_out,
+            (STATUS_FILENAME, PREFLIGHT_FILENAME, SUMMARY_FILENAME),
+        )
+        open_persistent_text = (open_persistent_out / STATUS_FILENAME).read_text(encoding="utf-8")
+        open_persistent_text += (open_persistent_out / PREFLIGHT_FILENAME).read_text(encoding="utf-8")
+        open_persistent_text += (open_persistent_out / SUMMARY_FILENAME).read_text(encoding="utf-8")
+        assert_no_forbidden_values(open_persistent_text)
 
         failure_out = require_tmp_dir(str(root / "failure"))
         prepare_out_dir(failure_out)

@@ -31,6 +31,7 @@ SCENARIOS = [
     "environment_edit_middle",
     "wifi_success_fake",
     "wifi_wrong_password_fake",
+    "wifi_open_retry_fake",
     "api_unavailable_fake",
     "reopen_configured",
     "cancel_flow",
@@ -610,6 +611,110 @@ def replay_wifi_success(r: Replay) -> None:
     r.assert_true(scenario, "networkmanager_not_called_by_replay", not r.external_process_calls)
 
 
+def replay_wifi_open_retry(r: Replay) -> None:
+    scenario = "wifi_open_retry_fake"
+    networks = [
+        {
+            "ssid": "TEST_WIFI_OPEN",
+            "signal_percent": 72,
+            "signal_bucket": "strong",
+            "security_present": False,
+        }
+    ]
+    r.screen(
+        scenario,
+        "wifi_list",
+        "02-wifi-list",
+        wizard.wifi_list_screen_svg(
+            networks=networks,
+            selected_index=0,
+            list_status="ok",
+            updated_age_sec=0,
+            refresh_message="Dados sinteticos.",
+            layout_rotation_deg=90,
+        ),
+        "enter",
+        "connect_without_password",
+    )
+    r.screen(
+        scenario,
+        "wifi_progress",
+        "02-wifi-open-applying-1",
+        wizard.wifi_connecting_screen_svg(layout_rotation_deg=90, security_present=False),
+        "wait",
+        "connecting",
+    )
+    r.screen(
+        scenario,
+        "wifi_failure",
+        "02-wifi-open-failure",
+        wizard.wifi_failure_screen_svg(
+            restored=True,
+            security_present=False,
+            layout_rotation_deg=90,
+        ),
+        "enter",
+        "retry_without_password",
+    )
+    r.screen(
+        scenario,
+        "wifi_retry",
+        "02-wifi-open-applying-2",
+        wizard.wifi_connecting_screen_svg(layout_rotation_deg=90, security_present=False),
+        "wait",
+        "connecting_again",
+    )
+    r.screen(
+        scenario,
+        "wifi_success",
+        "02-wifi-open-result",
+        wizard.wifi_success_screen_svg(layout_rotation_deg=90),
+        "enter_or_timeout",
+        "connected",
+    )
+    r.screen(
+        scenario,
+        "environment",
+        "03-environment",
+        environment_screen(TEST_ENV_UUID, len(TEST_ENV_UUID)),
+        "type_uuid,enter",
+        "valid_uuid",
+    )
+    r.screen(
+        scenario,
+        "review",
+        "05-review",
+        review_screen("Nova rede Wi-Fi confirmada"),
+        "enter",
+        "candidate_ready",
+    )
+    r.screen(scenario, "complete", "06-complete", complete_screen(), "enter", "done")
+    list_svg = r.screen_paths[(scenario, "02-wifi-list")].read_text(encoding="utf-8")
+    progress_svg = r.screen_paths[(scenario, "02-wifi-open-applying-1")].read_text(encoding="utf-8")
+    failure_svg = r.screen_paths[(scenario, "02-wifi-open-failure")].read_text(encoding="utf-8")
+    success_svg = r.screen_paths[(scenario, "02-wifi-open-result")].read_text(encoding="utf-8")
+    scenario_paths = [path for (scenario_name, _screen_id), path in r.screen_paths.items() if scenario_name == scenario]
+    scenario_text = "\n".join(path.read_text(encoding="utf-8") for path in scenario_paths)
+    r.assert_true(scenario, "open_network_is_selectable", "Aberta | Sem senha" in list_svg and "Enter conecta" in list_svg)
+    r.assert_true(scenario, "open_network_skips_password", "Senha Wi-Fi" not in scenario_text)
+    r.assert_true(scenario, "open_progress_is_truthful", "Rede aberta, sem senha" in progress_svg)
+    r.assert_true(
+        scenario,
+        "open_failure_retries_directly",
+        "Enter tenta novamente" in failure_svg and "Nenhuma senha foi solicitada" in failure_svg,
+    )
+    r.assert_true(
+        scenario,
+        "open_success_claims_link_not_internet",
+        "Endereco de rede recebido" in success_svg
+        and "Internet ainda nao" in success_svg
+        and "verificada." in success_svg
+        and "Wi-Fi conectado" in success_svg,
+    )
+    r.assert_true(scenario, "open_result_reaches_completion", (scenario, "06-complete") in r.screen_paths)
+    r.assert_true(scenario, "networkmanager_not_called_by_replay", not r.external_process_calls)
+
+
 def replay_api_unavailable(r: Replay) -> None:
     scenario = "api_unavailable_fake"
     preflight = wizard.environment_preflight_unavailable("none")
@@ -717,6 +822,7 @@ SCENARIO_RUNNERS: dict[str, Callable[[Replay], None]] = {
     "environment_edit_middle": replay_environment_edit_middle,
     "wifi_success_fake": replay_wifi_success,
     "wifi_wrong_password_fake": replay_wifi_wrong_password,
+    "wifi_open_retry_fake": replay_wifi_open_retry,
     "api_unavailable_fake": replay_api_unavailable,
     "reopen_configured": replay_reopen_configured,
     "cancel_flow": replay_cancel_flow,

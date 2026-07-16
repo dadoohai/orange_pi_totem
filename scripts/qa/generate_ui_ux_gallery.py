@@ -486,6 +486,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
     for screen_id, networks, selected, refresh_message, refreshing in (
         ("wizard.wifi.empty", [], 0, "Nenhuma rede encontrada.", False),
         ("wizard.wifi.three_networks", wifi3, 0, "Dados sinteticos.", False),
+        ("wizard.wifi.open_selected", wifi3, 1, "Rede aberta selecionada.", False),
         ("wizard.wifi.eighteen_page_1", wifi18, 0, "Pagina 1 de multiplas.", False),
         ("wizard.wifi.eighteen_page_2", wifi18, wizard.WIFI_LIST_PAGE_SIZE + 1, "Setas continuam alem da area visivel.", False),
         ("wizard.wifi.eighteen_page_3", wifi18, wizard.WIFI_LIST_PAGE_SIZE * 2 + 1, "Pagina seguinte.", False),
@@ -506,13 +507,13 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
         primary_action = (
             "Enter atualiza"
             if selected_network is None
-            else ("Enter detalhes" if selected_is_open else "Enter escolhe")
+            else ("Enter conecta" if selected_is_open else "Enter escolhe")
         )
         next_step_expected = (
             "Atualizar a lista local."
             if selected_network is None
             else (
-                "Explicar que rede aberta ainda nao esta disponivel."
+                "Conectar sem solicitar senha."
                 if selected_is_open
                 else "Ir para senha da rede selecionada."
             )
@@ -629,12 +630,21 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             "#f59e0b",
         ),
         (
+            "wizard.wifi.open_connecting",
+            "Conectando ao Wi-Fi",
+            "Testando e salvando a rede.",
+            "Aguarde...",
+            "Em andamento",
+            ["Rede aberta, sem senha.", "Rollback automatico.", "Nenhuma senha solicitada."],
+            "#f59e0b",
+        ),
+        (
             "wizard.wifi.success",
             "Wi-Fi conectado",
             "A rede foi salva neste totem.",
             "Avancando... | Enter continua",
             "Pronto",
-            ["Endereco de rede recebido.", "Reconexao automatica ativa.", "Perfil de rede salvo."],
+            ["Endereco de rede recebido.", "Reconexao automatica ativa.", "Internet ainda nao verificada."],
             "#22c55e",
         ),
     ):
@@ -668,11 +678,50 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 error_recovery_available=screen_id.endswith("connecting"),
             ),
             (
-                wizard.wifi_connecting_screen_svg(layout_rotation_deg=90)
+                wizard.wifi_connecting_screen_svg(
+                    layout_rotation_deg=90,
+                    security_present=not screen_id.endswith("open_connecting"),
+                )
                 if screen_id.endswith("connecting")
                 else wizard.wifi_success_screen_svg(layout_rotation_deg=90)
             ),
         )
+
+    add_screen(
+        specs,
+        gallery_dir,
+        ScreenSpec(
+            screen_id="wizard.wifi.open_failure_restored",
+            journey="wizard",
+            screen_type="wizard",
+            orientation="portrait",
+            function="Explicar falha recuperavel de rede aberta.",
+            operator_task="Tentar novamente ou escolher outra rede.",
+            primary_action="Enter tenta novamente",
+            secondary_action="Esc troca rede",
+            message_main="Nova rede nao conectada",
+            system_state="wizard_wifi_open_failure_restored",
+            next_step_expected="Repetir apply sem senha ou voltar para a lista.",
+            confusion_risk="low",
+            dependencies=["adapter Wi-Fi governado"],
+            dynamic_feedback_needed=True,
+            error_state_needed=True,
+            preview_covered=True,
+            title="Nova rede nao conectada",
+            subtitle="A rede anterior foi restaurada.",
+            body_items=["Rede anterior restaurada.", "Nenhuma senha foi solicitada.", "Ethernet nao foi alterado."],
+            footer="Enter tenta novamente | Esc troca rede",
+            option_text=[],
+            status_feedback=True,
+            back_applicable=True,
+            error_recovery_available=True,
+        ),
+        wizard.wifi_failure_screen_svg(
+            restored=True,
+            security_present=False,
+            layout_rotation_deg=90,
+        ),
+    )
 
     for screen_id, title, subtitle, footer, field_label, value_hint, field_note, items in (
         (

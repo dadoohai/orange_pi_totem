@@ -3109,11 +3109,31 @@ def prepare_wifi_secrets_dir(raw_path: str = DEFAULT_WIFI_SECRETS_DIR) -> pathli
     return secrets_dir
 
 
-def write_wifi_secrets_file(secrets_dir: pathlib.Path, ssid: str, psk: str) -> pathlib.Path:
+def write_wifi_secrets_file(
+    secrets_dir: pathlib.Path,
+    ssid: str,
+    psk: str | None,
+    *,
+    security_present: bool,
+) -> pathlib.Path:
     secrets_path = secrets_dir / "secrets.json"
     if secrets_path.exists() and secrets_path.is_symlink():
         raise VisualWizardError("arquivo temporario indisponivel")
-    wifi_adapter.atomic_write_private_json(secrets_path, {"ssid": ssid, "psk": psk}, secrets_dir)
+    payload = {
+        "ssid": ssid,
+        "security_type": (
+            wifi_adapter.WIFI_SECURITY_WPA_PSK
+            if security_present
+            else wifi_adapter.WIFI_SECURITY_OPEN
+        ),
+    }
+    if security_present:
+        if not isinstance(psk, str):
+            raise VisualWizardError("senha Wi-Fi indisponivel")
+        payload["psk"] = psk
+    elif psk not in {None, ""}:
+        raise VisualWizardError("rede aberta nao usa senha")
+    wifi_adapter.atomic_write_private_json(secrets_path, payload, secrets_dir)
     if secrets_path.is_symlink() or file_mode(secrets_path) != wifi_adapter.PRIVATE_FILE_MODE:
         raise VisualWizardError("arquivo temporario indisponivel")
     return secrets_path
@@ -3130,7 +3150,7 @@ def security_label(value: Any) -> str:
     if value is True:
         return "Protegida"
     if value is False:
-        return "Aberta | Indisponivel"
+        return "Aberta | Sem senha"
     return "Seguranca desconhecida"
 
 
@@ -3187,6 +3207,13 @@ def page_items(items: list[dict[str, Any]], selected_index: int, page_size: int)
     return items[start:end], start, end, page_index, page_count
 
 
+def wifi_network_identity(network: dict[str, Any]) -> tuple[str, bool | str]:
+    security = network.get("security_present")
+    if security not in {True, False}:
+        security = "unknown"
+    return str(network.get("ssid", "")), security
+
+
 def refresh_selected_index(
     previous_networks: list[dict[str, Any]],
     refreshed_networks: list[dict[str, Any]],
@@ -3194,13 +3221,13 @@ def refresh_selected_index(
 ) -> tuple[int, bool]:
     if not refreshed_networks:
         return 0, False
-    selected_ssid = ""
+    selected_identity: tuple[str, bool | str] | None = None
     if previous_networks:
         safe_previous = max(0, min(len(previous_networks) - 1, previous_selected_index))
-        selected_ssid = str(previous_networks[safe_previous].get("ssid", ""))
-    if selected_ssid:
+        selected_identity = wifi_network_identity(previous_networks[safe_previous])
+    if selected_identity and selected_identity[0]:
         for index, network in enumerate(refreshed_networks):
-            if str(network.get("ssid", "")) == selected_ssid:
+            if wifi_network_identity(network) == selected_identity:
                 return index, True
     return max(0, min(len(refreshed_networks) - 1, previous_selected_index)), False
 
@@ -3248,11 +3275,7 @@ def wifi_list_screen_svg(
         position = f"Mostrando {page_start + 1}-{page_end} de {len(networks)}"
         selected_line = f"Rede {selected_index + 1} de {len(networks)}"
         selected_network = networks[max(0, min(len(networks) - 1, selected_index))]
-        primary_action = (
-            "Enter detalhes"
-            if selected_network.get("security_present") is False
-            else "Enter escolhe"
-        )
+        primary_action = "Enter conecta" if selected_network.get("security_present") is False else "Enter escolhe"
     else:
         position = "Nenhuma rede encontrada"
         selected_line = "Use R para atualizar"
@@ -3277,7 +3300,7 @@ def wifi_list_screen_svg(
     )
 
 
-def wifi_connecting_screen_svg(*, layout_rotation_deg: int) -> str:
+def wifi_connecting_screen_svg(*, layout_rotation_deg: int, security_present: bool = True) -> str:
     return build_screen_svg(
         active_step=1,
         title="Conectando ao Wi-Fi",
@@ -3285,9 +3308,9 @@ def wifi_connecting_screen_svg(*, layout_rotation_deg: int) -> str:
         footer="Aguarde...",
         panel_title="Em andamento",
         panel_items=[
-            "Perfil protegido.",
+            "Rede protegida." if security_present else "Rede aberta, sem senha.",
             "Rollback automatico.",
-            "Senha fora dos logs.",
+            "Senha fora dos logs." if security_present else "Nenhuma senha solicitada.",
         ],
         accent="#f59e0b",
         layout_rotation_deg=layout_rotation_deg,
@@ -3304,9 +3327,43 @@ def wifi_success_screen_svg(*, layout_rotation_deg: int) -> str:
         panel_items=[
             "Endereco de rede recebido.",
             "Reconexao automatica ativa.",
-            "Perfil de rede salvo.",
+            "Internet ainda nao verificada.",
         ],
         accent="#22c55e",
+        layout_rotation_deg=layout_rotation_deg,
+    )
+
+
+def wifi_failure_screen_svg(
+    *,
+    restored: bool,
+    security_present: bool,
+    layout_rotation_deg: int,
+) -> str:
+    if security_present:
+        subtitle = "A rede anterior foi restaurada." if restored else "Confira a senha ou escolha outra rede."
+        footer = "Enter corrige senha | Esc troca rede"
+        panel_items = (
+            ["Rede anterior restaurada.", "Senha mantida para corrigir.", "Ethernet nao foi alterado."]
+            if restored
+            else ["Senha mantida para corrigir.", "Pode escolher outra rede.", "Ethernet nao foi alterado."]
+        )
+    else:
+        subtitle = "A rede anterior foi restaurada." if restored else "Tente novamente ou escolha outra rede."
+        footer = "Enter tenta novamente | Esc troca rede"
+        panel_items = (
+            ["Rede anterior restaurada.", "Nenhuma senha foi solicitada.", "Ethernet nao foi alterado."]
+            if restored
+            else ["Rede aberta, sem senha.", "Pode tentar novamente.", "Ethernet nao foi alterado."]
+        )
+    return build_screen_svg(
+        active_step=1,
+        title="Nova rede nao conectada" if restored else "Wi-Fi nao conectado",
+        subtitle=subtitle,
+        footer=footer,
+        panel_title="Sem conexao",
+        panel_items=panel_items,
+        accent="#ef4444",
         layout_rotation_deg=layout_rotation_deg,
     )
 
@@ -3337,6 +3394,7 @@ def choose_wifi_network(
     layout_rotation_deg: int,
     initial_networks: list[dict[str, Any]] | None = None,
     initial_selected_ssid: str = "",
+    initial_selected_security_present: bool | str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
     if initial_networks is None:
         networks, list_status = wifi_adapter.list_wifi_networks_for_local_ui(
@@ -3352,7 +3410,12 @@ def choose_wifi_network(
     selected_index = 0
     if initial_selected_ssid:
         for index, network in enumerate(networks):
-            if str(network.get("ssid", "")) == initial_selected_ssid:
+            same_ssid = str(network.get("ssid", "")) == initial_selected_ssid
+            same_security = (
+                initial_selected_security_present is None
+                or wifi_network_identity(network)[1] == initial_selected_security_present
+            )
+            if same_ssid and same_security:
                 selected_index = index
                 break
     last_refresh = time.monotonic()
@@ -3451,29 +3514,7 @@ def choose_wifi_network(
             continue
         if key == "enter":
             if networks:
-                selected_network = networks[selected_index]
-                if selected_network.get("security_present") is False:
-                    display.show(
-                        "02-wifi-open-unavailable",
-                        build_screen_svg(
-                            active_step=1,
-                            title="Rede aberta",
-                            subtitle="Esta versao ainda nao conecta redes sem senha.",
-                            footer="Enter volta para a lista",
-                            panel_title="Ainda indisponivel",
-                            panel_items=[
-                                "Nada foi alterado.",
-                                "Escolha uma rede protegida.",
-                                "Suporte entra na proxima etapa.",
-                            ],
-                            accent="#f59e0b",
-                            layout_rotation_deg=layout_rotation_deg,
-                        ),
-                    )
-                    read_advertised_action("enter")
-                    needs_render = True
-                    continue
-                return selected_network, networks
+                return networks[selected_index], networks
             display.show(
                 "02-wifi-list-refreshing",
                 wifi_list_screen_svg(
@@ -3539,6 +3580,8 @@ def wifi_network_from_status(
     adapter_status: dict[str, Any],
     secrets_path: pathlib.Path,
     selection_metadata: dict[str, Any],
+    *,
+    credentials_collected: bool | None = None,
 ) -> dict[str, Any]:
     profile_present = dedicated_profile_present()
     activation_result = str(adapter_status.get("wifi_activation_result") or "unknown")
@@ -3550,6 +3593,8 @@ def wifi_network_from_status(
     network_changed = bool(adapter_status.get("network_changed", False)) or bool(
         adapter_status.get("wifi_activation_attempted", False)
     )
+    if credentials_collected is None:
+        credentials_collected = selection_metadata.get("selected_network_security_present") is True
     return network_defaults(
         network_step="wifi_persistent",
         label="Wi-Fi conectado neste totem" if success else "Wi-Fi nao conectado",
@@ -3565,7 +3610,7 @@ def wifi_network_from_status(
         dedicated_profile_present_final=profile_present,
         dedicated_profile_persistent=success,
         network_changed=network_changed,
-        credentials_collected=True,
+        credentials_collected=credentials_collected,
         secrets_file_removed=not secrets_path.exists(),
         commands_executed=True,
         nmcli_called=True,
@@ -3578,7 +3623,8 @@ def apply_wifi_persistent_attempt(
     out_dir: pathlib.Path,
     *,
     ssid: str,
-    psk: str,
+    psk: str | None,
+    security_present: bool,
     selection_metadata: dict[str, Any],
     layout_rotation_deg: int,
 ) -> dict[str, Any]:
@@ -3594,7 +3640,12 @@ def apply_wifi_persistent_attempt(
         pass
     if stdout_path.exists() and stdout_path.is_symlink():
         raise VisualWizardError("arquivo temporario indisponivel")
-    secrets_path = write_wifi_secrets_file(prepare_wifi_secrets_dir(), ssid, psk)
+    secrets_path = write_wifi_secrets_file(
+        prepare_wifi_secrets_dir(),
+        ssid,
+        psk,
+        security_present=security_present,
+    )
     command = [
         sys.executable,
         str(ADAPTER_SCRIPT),
@@ -3624,13 +3675,19 @@ def apply_wifi_persistent_attempt(
             os.chmod(stdout_path, setup.PRIVATE_FILE_MODE)
             display.show(
                 "02-wifi-applying",
-                wifi_connecting_screen_svg(layout_rotation_deg=layout_rotation_deg),
+                wifi_connecting_screen_svg(
+                    layout_rotation_deg=layout_rotation_deg,
+                    security_present=security_present,
+                ),
             )
             process = subprocess.Popen(command, stdout=stdout_handle, stderr=subprocess.DEVNULL, text=True)
             while process.poll() is None:
                 display.show(
                     "02-wifi-applying",
-                    wifi_connecting_screen_svg(layout_rotation_deg=layout_rotation_deg),
+                    wifi_connecting_screen_svg(
+                        layout_rotation_deg=layout_rotation_deg,
+                        security_present=security_present,
+                    ),
                 )
                 time.sleep(1)
             rc = process.wait()
@@ -3656,7 +3713,12 @@ def apply_wifi_persistent_attempt(
         }
     if rc != 0 and adapter_status.get("wifi_activation_result") == "success":
         adapter_status["wifi_activation_result"] = "unknown"
-    network = wifi_network_from_status(adapter_status, secrets_path, selection_metadata)
+    network = wifi_network_from_status(
+        adapter_status,
+        secrets_path,
+        selection_metadata,
+        credentials_collected=security_present,
+    )
     record_wifi_attempt_in_session(network)
     return network
 
@@ -3670,6 +3732,7 @@ def run_wifi_persistent(
     c1523_phase("wifi_step_entered", mode="persistent")
     networks: list[dict[str, Any]] | None = None
     selected_ssid = ""
+    selected_security_present: bool | str | None = None
     psk = ""
     while True:
         selected = choose_wifi_network(
@@ -3677,31 +3740,37 @@ def run_wifi_persistent(
             layout_rotation_deg=layout_rotation_deg,
             initial_networks=networks,
             initial_selected_ssid=selected_ssid,
+            initial_selected_security_present=selected_security_present,
         )
         if selected is None:
             return None
         selected_network, networks = selected
         next_ssid = str(selected_network["ssid"])
-        if next_ssid != selected_ssid:
+        next_security_present = wifi_network_identity(selected_network)[1]
+        if (next_ssid, next_security_present) != (selected_ssid, selected_security_present):
             psk = ""
         selected_ssid = next_ssid
+        selected_security_present = next_security_present
         selection_metadata = wifi_adapter.wifi_selection_public_metadata(networks, selected_network)
+        security_present = selected_network.get("security_present") is not False
 
         while True:
-            entered_psk = collect_wifi_password(
-                display,
-                selected_network=selected_network,
-                layout_rotation_deg=layout_rotation_deg,
-                initial_value=psk,
-            )
-            if entered_psk is None:
-                break
-            psk = entered_psk
+            if security_present:
+                entered_psk = collect_wifi_password(
+                    display,
+                    selected_network=selected_network,
+                    layout_rotation_deg=layout_rotation_deg,
+                    initial_value=psk,
+                )
+                if entered_psk is None:
+                    break
+                psk = entered_psk
             network = apply_wifi_persistent_attempt(
                 display,
                 out_dir,
                 ssid=selected_ssid,
-                psk=psk,
+                psk=psk if security_present else None,
+                security_present=security_present,
                 selection_metadata=selection_metadata,
                 layout_rotation_deg=layout_rotation_deg,
             )
@@ -3716,22 +3785,9 @@ def run_wifi_persistent(
             restored = bool(network["previous_profile_restored"])
             display.show(
                 "02-wifi-result",
-                build_screen_svg(
-                    active_step=1,
-                    title="Nova rede nao conectada" if restored else "Wi-Fi nao conectado",
-                    subtitle=(
-                        "A rede anterior foi restaurada."
-                        if restored
-                        else "Confira a senha ou escolha outra rede."
-                    ),
-                    footer="Enter corrige senha | Esc troca rede",
-                    panel_title="Sem conexao",
-                    panel_items=(
-                        ["Rede anterior restaurada.", "Senha mantida para corrigir.", "Ethernet nao foi alterado."]
-                        if restored
-                        else ["Senha mantida para corrigir.", "Pode escolher outra rede.", "Ethernet nao foi alterado."]
-                    ),
-                    accent="#ef4444",
+                wifi_failure_screen_svg(
+                    restored=restored,
+                    security_present=security_present,
                     layout_rotation_deg=layout_rotation_deg,
                 ),
             )
@@ -5413,7 +5469,7 @@ def run_visual_wizard(
                             panel_items=[
                                 "Conexao atual verificada." if has_verified_current else "Lista de redes locais.",
                                 "Nova rede com rollback.",
-                                "Senha protegida.",
+                                "Senha somente quando necessaria.",
                             ],
                             layout_rotation_deg=layout_rotation_deg,
                             initial_selected_index=network_option_index_for_step(
@@ -5711,7 +5767,11 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
                 ethernet_available=True,
             ),
             selected_index=0,
-            panel_items=["Conexao atual verificada.", "Nova rede com rollback.", "Senha protegida."],
+            panel_items=[
+                "Conexao atual verificada.",
+                "Nova rede com rollback.",
+                "Senha somente quando necessaria.",
+            ],
             layout_rotation_deg=90,
         ),
     )
@@ -6276,6 +6336,68 @@ def run_self_test() -> None:
             "Enter conecta" in retained_password_svg and "Esc troca rede" in retained_password_svg,
             "password screen should combine credential entry with the connect action",
         )
+        open_secret_dir = prepare_wifi_secrets_dir(str(root / "open-wifi-secret"))
+        open_secret_path = write_wifi_secrets_file(
+            open_secret_dir,
+            "TEST_OPEN_NETWORK",
+            None,
+            security_present=False,
+        )
+        open_secret_payload = json.loads(open_secret_path.read_text(encoding="utf-8"))
+        assert_true(
+            open_secret_payload
+            == {
+                "ssid": "TEST_OPEN_NETWORK",
+                "security_type": wifi_adapter.WIFI_SECURITY_OPEN,
+            },
+            "open Wi-Fi should create a passwordless private apply payload",
+        )
+        open_artifacts_dir = root / "open-wifi-artifacts"
+        open_artifact_network = network_defaults(
+            network_step="wifi_persistent",
+            label="Wi-Fi conectado neste totem",
+            connected="yes",
+            connection_type="wifi",
+            connectivity="not_checked",
+            wifi_real_test_attempted=True,
+            wifi_activation_result="success",
+            wifi_link_ready=True,
+            dedicated_profile_present_final=True,
+            dedicated_profile_persistent=True,
+            network_changed=True,
+            credentials_collected=False,
+            secrets_file_removed=True,
+            wifi_networks_found_count=1,
+            selected_network_present=True,
+            selected_network_signal_bucket="strong",
+            selected_network_security_present=False,
+            commands_executed=True,
+            nmcli_called=True,
+        )
+        open_artifact_status = write_visual_artifacts(
+            open_artifacts_dir,
+            primary_environment_id,
+            resolve_display_selection("landscape"),
+            open_artifact_network,
+        )
+        open_artifact_candidate = json.loads(
+            (open_artifacts_dir / CANDIDATE_FILENAME).read_text(encoding="utf-8")
+        )
+        assert_true(
+            open_artifact_candidate["setup_wifi_selected_network_security_present"] is False
+            and open_artifact_status["network"]["selected_network_security_present"] is False
+            and open_artifact_status["network"]["credentials_collected"] is False,
+            "open Wi-Fi state must reach candidate and status without a credential claim",
+        )
+        open_public_text = (
+            (open_artifacts_dir / CANDIDATE_FILENAME).read_text(encoding="utf-8")
+            + (open_artifacts_dir / STATUS_FILENAME).read_text(encoding="utf-8")
+            + (open_artifacts_dir / SUMMARY_FILENAME).read_text(encoding="utf-8")
+        )
+        assert_true(
+            "TEST_OPEN_NETWORK" not in open_public_text,
+            "open Wi-Fi SSID must not reach candidate, status, or summary",
+        )
         original_profile_present = globals()["dedicated_profile_present"]
         try:
             globals()["dedicated_profile_present"] = lambda: True
@@ -6346,8 +6468,15 @@ def run_self_test() -> None:
             layout_rotation_deg: int,
             initial_networks: list[dict[str, Any]] | None = None,
             initial_selected_ssid: str = "",
+            initial_selected_security_present: bool | str | None = None,
         ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-            del display, layout_rotation_deg, initial_networks, initial_selected_ssid
+            del (
+                display,
+                layout_rotation_deg,
+                initial_networks,
+                initial_selected_ssid,
+                initial_selected_security_present,
+            )
             return retry_networks[0], retry_networks
 
         def fake_collect_wifi_password(
@@ -6366,13 +6495,17 @@ def run_self_test() -> None:
             out_dir: pathlib.Path,
             *,
             ssid: str,
-            psk: str,
+            psk: str | None,
+            security_present: bool,
             selection_metadata: dict[str, Any],
             layout_rotation_deg: int,
         ) -> dict[str, Any]:
             nonlocal retry_apply_count
             del display, out_dir, selection_metadata, layout_rotation_deg
-            assert_true(ssid == synthetic_ssid and psk == synthetic_password, "retry should preserve local credentials")
+            assert_true(
+                ssid == synthetic_ssid and psk == synthetic_password and security_present,
+                "retry should preserve local credentials",
+            )
             retry_apply_count += 1
             return network_defaults(
                 network_step="wifi_persistent",
@@ -6406,6 +6539,114 @@ def run_self_test() -> None:
         assert_true(
             retry_apply_count == 2 and retry_password_inputs == ["", synthetic_password],
             "failed Wi-Fi retry should not force the user to repeat selection or password entry",
+        )
+
+        open_retry_display = VisualDisplay(root / "open-wifi-retry-flow", enabled=False)
+        open_retry_apply_count = 0
+        open_password_prompted = False
+        open_networks = [
+            {
+                "ssid": "TEST_OPEN_NETWORK",
+                "signal_percent": 72,
+                "signal_bucket": "strong",
+                "security_present": False,
+            }
+        ]
+
+        def fake_choose_open_wifi(
+            display: VisualDisplay,
+            *,
+            layout_rotation_deg: int,
+            initial_networks: list[dict[str, Any]] | None = None,
+            initial_selected_ssid: str = "",
+            initial_selected_security_present: bool | str | None = None,
+        ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+            del (
+                display,
+                layout_rotation_deg,
+                initial_networks,
+                initial_selected_ssid,
+                initial_selected_security_present,
+            )
+            return open_networks[0], open_networks
+
+        def reject_open_wifi_password(
+            display: VisualDisplay,
+            *,
+            selected_network: dict[str, Any],
+            layout_rotation_deg: int,
+            initial_value: str = "",
+        ) -> str:
+            nonlocal open_password_prompted
+            del display, selected_network, layout_rotation_deg, initial_value
+            open_password_prompted = True
+            raise AssertionError("open Wi-Fi must not request a password")
+
+        def fake_apply_open_wifi(
+            display: VisualDisplay,
+            out_dir: pathlib.Path,
+            *,
+            ssid: str,
+            psk: str | None,
+            security_present: bool,
+            selection_metadata: dict[str, Any],
+            layout_rotation_deg: int,
+        ) -> dict[str, Any]:
+            nonlocal open_retry_apply_count
+            del display, out_dir, layout_rotation_deg
+            assert_true(
+                ssid == "TEST_OPEN_NETWORK"
+                and psk is None
+                and security_present is False
+                and selection_metadata["selected_network_security_present"] is False,
+                "open Wi-Fi apply must remain passwordless and explicitly classified",
+            )
+            open_retry_apply_count += 1
+            return network_defaults(
+                network_step="wifi_persistent",
+                wifi_link_ready=open_retry_apply_count == 2,
+                previous_profile_restored=open_retry_apply_count == 1,
+                network_changed=True,
+                credentials_collected=False,
+                selected_network_security_present=False,
+            )
+
+        try:
+            globals()["choose_wifi_network"] = fake_choose_open_wifi
+            globals()["collect_wifi_password"] = reject_open_wifi_password
+            globals()["apply_wifi_persistent_attempt"] = fake_apply_open_wifi
+            globals()["read_advertised_action"] = lambda *keys: "enter"
+            globals()["wait_enter_or_timeout"] = lambda timeout_sec: None
+            open_retried_network = run_wifi_persistent(
+                open_retry_display,
+                root / "open-wifi-retry-output",
+                layout_rotation_deg=0,
+            )
+        finally:
+            globals()["choose_wifi_network"] = original_choose_wifi_network
+            globals()["collect_wifi_password"] = original_collect_wifi_password
+            globals()["apply_wifi_persistent_attempt"] = original_apply_wifi_attempt
+            globals()["read_advertised_action"] = original_read_advertised_action
+            globals()["wait_enter_or_timeout"] = original_wait_enter_or_timeout
+            open_retry_display.stop()
+        assert_true(
+            open_retried_network is not None and open_retried_network["wifi_link_ready"] is True,
+            "open Wi-Fi should retry directly and advance after success",
+        )
+        assert_true(
+            open_retry_apply_count == 2 and not open_password_prompted,
+            "open Wi-Fi retry must not enter the password screen",
+        )
+        open_retry_text = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (root / "open-wifi-retry-flow" / "screens").glob("*.svg")
+        )
+        assert_true(
+            "Nenhuma senha foi" in open_retry_text
+            and "solicitada." in open_retry_text
+            and "Enter corrige senha" not in open_retry_text
+            and "Senha mantida para corrigir" not in open_retry_text,
+            "open Wi-Fi failure copy must remain passwordless",
         )
 
         cancelled_root = require_tmp_dir(str(root / "cancelled-after-wifi"))
@@ -7713,7 +7954,7 @@ def run_self_test() -> None:
         open_network_display = VisualDisplay(root / "open-network-block", enabled=False)
         original_wifi_list = wifi_adapter.list_wifi_networks_for_local_ui
         original_open_network_key = globals()["read_key"]
-        open_network_keys = iter(("enter", "enter", "escape"))
+        open_network_keys = iter(("enter",))
         try:
             wifi_adapter.list_wifi_networks_for_local_ui = lambda timeout_sec, rescan: (
                 [
@@ -7732,15 +7973,21 @@ def run_self_test() -> None:
             wifi_adapter.list_wifi_networks_for_local_ui = original_wifi_list
             globals()["read_key"] = original_open_network_key
             open_network_display.stop()
-        assert_true(open_selection is None, "unsupported open Wi-Fi should return to the list instead of asking for a password")
+        assert_true(
+            open_selection is not None
+            and open_selection[0]["security_present"] is False,
+            "open Wi-Fi should be selectable without entering a credential path",
+        )
         open_network_text = "\n".join(
             path.read_text(encoding="utf-8")
             for path in (root / "open-network-block" / "screens").glob("*.svg")
         )
         assert_true(
-            "Esta versao ainda nao conecta redes sem senha" in open_network_text
+            "Aberta | Sem senha" in open_network_text
+            and "Enter conecta" in open_network_text
+            and "Indisponivel" not in open_network_text
             and "Senha Wi-Fi" not in open_network_text,
-            "open Wi-Fi should fail visibly before entering an impossible credential path",
+            "open Wi-Fi should advertise the direct passwordless path",
         )
         page_fixture = [
             {"ssid": f"PAGE_TEST_{index:02d}", "signal_percent": 100 - index, "signal_bucket": "strong", "security_present": True}
@@ -7766,6 +8013,32 @@ def run_self_test() -> None:
         assert_true(portrait_last_card_bottom < portrait_footer_y, "portrait Wi-Fi cards should not touch footer")
         preserved_index, preserved = refresh_selected_index(page_fixture[:3], [page_fixture[2], page_fixture[1]], 1)
         assert_true(preserved and preserved_index == 1, "refresh should preserve selected SSID")
+        shared_name_networks = [
+            {
+                "ssid": "SHARED_NAME",
+                "signal_percent": 82,
+                "signal_bucket": "strong",
+                "security_present": True,
+            },
+            {
+                "ssid": "SHARED_NAME",
+                "signal_percent": 76,
+                "signal_bucket": "strong",
+                "security_present": False,
+            },
+        ]
+        shared_refreshed = [shared_name_networks[1], shared_name_networks[0]]
+        shared_index, shared_preserved = refresh_selected_index(
+            shared_name_networks,
+            shared_refreshed,
+            1,
+        )
+        assert_true(
+            shared_preserved
+            and shared_index == 0
+            and shared_refreshed[shared_index]["security_present"] is False,
+            "refresh must preserve both SSID and security mode when names are identical",
+        )
         disappeared_networks, disappeared_index, disappeared_message = apply_wifi_refresh_result(
             page_fixture[:3],
             [page_fixture[3], page_fixture[4]],
