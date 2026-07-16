@@ -846,3 +846,11 @@ podemos escolher entre:
     policy/timer stable restaurados. Portal cativo e o proximo recorte.
     Evidencia:
     `docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/`.
+16. M9 item 7 fechou tecnicamente na candidata C21.23: deteccao positiva de
+    portal, ambiguidade fail-closed, bloqueio de ambiente/revisao/gravacao e
+    caminhos de retry/troca/saida. Gates `84/84`, auditorias, bloqueio stable,
+    apply/rollback/reapply e testes instalados passaram. A placa terminou em
+    C21.23 com C21.22 como previous, player sem restart, rede preservada e
+    policy/timer stable restaurados. Portal fisico/emulado e navegador M9.8
+    continuam pendentes, sem contaminar este claim. Evidencia:
+    `docs/evidence/c20-totem-core-ota/20260716T214911Z-c21-23-captive-portal-board-e2e/`.

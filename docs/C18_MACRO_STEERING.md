@@ -303,7 +303,9 @@ Plano de decisao e criterios:
 
 Status: em andamento desde 2026-07-16; itens 1 e 2 fechados na C21.20. O item
 3 esta implementado e validado no pacote/OTA C21.21, com associacao em AP
-aberto real ainda pendente. Os itens 4, 5 e 6 fecharam na candidata C21.22.
+aberto real ainda pendente. Os itens 4, 5 e 6 fecharam na candidata C21.22. O
+item 7 fechou tecnicamente na candidata C21.23; falta a prova em portal real ou
+emulado. O item 8, navegador restrito, continua separado.
 
 Valor: permitir que um usuario configure a conectividade local sem caminho
 impossivel, mensagem enganosa ou repeticao desnecessaria, preservando a rede
@@ -364,6 +366,16 @@ C21.22, com C21.21 como retorno, player sem restart, conexoes preservadas e
 policy/timer stable restaurados. Portal cativo e o proximo recorte; AP aberto
 fisico continua pendente sem contaminar este claim. Evidencia:
 `docs/evidence/c20-totem-core-ota/20260716T202728Z-c21-22-wifi-state-recovery-board-e2e/`.
+
+Fechamento M9.7 em 2026-07-16: C21.23 adicionou deteccao positiva de portal
+cativo sem transformar falhas ambiguas em portal, bloqueou o prosseguimento
+enquanto o acesso estiver pendente e preservou privacidade. Os gates de fonte e
+pacote passaram `84/84`; stable bloqueou com rc `41`; apply, rollback para
+C21.22 e reaplicacao passaram. O pacote instalado passou self-tests e a coleta
+normal nao produziu falso portal. Player, redes, timer e policy terminaram
+preservados. O portal fisico/emulado e o navegador permanecem non-claims.
+Evidencia:
+`docs/evidence/c20-totem-core-ota/20260716T214911Z-c21-23-captive-portal-board-e2e/`.
 
 ## Checklist Contra Hiperfoco
 

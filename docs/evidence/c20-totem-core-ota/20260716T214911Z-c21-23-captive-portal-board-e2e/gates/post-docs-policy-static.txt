@@ -1,0 +1,211 @@
+test_appliance_status_snapshot_is_read_only_field_data_governance (__main__.C18OtaPolicyStaticTest.test_appliance_status_snapshot_is_read_only_field_data_governance) ... self-test ok; sanitized fixture root: /tmp/dadooh-c7-selftest-root
+ok
+test_board_readonly_diagnostics_evidence_gate_is_wired (__main__.C18OtaPolicyStaticTest.test_board_readonly_diagnostics_evidence_gate_is_wired) ... test_config_content_read_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_config_content_read_denies) ... ok
+test_h2_claim_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_h2_claim_denies) ... ok
+test_manifest_hash_mismatch_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_manifest_hash_mismatch_denies) ... ok
+test_overclaim_readme_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_overclaim_readme_denies) ... ok
+test_privacy_leak_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_privacy_leak_denies) ... ok
+test_root_symlink_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_root_symlink_denies) ... ok
+test_sensitive_json_key_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_sensitive_json_key_denies) ... ok
+test_sensitive_negative_looking_json_key_denies (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_sensitive_negative_looking_json_key_denies) ... ok
+test_valid_fixture_passes (__main__.BoardReadonlyDiagnosticsEvidenceGateSelfTest.test_valid_fixture_passes) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.257s
+
+OK
+ok
+test_c18_1u_offline_build_matches_promoted_current_golden (__main__.C18OtaPolicyStaticTest.test_c18_1u_offline_build_matches_promoted_current_golden) ... ok
+test_c18_coldboot_evidence_collector_and_gate_are_wired (__main__.C18OtaPolicyStaticTest.test_c18_coldboot_evidence_collector_and_gate_are_wired) ... ok
+test_c18_current_golden_registry_is_single_source_for_gates (__main__.C18OtaPolicyStaticTest.test_c18_current_golden_registry_is_single_source_for_gates) ... ok
+test_c18_current_hardware_evidence_is_public_and_passing (__main__.C18OtaPolicyStaticTest.test_c18_current_hardware_evidence_is_public_and_passing) ... ok
+test_c18_docs_and_probes_do_not_default_to_stock_mpv (__main__.C18OtaPolicyStaticTest.test_c18_docs_and_probes_do_not_default_to_stock_mpv) ... ok
+test_c18_docs_keep_current_golden_in_sync (__main__.C18OtaPolicyStaticTest.test_c18_docs_keep_current_golden_in_sync) ... ok
+test_c18_docs_mark_legacy_kiosky_update_paths_and_artifact_roots (__main__.C18OtaPolicyStaticTest.test_c18_docs_mark_legacy_kiosky_update_paths_and_artifact_roots) ... ok
+test_c18_h2_image_identity_split_is_formalized (__main__.C18OtaPolicyStaticTest.test_c18_h2_image_identity_split_is_formalized) ... ok
+test_c18_historical_m6_gate_artifact_is_fail_closed_for_current_contract (__main__.C18OtaPolicyStaticTest.test_c18_historical_m6_gate_artifact_is_fail_closed_for_current_contract) ... ok
+test_c18_historical_player_runtime_data_previous_trial_evidence_is_public_but_old_contract (__main__.C18OtaPolicyStaticTest.test_c18_historical_player_runtime_data_previous_trial_evidence_is_public_but_old_contract) ... ok
+test_c18_historical_player_runtime_data_trial_evidence_is_public_but_old_contract (__main__.C18OtaPolicyStaticTest.test_c18_historical_player_runtime_data_trial_evidence_is_public_but_old_contract) ... ok
+test_c18_image_deriver_has_explicit_production_path (__main__.C18OtaPolicyStaticTest.test_c18_image_deriver_has_explicit_production_path) ... ok
+test_c18_player_runtime_fault_hooks_and_corrupt_state_fail_closed_are_wired (__main__.C18OtaPolicyStaticTest.test_c18_player_runtime_fault_hooks_and_corrupt_state_fail_closed_are_wired) ... ok
+test_c18_player_runtime_future_trial_records_repo_identity (__main__.C18OtaPolicyStaticTest.test_c18_player_runtime_future_trial_records_repo_identity) ... ok
+test_c18_production_image_credential_policy_is_fail_closed (__main__.C18OtaPolicyStaticTest.test_c18_production_image_credential_policy_is_fail_closed) ... ok
+test_c18_release_gate_player_runtime_decisive_mode_is_explicit (__main__.C18OtaPolicyStaticTest.test_c18_release_gate_player_runtime_decisive_mode_is_explicit) ... ok
+test_c18_status_doc_188_keeps_board_identifiers_redacted (__main__.C18OtaPolicyStaticTest.test_c18_status_doc_188_keeps_board_identifiers_redacted) ... ok
+test_canonical_policy_restricts_to_totem_core (__main__.C18OtaPolicyStaticTest.test_canonical_policy_restricts_to_totem_core) ... ok
+test_config_contract_seals_c18_mpv_path (__main__.C18OtaPolicyStaticTest.test_config_contract_seals_c18_mpv_path) ... ok
+test_current_player_runtime_homologation_release_preserves_release_gate_artifact (__main__.C18OtaPolicyStaticTest.test_current_player_runtime_homologation_release_preserves_release_gate_artifact) ... ok
+test_display_profile_baseline_is_sanitized_read_only_d1 (__main__.C18OtaPolicyStaticTest.test_display_profile_baseline_is_sanitized_read_only_d1) ... test_empty_edid_low_mode_classifies_fallback (__main__.DisplayProfileBaselineSelfTest.test_empty_edid_low_mode_classifies_fallback) ... ok
+test_mode_area_ignores_refresh_suffix (__main__.DisplayProfileBaselineSelfTest.test_mode_area_ignores_refresh_suffix) ... ok
+test_non_empty_edid_does_not_include_raw_bytes (__main__.DisplayProfileBaselineSelfTest.test_non_empty_edid_does_not_include_raw_bytes) ... ok
+test_video_override_is_sanitized (__main__.DisplayProfileBaselineSelfTest.test_video_override_is_sanitized) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.035s
+
+OK
+test_private_path_denies (__main__.DisplayProfileBaselineGateSelfTest.test_private_path_denies) ... ok
+test_raw_edid_key_denies (__main__.DisplayProfileBaselineGateSelfTest.test_raw_edid_key_denies) ... ok
+test_valid_fixture_passes (__main__.DisplayProfileBaselineGateSelfTest.test_valid_fixture_passes) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.010s
+
+OK
+ok
+test_display_status_collector_is_read_only_public_totem_core (__main__.C18OtaPolicyStaticTest.test_display_status_collector_is_read_only_public_totem_core) ... test_connected_enabled_modes_with_empty_mode_file_is_unknown_not_stalled (__main__.DisplayStatusCollectSelfTest.test_connected_enabled_modes_with_empty_mode_file_is_unknown_not_stalled) ... ok
+test_connected_enabled_modes_without_mode_file_is_unknown_not_stalled (__main__.DisplayStatusCollectSelfTest.test_connected_enabled_modes_without_mode_file_is_unknown_not_stalled) ... ok
+test_connected_without_mode_is_pipeline_stalled (__main__.DisplayStatusCollectSelfTest.test_connected_without_mode_is_pipeline_stalled) ... ok
+test_disconnected_connector_modes_do_not_make_connected_sink_ready (__main__.DisplayStatusCollectSelfTest.test_disconnected_connector_modes_do_not_make_connected_sink_ready) ... ok
+test_display_ok_classification (__main__.DisplayStatusCollectSelfTest.test_display_ok_classification) ... ok
+test_no_sink_classification (__main__.DisplayStatusCollectSelfTest.test_no_sink_classification) ... ok
+test_output_json_roundtrip (__main__.DisplayStatusCollectSelfTest.test_output_json_roundtrip) ... ok
+test_status_error_classifies_pipeline_stalled (__main__.DisplayStatusCollectSelfTest.test_status_error_classifies_pipeline_stalled) ... ok
+test_status_fields_are_token_sanitized (__main__.DisplayStatusCollectSelfTest.test_status_fields_are_token_sanitized) ... ok
+test_visible_black_with_healthy_board_classifies_sink_hung (__main__.DisplayStatusCollectSelfTest.test_visible_black_with_healthy_board_classifies_sink_hung) ... ok
+test_visible_ok_with_mode_file_unavailable_can_classify_display_ok (__main__.DisplayStatusCollectSelfTest.test_visible_ok_with_mode_file_unavailable_can_classify_display_ok) ... ok
+test_visible_ok_without_status_does_not_overclaim_display_ok (__main__.DisplayStatusCollectSelfTest.test_visible_ok_without_status_does_not_overclaim_display_ok) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.144s
+
+OK
+ok
+test_historical_bootstrap_and_c17_7_embed_do_not_wrap_player_launcher (__main__.C18OtaPolicyStaticTest.test_historical_bootstrap_and_c17_7_embed_do_not_wrap_player_launcher) ... ok
+test_historical_docs_and_timer_point_to_c18_contract (__main__.C18OtaPolicyStaticTest.test_historical_docs_and_timer_point_to_c18_contract) ... ok
+test_homologation_pilot_preflight_collector_is_read_only_and_wired (__main__.C18OtaPolicyStaticTest.test_homologation_pilot_preflight_collector_is_read_only_and_wired) ... ok
+test_image_embed_has_explicit_production_profile (__main__.C18OtaPolicyStaticTest.test_image_embed_has_explicit_production_profile) ... ok
+test_image_embed_keeps_player_launcher_fixed_to_image (__main__.C18OtaPolicyStaticTest.test_image_embed_keeps_player_launcher_fixed_to_image) ... ok
+test_image_embed_writes_policy_service_and_disables_timer (__main__.C18OtaPolicyStaticTest.test_image_embed_writes_policy_service_and_disables_timer) ... ok
+test_kiosky_service_launcher_has_external_status_mpv_watchdog (__main__.C18OtaPolicyStaticTest.test_kiosky_service_launcher_has_external_status_mpv_watchdog) ... self-test ok
+ok
+test_kiosky_service_launcher_waits_for_child_on_shutdown (__main__.C18OtaPolicyStaticTest.test_kiosky_service_launcher_waits_for_child_on_shutdown) ... ok
+test_lab_thaw_wrapper_rejects_unguarded_and_bad_manifests (__main__.C18OtaPolicyStaticTest.test_lab_thaw_wrapper_rejects_unguarded_and_bad_manifests) ... lab_thaw_guard_required:set C18_PLAYER_RUNTIME_LAB_THAW=1 and pass --lab-only-thaw
+ok
+test_legacy_c14_remote_scripts_are_guarded_as_bypass (__main__.C18OtaPolicyStaticTest.test_legacy_c14_remote_scripts_are_guarded_as_bypass) ... ok
+test_legacy_kiosky_player_builder_rejects_stable_even_with_bypass (__main__.C18OtaPolicyStaticTest.test_legacy_kiosky_player_builder_rejects_stable_even_with_bypass) ... ok
+test_legacy_kiosky_player_bypass_rejects_boundary_payload (__main__.C18OtaPolicyStaticTest.test_legacy_kiosky_player_bypass_rejects_boundary_payload) ... ok
+test_legacy_kiosky_player_publisher_rejects_boundary_payload (__main__.C18OtaPolicyStaticTest.test_legacy_kiosky_player_publisher_rejects_boundary_payload) ... ok
+test_legacy_remote_bypass_scripts_are_guarded (__main__.C18OtaPolicyStaticTest.test_legacy_remote_bypass_scripts_are_guarded) ... ok
+test_m6_trial_accepts_clean_repo_identity_file (__main__.C18OtaPolicyStaticTest.test_m6_trial_accepts_clean_repo_identity_file) ... ok
+test_m6_trial_validates_live_repo_identity_before_persisting (__main__.C18OtaPolicyStaticTest.test_m6_trial_validates_live_repo_identity_before_persisting) ... ok
+test_macro_governance_gate_aggregates_pre_h2_snapshot (__main__.C18OtaPolicyStaticTest.test_macro_governance_gate_aggregates_pre_h2_snapshot) ... test_board_overclaim_fails_closed (__main__.MacroGovernanceGateSelfTest.test_board_overclaim_fails_closed) ... ok
+test_docs_must_name_macro_gate (__main__.MacroGovernanceGateSelfTest.test_docs_must_name_macro_gate) ... ok
+test_docs_reject_stale_current_pilot_wording (__main__.MacroGovernanceGateSelfTest.test_docs_reject_stale_current_pilot_wording) ... ok
+test_h1_data_git_guard_is_required (__main__.MacroGovernanceGateSelfTest.test_h1_data_git_guard_is_required) ... ok
+test_h2_current_snapshot_is_hash_bound (__main__.MacroGovernanceGateSelfTest.test_h2_current_snapshot_is_hash_bound) ... ok
+test_h2_missing_expected_blocker_fails (__main__.MacroGovernanceGateSelfTest.test_h2_missing_expected_blocker_fails) ... ok
+test_h2_must_remain_red_with_exact_blockers (__main__.MacroGovernanceGateSelfTest.test_h2_must_remain_red_with_exact_blockers) ... ok
+test_pilot_channel_must_remain_homologation (__main__.MacroGovernanceGateSelfTest.test_pilot_channel_must_remain_homologation) ... ok
+test_repo_clean_and_tracked_inputs_are_required_by_default (__main__.MacroGovernanceGateSelfTest.test_repo_clean_and_tracked_inputs_are_required_by_default) ... ok
+test_server_side_asset_records_are_file_hash_bound (__main__.MacroGovernanceGateSelfTest.test_server_side_asset_records_are_file_hash_bound) ... ok
+test_server_side_asset_records_reject_parent_symlink (__main__.MacroGovernanceGateSelfTest.test_server_side_asset_records_reject_parent_symlink) ... ok
+test_server_side_current_is_hash_bound (__main__.MacroGovernanceGateSelfTest.test_server_side_current_is_hash_bound) ... ok
+test_server_side_rollout_state_must_be_paused_pre_h2 (__main__.MacroGovernanceGateSelfTest.test_server_side_rollout_state_must_be_paused_pre_h2) ... ok
+test_target_blocking_diagnostic_blocks_current_target (__main__.MacroGovernanceGateSelfTest.test_target_blocking_diagnostic_blocks_current_target) ... ok
+test_valid_fixture_passes (__main__.MacroGovernanceGateSelfTest.test_valid_fixture_passes) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.844s
+
+OK
+ok
+test_operational_resume_gate_blocks_stale_snapshot_inputs (__main__.C18OtaPolicyStaticTest.test_operational_resume_gate_blocks_stale_snapshot_inputs) ... test_expired_authorization_blocks (__main__.OperationalResumeGateSelfTest.test_expired_authorization_blocks) ... ok
+test_macro_snapshot_must_preserve_h2_blockers (__main__.OperationalResumeGateSelfTest.test_macro_snapshot_must_preserve_h2_blockers) ... ok
+test_missing_current_inputs_block (__main__.OperationalResumeGateSelfTest.test_missing_current_inputs_block) ... ok
+test_post_apply_preflight_does_not_resume_pre_apply (__main__.OperationalResumeGateSelfTest.test_post_apply_preflight_does_not_resume_pre_apply) ... ok
+test_preflight_device_must_be_authorized (__main__.OperationalResumeGateSelfTest.test_preflight_device_must_be_authorized) ... ok
+test_repo_clean_and_tracked_inputs_are_required_by_default (__main__.OperationalResumeGateSelfTest.test_repo_clean_and_tracked_inputs_are_required_by_default) ... ok
+test_stale_preflight_blocks (__main__.OperationalResumeGateSelfTest.test_stale_preflight_blocks) ... ok
+test_valid_fresh_inputs_pass (__main__.OperationalResumeGateSelfTest.test_valid_fresh_inputs_pass) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.041s
+
+OK
+ok
+test_persistent_trial_repo_identity_treats_empty_git_status_as_clean (__main__.C18OtaPolicyStaticTest.test_persistent_trial_repo_identity_treats_empty_git_status_as_clean) ... ok
+test_playback_observers_collect_c18_decode_properties (__main__.C18OtaPolicyStaticTest.test_playback_observers_collect_c18_decode_properties) ... test_active_rollout_denies (__main__.RolloutStateGateSelfTest.test_active_rollout_denies) ... ok
+test_allowlist_and_raw_ids_deny (__main__.RolloutStateGateSelfTest.test_allowlist_and_raw_ids_deny) ... ok
+test_empty_state_denies (__main__.RolloutStateGateSelfTest.test_empty_state_denies) ... ok
+test_hash_mismatch_denies (__main__.RolloutStateGateSelfTest.test_hash_mismatch_denies) ... ok
+test_raw_identifiers_and_positive_claims_deny (__main__.RolloutStateGateSelfTest.test_raw_identifiers_and_positive_claims_deny) ... ok
+test_target_mismatch_denies (__main__.RolloutStateGateSelfTest.test_target_mismatch_denies) ... ok
+test_valid_fixture_passes (__main__.RolloutStateGateSelfTest.test_valid_fixture_passes) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.039s
+
+OK
+ok
+test_player_release_scripts_are_frozen_by_default (__main__.C18OtaPolicyStaticTest.test_player_release_scripts_are_frozen_by_default) ... ok
+test_player_runtime_builder_is_lab_only_and_gated (__main__.C18OtaPolicyStaticTest.test_player_runtime_builder_is_lab_only_and_gated) ... ok
+test_player_runtime_evidence_gate_self_test_passes (__main__.C18OtaPolicyStaticTest.test_player_runtime_evidence_gate_self_test_passes) ... ok
+test_player_runtime_lab_apply_guards_are_executable (__main__.C18OtaPolicyStaticTest.test_player_runtime_lab_apply_guards_are_executable) ... ok
+test_player_runtime_lab_rollback_guards_are_executable (__main__.C18OtaPolicyStaticTest.test_player_runtime_lab_rollback_guards_are_executable) ... ok
+test_player_runtime_lab_topology_reset_guards_are_executable (__main__.C18OtaPolicyStaticTest.test_player_runtime_lab_topology_reset_guards_are_executable) ... ok
+test_player_runtime_launcher_path_is_governed (__main__.C18OtaPolicyStaticTest.test_player_runtime_launcher_path_is_governed) ... ok
+test_player_runtime_mpv_stop_requests_ipc_quit_before_signals (__main__.C18OtaPolicyStaticTest.test_player_runtime_mpv_stop_requests_ipc_quit_before_signals) ... ok
+test_pre_soak_scale_governance_gate_is_wired (__main__.C18OtaPolicyStaticTest.test_pre_soak_scale_governance_gate_is_wired) ... test_docs_require_all_responsibility_fronts (__main__.PreSoakScaleGovernanceGateSelfTest.test_docs_require_all_responsibility_fronts) ... ok
+test_h2_green_is_rejected_pre_soak (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_green_is_rejected_pre_soak) ... ok
+test_h2_must_remain_blocked_with_exact_blockers (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_must_remain_blocked_with_exact_blockers) ... ok
+test_h2_powerloss_preflight_snapshot_is_accepted (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_powerloss_preflight_snapshot_is_accepted) ... ok
+test_h2_powerloss_preflight_snapshot_rejects_manifest_restamp (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_powerloss_preflight_snapshot_rejects_manifest_restamp) ... ok
+test_h2_powerloss_preflight_snapshot_rejects_stale_freshness (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_powerloss_preflight_snapshot_rejects_stale_freshness) ... ok
+test_h2_powerloss_preflight_snapshot_rejects_tampered_key_check (__main__.PreSoakScaleGovernanceGateSelfTest.test_h2_powerloss_preflight_snapshot_rejects_tampered_key_check) ... ok
+test_operational_resume_blocked_snapshot_is_accepted (__main__.PreSoakScaleGovernanceGateSelfTest.test_operational_resume_blocked_snapshot_is_accepted) ... ok
+test_operational_resume_blocked_snapshot_rejects_green_claim (__main__.PreSoakScaleGovernanceGateSelfTest.test_operational_resume_blocked_snapshot_rejects_green_claim) ... ok
+test_operational_resume_default_requires_current_macro_and_blocks (__main__.PreSoakScaleGovernanceGateSelfTest.test_operational_resume_default_requires_current_macro_and_blocks) ... ok
+test_server_side_current_snapshot_is_accepted (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_is_accepted) ... ok
+test_server_side_current_snapshot_rejects_active_rollout_state (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_active_rollout_state) ... ok
+test_server_side_current_snapshot_rejects_missing_non_claim (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_missing_non_claim) ... ok
+test_server_side_current_snapshot_rejects_missing_rollout_or_audit (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_missing_rollout_or_audit) ... ok
+test_server_side_current_snapshot_rejects_missing_signature_attestation (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_missing_signature_attestation) ... ok
+test_server_side_current_snapshot_rejects_parent_symlink_asset_record (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_parent_symlink_asset_record) ... ok
+test_server_side_current_snapshot_rejects_tampered_asset_record (__main__.PreSoakScaleGovernanceGateSelfTest.test_server_side_current_snapshot_rejects_tampered_asset_record) ... ok
+test_skipped_release_gate_blocks_by_default (__main__.PreSoakScaleGovernanceGateSelfTest.test_skipped_release_gate_blocks_by_default) ... ok
+test_skipped_release_gate_requires_explicit_advisory_mode (__main__.PreSoakScaleGovernanceGateSelfTest.test_skipped_release_gate_requires_explicit_advisory_mode) ... ok
+test_stable_thaw_draft_blocked_snapshot_is_accepted (__main__.PreSoakScaleGovernanceGateSelfTest.test_stable_thaw_draft_blocked_snapshot_is_accepted) ... ok
+test_stable_thaw_draft_blocked_snapshot_rejects_authorized_thaw (__main__.PreSoakScaleGovernanceGateSelfTest.test_stable_thaw_draft_blocked_snapshot_rejects_authorized_thaw) ... ok
+test_stable_thaw_draft_blocked_snapshot_rejects_run_authorization (__main__.PreSoakScaleGovernanceGateSelfTest.test_stable_thaw_draft_blocked_snapshot_rejects_run_authorization) ... ok
+test_stable_thaw_draft_blocked_snapshot_rejects_written_output_claim (__main__.PreSoakScaleGovernanceGateSelfTest.test_stable_thaw_draft_blocked_snapshot_rejects_written_output_claim) ... ok
+test_tracked_inputs_follow_cli_overrides (__main__.PreSoakScaleGovernanceGateSelfTest.test_tracked_inputs_follow_cli_overrides) ... ok
+
+----------------------------------------------------------------------
+Ran 24 tests in 0.185s
+
+OK
+ok
+test_production_policy_is_stable_totem_core_only (__main__.C18OtaPolicyStaticTest.test_production_policy_is_stable_totem_core_only) ... ok
+test_production_update_agent_profile_targets_only_totem_core (__main__.C18OtaPolicyStaticTest.test_production_update_agent_profile_targets_only_totem_core) ... ok
+test_public_player_runtime_path_is_exact_authorized_only (__main__.C18OtaPolicyStaticTest.test_public_player_runtime_path_is_exact_authorized_only) ... ok
+test_release_gate_allows_full_visual_gallery_to_finish (__main__.C18OtaPolicyStaticTest.test_release_gate_allows_full_visual_gallery_to_finish) ... ok
+test_release_gate_base_ref_catches_committed_responsibility_matrix_diff (__main__.C18OtaPolicyStaticTest.test_release_gate_base_ref_catches_committed_responsibility_matrix_diff) ... ok
+test_release_gate_blocks_player_runtime_diff (__main__.C18OtaPolicyStaticTest.test_release_gate_blocks_player_runtime_diff) ... ok
+test_release_gate_powerloss_evidence_guard_rejects_untracked_or_ignored_files (__main__.C18OtaPolicyStaticTest.test_release_gate_powerloss_evidence_guard_rejects_untracked_or_ignored_files) ... ok
+test_settings_active_config_prefill_is_session_scoped_until_commit (__main__.C18OtaPolicyStaticTest.test_settings_active_config_prefill_is_session_scoped_until_commit) ... ok
+test_settings_candidate_attestation_is_bound_to_current_session (__main__.C18OtaPolicyStaticTest.test_settings_candidate_attestation_is_bound_to_current_session) ... ok
+test_settings_framebuffer_console_ownership_is_restored (__main__.C18OtaPolicyStaticTest.test_settings_framebuffer_console_ownership_is_restored) ... ok
+test_settings_policy_rejects_external_tmp_private_values (__main__.C18OtaPolicyStaticTest.test_settings_policy_rejects_external_tmp_private_values) ... ok
+test_settings_private_cleanup_removes_initial_and_qr_sources (__main__.C18OtaPolicyStaticTest.test_settings_private_cleanup_removes_initial_and_qr_sources) ... ok
+test_settings_qr_private_values_are_bound_to_current_pairing_dir (__main__.C18OtaPolicyStaticTest.test_settings_qr_private_values_are_bound_to_current_pairing_dir) ... ok
+test_settings_service_stop_probe_proves_fast_path (__main__.C18OtaPolicyStaticTest.test_settings_service_stop_probe_proves_fast_path) ... ok
+test_settings_session_cleans_private_artifacts_on_every_exit (__main__.C18OtaPolicyStaticTest.test_settings_session_cleans_private_artifacts_on_every_exit) ... ok
+test_settings_session_defers_while_update_lock_is_held (__main__.C18OtaPolicyStaticTest.test_settings_session_defers_while_update_lock_is_held) ... ok
+test_settings_session_rc8_requires_attested_candidate (__main__.C18OtaPolicyStaticTest.test_settings_session_rc8_requires_attested_candidate) ... ok
+test_settings_session_resets_reused_scratch_without_following_symlinks (__main__.C18OtaPolicyStaticTest.test_settings_session_resets_reused_scratch_without_following_symlinks) ... ok
+test_settings_signal_handlers_preserve_failure_status (__main__.C18OtaPolicyStaticTest.test_settings_signal_handlers_preserve_failure_status) ... ok
+test_stable_channel_requires_promotion_evidence (__main__.C18OtaPolicyStaticTest.test_stable_channel_requires_promotion_evidence) ... ok
+test_timer_is_manifested_disabled (__main__.C18OtaPolicyStaticTest.test_timer_is_manifested_disabled) ... ok
+test_totem_core_ota_payload_excludes_player_launcher (__main__.C18OtaPolicyStaticTest.test_totem_core_ota_payload_excludes_player_launcher) ... ok
+test_totem_core_production_timer_validation_is_wired (__main__.C18OtaPolicyStaticTest.test_totem_core_production_timer_validation_is_wired) ... ok
+test_totem_core_publish_targets_manifest_source_commit (__main__.C18OtaPolicyStaticTest.test_totem_core_publish_targets_manifest_source_commit) ... ok
+test_totem_core_stable_publisher_passes_validated_assets_to_gh (__main__.C18OtaPolicyStaticTest.test_totem_core_stable_publisher_passes_validated_assets_to_gh) ... ok
+test_update_agent_service_targets_totem_core_repo (__main__.C18OtaPolicyStaticTest.test_update_agent_service_targets_totem_core_repo) ... ok
+test_update_contract_declares_c18_config_and_deep_health (__main__.C18OtaPolicyStaticTest.test_update_contract_declares_c18_config_and_deep_health) ... ok
+test_updatectl_contract_blocks_ambiguous_policy_and_requires_created_at (__main__.C18OtaPolicyStaticTest.test_updatectl_contract_blocks_ambiguous_policy_and_requires_created_at) ... ok
+
+----------------------------------------------------------------------
+Ran 81 tests in 78.138s
+
+OK

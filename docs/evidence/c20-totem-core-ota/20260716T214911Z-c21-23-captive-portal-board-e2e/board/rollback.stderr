@@ -1,0 +1,2 @@
+2026-07-16T22:00:55Z INFO update_lock_acquired operation=rollback:totem-core lock=/run/totem-updatectl.lock
+2026-07-16T22:01:11Z INFO manual_rollback_ok rolled_to=c21.22-wifi-state-recovery-20260716T194811Z-9526cf9

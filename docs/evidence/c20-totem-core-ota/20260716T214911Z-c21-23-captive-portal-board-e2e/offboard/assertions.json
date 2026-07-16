@@ -1,0 +1,332 @@
+[
+  {
+    "assertion": "valid_uuid_passes_local_validation",
+    "detail": "",
+    "passed": true,
+    "scenario": "happy_path_synthetic"
+  },
+  {
+    "assertion": "writer_not_called",
+    "detail": "",
+    "passed": true,
+    "scenario": "happy_path_synthetic"
+  },
+  {
+    "assertion": "esc_returns_to_previous_screen",
+    "detail": "",
+    "passed": true,
+    "scenario": "back_navigation"
+  },
+  {
+    "assertion": "no_save_on_back",
+    "detail": "",
+    "passed": true,
+    "scenario": "back_navigation"
+  },
+  {
+    "assertion": "partial_state_cannot_commit",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  },
+  {
+    "assertion": "first_pending_is_connection",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  },
+  {
+    "assertion": "review_status_blocked",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  },
+  {
+    "assertion": "candidate_not_generated_for_partial_state",
+    "detail": "",
+    "passed": true,
+    "scenario": "step_focus_pending_review"
+  },
+  {
+    "assertion": "invalid_uuid_blocks_advance",
+    "detail": "",
+    "passed": true,
+    "scenario": "environment_invalid_uuid"
+  },
+  {
+    "assertion": "writer_not_called",
+    "detail": "",
+    "passed": true,
+    "scenario": "environment_invalid_uuid"
+  },
+  {
+    "assertion": "middle_edit_reaches_valid_uuid",
+    "detail": "",
+    "passed": true,
+    "scenario": "environment_edit_middle"
+  },
+  {
+    "assertion": "cursor_editing_supported",
+    "detail": "",
+    "passed": true,
+    "scenario": "environment_edit_middle"
+  },
+  {
+    "assertion": "password_value_not_rendered",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_success_fake"
+  },
+  {
+    "assertion": "progress_is_visible",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_success_fake"
+  },
+  {
+    "assertion": "success_is_visible",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_success_fake"
+  },
+  {
+    "assertion": "wifi_result_reaches_environment",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_success_fake"
+  },
+  {
+    "assertion": "wifi_result_reaches_review",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_success_fake"
+  },
+  {
+    "assertion": "wifi_result_reaches_completion",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_success_fake"
+  },
+  {
+    "assertion": "networkmanager_not_called_by_replay",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_success_fake"
+  },
+  {
+    "assertion": "password_value_not_rendered",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_wrong_password_fake"
+  },
+  {
+    "assertion": "retry_path_available",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_wrong_password_fake"
+  },
+  {
+    "assertion": "open_network_is_selectable",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_open_retry_fake"
+  },
+  {
+    "assertion": "open_network_skips_password",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_open_retry_fake"
+  },
+  {
+    "assertion": "open_progress_is_truthful",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_open_retry_fake"
+  },
+  {
+    "assertion": "open_failure_retries_directly",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_open_retry_fake"
+  },
+  {
+    "assertion": "open_success_keeps_product_access_inconclusive",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_open_retry_fake"
+  },
+  {
+    "assertion": "open_result_reaches_completion",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_open_retry_fake"
+  },
+  {
+    "assertion": "networkmanager_not_called_by_replay",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_open_retry_fake"
+  },
+  {
+    "assertion": "success_online_is_consistent",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "success_limited_is_consistent",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "success_offline_is_consistent",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "success_unknown_is_consistent",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "portal_is_distinct_and_actionable",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "portal_material_is_not_rendered",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "failure_auth_is_specific",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "failure_timeout_is_specific",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "failure_missing_is_specific",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "failure_signal_is_specific",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "failure_ip_is_specific",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "failure_device_is_specific",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "failure_generic_open_is_specific",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "cached_list_is_not_fresh",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "connectivity_matrix_is_explicit",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "raw_failure_text_not_rendered",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "networkmanager_not_called_by_replay",
+    "detail": "",
+    "passed": true,
+    "scenario": "wifi_state_matrix_fake"
+  },
+  {
+    "assertion": "api_unavailable_requires_confirmation",
+    "detail": "",
+    "passed": true,
+    "scenario": "api_unavailable_fake"
+  },
+  {
+    "assertion": "operator_confirmation_recorded",
+    "detail": "",
+    "passed": true,
+    "scenario": "api_unavailable_fake"
+  },
+  {
+    "assertion": "reopens_directly_on_review",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "existing_configuration_can_commit",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "environment_is_retained_without_remote_preflight",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "backend_not_called_for_retained_environment",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "network_not_changed",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "wifi_probe_is_reported",
+    "detail": "",
+    "passed": true,
+    "scenario": "reopen_configured"
+  },
+  {
+    "assertion": "esc_cancels_without_writer",
+    "detail": "",
+    "passed": true,
+    "scenario": "cancel_flow"
+  },
+  {
+    "assertion": "real_config_not_written",
+    "detail": "",
+    "passed": true,
+    "scenario": "cancel_flow"
+  }
+]

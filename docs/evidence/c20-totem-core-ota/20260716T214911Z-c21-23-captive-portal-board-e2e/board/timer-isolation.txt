@@ -1,0 +1,4 @@
+isolation_ready=true
+inactive
+enabled
+inactive

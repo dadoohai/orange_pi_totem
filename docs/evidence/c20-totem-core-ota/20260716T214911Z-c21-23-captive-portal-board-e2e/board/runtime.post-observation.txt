@@ -1,0 +1,13 @@
+utc=2026-07-16T22:04:50Z
+boot_id=41dd24dd-a601-462e-92af-64fd6f6a3def
+current=releases/c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8
+previous=releases/c21.22-wifi-state-recovery-20260716T194811Z-9526cf9
+player_active=active
+player_restarts=0
+timer_active=active
+timer_enabled=enabled
+agent_active=inactive
+end0:ethernet:connected
+wlan0:wifi:connected
+lo:loopback:connected (externally)
+p2p-dev-wlan0:wifi-p2p:disconnected

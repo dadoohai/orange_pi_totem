@@ -682,7 +682,9 @@ auto-pull publico.
 Estado: itens 1 e 2 fechados na placa pela C21.20. O item 3 foi implementado,
 empacotado e exercitado por OTA na C21.21; falta somente a prova de associacao
 em um AP aberto real. Os itens 4, 5 e 6 foram fechados na candidata C21.22 com
-gates, replay, galeria, pacote instalado e roundtrip OTA.
+gates, replay, galeria, pacote instalado e roundtrip OTA. O item 7 fechou na
+candidata C21.23; falta a prova em portal fisico/emulado. O item 8 continua
+separado porque introduzir navegador pode exigir nova imagem.
 
 Objetivo: transformar a base transacional ja comprovada em uma jornada curta,
 verdadeira e utilizavel por cliente. A ordem abaixo prioriza maior valor com
@@ -805,6 +807,33 @@ foram injetadas nesta rodada. O probe interativo de framebuffer nao foi rodado
 porque seu preflight encontrou uma seed privada de homologacao. A evidencia
 visual desta rodada e a galeria revisada mais os previews gerados pelo pacote
 instalado na placa.
+
+### Rodada M9.7 - Deteccao De Portal Cativo
+
+Implementado:
+
+- o health HTTPS Dadooh continua sendo a unica prova positiva de `online`;
+- HTTP 511, redirect interceptado e HTML de autenticacao sao evidencia positiva
+  de portal, sem seguir o redirect;
+- timeout, DNS, TLS e resposta ambigua continuam inconclusivos;
+- o wizard bloqueia ambiente, revisao e gravacao enquanto o acesso estiver
+  pendente;
+- o usuario pode verificar novamente, escolher outra rede ou sair;
+- URL, HTML, cookie, SSID, senha, IP, DNS e erro bruto nao sao persistidos.
+
+Fechamento tecnico: C21.23 passou os gates de fonte e pacote `84/84`, replay
+com 12 cenarios e 55 assertions, galeria 123/123 e duas auditorias
+independentes sem blocker. A policy stable bloqueou o prerelease com rc `41`;
+apply, rollback para C21.22 e reaplicacao passaram com rc `0`. Os testes do
+pacote instalado e a coleta assíncrona real passaram. Player, Ethernet, Wi-Fi,
+timer e policy terminaram preservados.
+
+Evidencia:
+`docs/evidence/c20-totem-core-ota/20260716T214911Z-c21-23-captive-portal-board-e2e/`.
+
+Limite honesto: nao havia portal fisico ou emulado. A prova de campo continua
+pendente, e o navegador temporario permanece como M9.8, condicionado a uma
+decisao explicita de runtime na proxima imagem.
 
 ## Criterio De Fechamento Da Frente
 

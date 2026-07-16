@@ -1,0 +1,4 @@
+run_id=20260716T214911Z-c21-23-captive-portal-board-e2e
+version=c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8
+source_commit=3e5dbf8f2c4022b74c123576dae31bb53a0f6199
+package_commit=225b40f8a34c7519db7353dc4e80d50b1b78dd12

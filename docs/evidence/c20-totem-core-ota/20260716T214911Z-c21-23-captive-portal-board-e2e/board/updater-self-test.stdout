@@ -1,0 +1,15 @@
+{
+  "checks": {
+    "component_base_exists": true,
+    "data_root_writable": true,
+    "fallback_bin_exists": true,
+    "log_dir_writable": true,
+    "python_stdlib_only": true,
+    "service_unit_known": true,
+    "settings_lock_guard_available": true,
+    "settings_lock_guard_clear": true,
+    "systemctl_present": true,
+    "updates_dir_exists": true
+  },
+  "self_test": true
+}

@@ -1,0 +1,56 @@
+{
+  "artifact_id": "20260716T214911Z-c21-23-captive-portal-board-e2e",
+  "board_final": {
+    "current": "c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8",
+    "ethernet_connected": true,
+    "existing_wifi_connected": true,
+    "player_active": true,
+    "player_restarts": 0,
+    "previous": "c21.22-wifi-state-recovery-20260716T194811Z-9526cf9",
+    "settings_inactive": true,
+    "stable_policy_restored": true,
+    "timer_enabled_and_active": true
+  },
+  "candidate": {
+    "channel": "homologation",
+    "component": "totem-core",
+    "manifest_sha256": "2e64d4722c670f9d6c62e4fbaf35c32818db98c350e6caab3fd772f591dfd2c8",
+    "payload_sha256": "90990b123c8f4f21260ede05dbb742a4a5122616d11bf1f2045c68a93bbde6e3",
+    "source_commit": "3e5dbf8f2c4022b74c123576dae31bb53a0f6199",
+    "version": "c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8"
+  },
+  "checks": {
+    "ambiguous_failures_do_not_become_portal": true,
+    "board_normal_connectivity_not_false_portal": true,
+    "exact_package_release_gate_84_of_84": true,
+    "governed_apply_rollback_reapply": true,
+    "installed_files_match_package": true,
+    "installed_self_tests_passed": true,
+    "player_preserved_without_restart": true,
+    "portal_blocks_environment_review_and_commit": true,
+    "post_docs_policy_static_81_of_81": true,
+    "post_reapply_observation_stable": true,
+    "public_artifacts_exclude_network_identifiers_and_probe_material": true,
+    "replay_12_scenarios_55_assertions": true,
+    "source_release_gate_84_of_84": true,
+    "stable_policy_blocked_homologation": true,
+    "visual_gallery_123_of_123": true
+  },
+  "independent_audits": {
+    "board_operation": "go_conditioned",
+    "final_evidence_review": "go",
+    "final_blocker_reaudit": "go",
+    "final_safety_review": "go",
+    "unresolved_blockers": 0
+  },
+  "non_claims": [
+    "not_a_stable_promotion",
+    "not_a_public_release",
+    "not_a_new_reference_image",
+    "not_a_captive_portal_browser",
+    "not_physical_captive_portal_proof",
+    "not_physical_open_ap_association_proof"
+  ],
+  "passed": true,
+  "schema": "dadooh.c21.23.captive_portal_detection_candidate_closure.v1"
+}

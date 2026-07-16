@@ -1,0 +1,8 @@
+{
+  "captive_portal": "not_detected",
+  "internet": "online",
+  "probe_attempted": true,
+  "source": "dadooh_health_probe",
+  "transport": "ethernet",
+  "wifi_signal": "unknown"
+}

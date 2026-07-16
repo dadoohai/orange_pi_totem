@@ -43,3 +43,16 @@ Testes deterministas devem cobrir redirect esperado, redirect interceptado,
 HTTP 511, HTML, timeout, rota ausente, conflito Ethernet/Wi-Fi, retry e
 privacidade. A prova em portal fisico ou emulado permanece obrigatoria antes de
 declarar suporte de campo completo.
+
+## Resultado Da Candidata
+
+A C21.23 passou os gates de fonte e pacote `84/84`, replay, galeria, auditorias
+independentes e roundtrip OTA na placa. A policy stable bloqueou o prerelease
+com rc `41`; apply, rollback para C21.22 e reaplicacao passaram com rc `0`.
+Player, Ethernet, Wi-Fi, timer e policy terminaram preservados. A rede normal
+foi classificada como `online` e `not_detected`, sem falso portal.
+
+Evidencia:
+`docs/evidence/c20-totem-core-ota/20260716T214911Z-c21-23-captive-portal-board-e2e/`.
+
+O portal fisico/emulado e o navegador continuam fora deste claim.

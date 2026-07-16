@@ -1,0 +1,49 @@
+{
+  "channel": "homologation",
+  "component": "totem-core",
+  "created_at": "2026-07-16T21:46:22Z",
+  "created_at_utc": "2026-07-16T21:46:22Z",
+  "entrypoint": "bin/totem_setup_visual_wizard.py",
+  "health_checks": [
+    "wizard_self_test",
+    "wifi_adapter_self_test",
+    "splash_self_test",
+    "status_preview_self_test",
+    "status_aggregate_self_test",
+    "status_renderer_self_test",
+    "config_contract_self_test",
+    "bash_syntax",
+    "restore_order_static"
+  ],
+  "payload": "dadooh-totem-core-c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8.tar.gz",
+  "payload_bytes": 221755,
+  "payload_sha256": "90990b123c8f4f21260ede05dbb742a4a5122616d11bf1f2045c68a93bbde6e3",
+  "required_base_image_min": "c17.4.2",
+  "requires": {
+    "base_image_min": "c17.4.2",
+    "device": "orangepizero3",
+    "device_track": "c18-hwdecode",
+    "updater_features": [
+      "c18-freeze-kiosky-player-v1",
+      "c18-rollback-reapply-v1",
+      "c18-safe-payload-v1",
+      "c18-track-v1"
+    ]
+  },
+  "schema": "dadooh.totem.update.v1",
+  "source_branch": "foundation-v0.1",
+  "source_commit": "3e5dbf8f2c4022b74c123576dae31bb53a0f6199",
+  "source_dirty": false,
+  "source_repo": "dadoohai/orange_pi_totem",
+  "stable_promotion_evidence_sha256": "",
+  "updates": [
+    "wizard",
+    "splash",
+    "status",
+    "settings-session",
+    "wifi-adapter",
+    "config-contract",
+    "firstboot"
+  ],
+  "version": "c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8"
+}

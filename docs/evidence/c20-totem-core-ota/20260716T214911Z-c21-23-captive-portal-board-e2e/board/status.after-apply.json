@@ -1,0 +1,60 @@
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c21.22-wifi-state-recovery-20260716T194811Z-9526cf9",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-16T21:58:36Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-16T21:46:22Z",
+      "path": "/data/core/totem/releases/c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8",
+      "payload_sha256": "90990b123c8f4f21260ede05dbb742a4a5122616d11bf1f2045c68a93bbde6e3",
+      "source": "local:manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "3e5dbf8f2c4022b74c123576dae31bb53a0f6199",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-16T21:58:43Z",
+      "source": "local:manifest.json",
+      "started_at_utc": "2026-07-16T21:58:28Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-16T20:31:54Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-16T20:08:25Z",
+      "path": "/data/core/totem/releases/c21.22-wifi-state-recovery-20260716T194811Z-9526cf9",
+      "payload_sha256": "a98c3ad1eec78ccd21e520dc518517085d3e1b9c00da776319458cce1e523d60",
+      "source": "local:dadooh-totem-core-c21.22-wifi-state-recovery-20260716T194811Z-9526cf9.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "9526cf932684e50cfc69837bae4c01be84d48cec",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.22-wifi-state-recovery-20260716T194811Z-9526cf9"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-14T17:32:45Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}
