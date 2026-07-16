@@ -118,6 +118,7 @@ CONNECTIVITY_INDICATOR_POLL_SEC = 0.1
 CONNECTIVITY_INDICATOR_START = "<!-- dadooh-connectivity-indicator:start -->"
 CONNECTIVITY_INDICATOR_END = "<!-- dadooh-connectivity-indicator:end -->"
 CONNECTIVITY_INTERNET_STATES = frozenset({"online", "limited", "offline", "unknown"})
+CAPTIVE_PORTAL_STATES = frozenset({"required", "not_detected", "not_applicable", "unknown"})
 WIFI_FAILURE_CATEGORIES = frozenset(
     {
         "none",
@@ -569,6 +570,7 @@ def normalize_connectivity_snapshot(snapshot: dict[str, Any] | None) -> dict[str
     transport = str(raw.get("transport", "unknown")).strip().lower()
     wifi_signal = str(raw.get("wifi_signal", "unknown")).strip().lower()
     internet = str(raw.get("internet", "unknown")).strip().lower()
+    captive_portal = str(raw.get("captive_portal", "unknown")).strip().lower()
     guardrails = raw.get("guardrails") if isinstance(raw.get("guardrails"), dict) else {}
     probe_attempted = bool(
         raw.get("probe_attempted", guardrails.get("external_connectivity_probe", False))
@@ -579,14 +581,22 @@ def normalize_connectivity_snapshot(snapshot: dict[str, Any] | None) -> dict[str
         wifi_signal = "unknown"
     if internet not in CONNECTIVITY_INTERNET_STATES:
         internet = "unknown"
+    if captive_portal not in CAPTIVE_PORTAL_STATES:
+        captive_portal = "unknown"
     if transport == "none":
         internet = "offline"
+        captive_portal = "not_applicable"
     elif transport == "unknown" and internet == "online":
         internet = "unknown"
+    if internet == "online":
+        captive_portal = "not_detected"
+    elif captive_portal == "required" and transport not in {"ethernet", "wifi"}:
+        captive_portal = "unknown"
     return {
         "transport": transport,
         "wifi_signal": wifi_signal,
         "internet": internet,
+        "captive_portal": captive_portal,
         "probe_attempted": probe_attempted,
         "source": "dadooh_health_probe" if probe_attempted else "local_network_state",
     }
@@ -613,6 +623,12 @@ def connectivity_presentation(snapshot: dict[str, Any] | None) -> ConnectivityPr
             "#64748b",
         )
 
+    if state["captive_portal"] == "required":
+        return ConnectivityPresentation(
+            f"{local} | Acesso pendente",
+            "Esta rede exige uma etapa de acesso.",
+            "#f59e0b",
+        )
     if internet == "online":
         return ConnectivityPresentation(
             f"{local} | Dadooh acessivel",
@@ -678,6 +694,7 @@ def connectivity_snapshot_for_network(
         "observed_transport": observed_transport,
         "wifi_signal": "unknown",
         "internet": "unknown",
+        "captive_portal": "unknown",
         "probe_attempted": False,
         "source": "default_route_transport_mismatch",
     }
@@ -688,6 +705,7 @@ def connectivity_snapshot_from_network(network: dict[str, Any]) -> dict[str, Any
         "transport": network.get("connectivity_transport", "unknown"),
         "wifi_signal": network.get("connectivity_wifi_signal", "unknown"),
         "internet": network.get("connectivity", "unknown"),
+        "captive_portal": network.get("connectivity_captive_portal", "unknown"),
         "probe_attempted": network.get("connectivity_probe_attempted", False),
     }
 
@@ -704,6 +722,7 @@ def apply_connectivity_snapshot(
             "connectivity_transport": state["transport"],
             "connectivity_observed_transport": state["observed_transport"],
             "connectivity_wifi_signal": state["wifi_signal"],
+            "connectivity_captive_portal": state["captive_portal"],
             "connectivity_probe_attempted": state["probe_attempted"],
             "connectivity_source": state["source"],
         }
@@ -868,6 +887,7 @@ def connectivity_indicator_svg(layout: ScreenLayout, snapshot: dict[str, Any] | 
     transport = state["transport"]
     wifi_signal = state["wifi_signal"]
     internet = state["internet"]
+    captive_portal = state["captive_portal"]
     x, y = connectivity_indicator_position(layout)
 
     if transport == "ethernet":
@@ -889,17 +909,20 @@ def connectivity_indicator_svg(layout: ScreenLayout, snapshot: dict[str, Any] | 
             for index, height in enumerate(heights)
         )
 
+    visual_state = "portal" if captive_portal == "required" else internet
     badge_color, badge_symbol = {
         "online": ("#22c55e", "OK"),
         "limited": ("#f59e0b", "!"),
+        "portal": ("#f59e0b", "P"),
         "offline": ("#ef4444", "X"),
         "unknown": ("#64748b", "?"),
-    }[internet]
+    }[visual_state]
     badge_text_x = x + 54 if badge_symbol == "OK" else x + 58
     badge_font_size = 10 if badge_symbol == "OK" else 14
     return (
         f'<g id="connectivity-indicator" data-transport="{transport}" '
-        f'data-wifi-signal="{wifi_signal}" data-internet="{internet}">'
+        f'data-wifi-signal="{wifi_signal}" data-internet="{internet}" '
+        f'data-captive-portal="{captive_portal}">'
         f'<rect x="{x}" y="{y}" width="76" height="34" rx="8" fill="#172033"/>'
         f'{transport_svg}'
         f'<rect x="{x + 45}" y="{y + 7}" width="2" height="20" rx="1" fill="#334155"/>'
@@ -2127,7 +2150,15 @@ def choose_option(
         rendered_connectivity: object = _CONNECTIVITY_SNAPSHOT_AUTO
         if context_provider is not None:
             rendered_panel_items, rendered_accent, rendered_connectivity = context_provider()
-        footer = option_footer(focus_area=focus_area, primary="Enter confirma", allow_back=allow_back)
+        portal_pending = (
+            isinstance(rendered_connectivity, dict)
+            and normalize_connectivity_snapshot(rendered_connectivity)["captive_portal"] == "required"
+        )
+        footer = option_footer(
+            focus_area=focus_area,
+            primary="Enter continua" if portal_pending else "Enter confirma",
+            allow_back=allow_back,
+        )
         display.show(
             screen_id,
             build_screen_svg(
@@ -3036,6 +3067,7 @@ def network_defaults(**overrides: Any) -> dict[str, Any]:
         "connectivity_transport": "unknown",
         "connectivity_observed_transport": "unknown",
         "connectivity_wifi_signal": "unknown",
+        "connectivity_captive_portal": "unknown",
         "connectivity_probe_attempted": False,
         "connectivity_source": "not_checked",
         "connected": "unknown",
@@ -3119,10 +3151,14 @@ def network_review_note(network: dict[str, Any] | None, status: str = "pending")
     elif status == "retained":
         base = f"{base} (mantido)"
     connectivity = str(network.get("connectivity", ""))
+    captive_portal = str(network.get("connectivity_captive_portal", "unknown"))
     expected_transport = str(network.get("connection_type", ""))
     claimed_transport = str(network.get("connectivity_transport", ""))
     if expected_transport in {"ethernet", "wifi"} and claimed_transport != expected_transport:
         connectivity = "unknown"
+        captive_portal = "unknown"
+    if captive_portal == "required":
+        return f"{base} | acesso pendente"
     connectivity_note = {
         "online": "Dadooh OK",
         "limited": "Dadooh indisponivel",
@@ -3165,8 +3201,34 @@ def environment_is_ready(state: WizardState) -> bool:
     )
 
 
+def network_is_ready(network: dict[str, Any] | None) -> bool:
+    return bool(
+        network is not None
+        and str(network.get("connectivity_captive_portal", "unknown")).strip().lower() != "required"
+    )
+
+
+def retain_live_portal_requirement(network: dict[str, Any] | None) -> None:
+    if network is None:
+        return
+    live_state = connectivity_snapshot_for_network(network, current_connectivity_snapshot())
+    if live_state["captive_portal"] != "required":
+        return
+    network.update(
+        {
+            "connectivity": live_state["internet"],
+            "connectivity_transport": live_state["transport"],
+            "connectivity_observed_transport": live_state["observed_transport"],
+            "connectivity_wifi_signal": live_state["wifi_signal"],
+            "connectivity_captive_portal": "required",
+            "connectivity_probe_attempted": live_state["probe_attempted"],
+            "connectivity_source": live_state["source"],
+        }
+    )
+
+
 def wizard_can_commit(state: WizardState) -> bool:
-    return bool(state.network is not None and environment_is_ready(state))
+    return bool(network_is_ready(state.network) and environment_is_ready(state))
 
 
 def initial_wizard_step(state: WizardState) -> int:
@@ -3174,7 +3236,7 @@ def initial_wizard_step(state: WizardState) -> int:
 
 
 def first_incomplete_step(state: WizardState) -> int:
-    if state.network is None:
+    if not network_is_ready(state.network):
         return 1
     if not environment_is_ready(state):
         return 2
@@ -3185,7 +3247,7 @@ def step_status_label(state: WizardState, step: int) -> str:
     if step == 0:
         return "Confirmado" if state.rotation_status == "confirmed" else "Default"
     if step == 1:
-        if state.network is None:
+        if not network_is_ready(state.network):
             return "Pendente"
         return "Confirmado"
     if step == 2:
@@ -3545,6 +3607,11 @@ def wifi_success_screen_svg(
 ) -> str:
     presentation = connectivity_presentation(connectivity_snapshot)
     state = normalize_connectivity_snapshot(connectivity_snapshot)
+    if state["captive_portal"] == "required":
+        return wifi_portal_required_screen_svg(
+            layout_rotation_deg=layout_rotation_deg,
+            connectivity_snapshot=state,
+        )
     if state["internet"] == "online":
         subtitle = "Rede salva e servico Dadooh acessivel."
         panel_title = "Pronto"
@@ -3572,6 +3639,60 @@ def wifi_success_screen_svg(
         layout_rotation_deg=layout_rotation_deg,
         connectivity_snapshot=state,
     )
+
+
+def wifi_portal_required_screen_svg(
+    *,
+    layout_rotation_deg: int,
+    connectivity_snapshot: dict[str, Any] | None = None,
+) -> str:
+    state = normalize_connectivity_snapshot(connectivity_snapshot)
+    return build_screen_svg(
+        active_step=1,
+        title="Acesso a rede pendente",
+        subtitle="A rede conectou, mas pede uma etapa de acesso.",
+        footer="R verifica | Enter troca rede | Esc sai",
+        panel_title="Como continuar",
+        panel_items=[
+            "Nenhum dado do portal foi salvo.",
+            "Tente verificar ou escolha outra rede.",
+            "A exibicao volta ao sair.",
+        ],
+        accent="#f59e0b",
+        layout_rotation_deg=layout_rotation_deg,
+        connectivity_snapshot=state,
+    )
+
+
+def resolve_captive_portal_requirement(
+    display: VisualDisplay,
+    network: dict[str, Any],
+    *,
+    layout_rotation_deg: int,
+) -> dict[str, Any] | None:
+    current = dict(network)
+    while current.get("connectivity_captive_portal") == "required":
+        snapshot = connectivity_snapshot_from_network(current)
+        display.show(
+            "02-wifi-portal-required",
+            wifi_portal_required_screen_svg(
+                layout_rotation_deg=layout_rotation_deg,
+                connectivity_snapshot=snapshot,
+            ),
+        )
+        action = read_advertised_action("r", "R", "enter", "escape", "q", "Q")
+        if action in {"r", "R"}:
+            refreshed = apply_connectivity_snapshot(
+                current,
+                collect_connectivity_snapshot_now(),
+            )
+            if refreshed["connectivity_captive_portal"] != "unknown":
+                current = refreshed
+            continue
+        if action == "enter":
+            return None
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+    return current
 
 
 def normalize_wifi_failure_category(value: Any) -> str:
@@ -4109,15 +4230,16 @@ def run_wifi_persistent(
                     network,
                     collect_connectivity_snapshot_now(),
                 )
-                connectivity_snapshot = connectivity_snapshot_from_network(network)
-                display.show(
-                    "02-wifi-result",
-                    wifi_success_screen_svg(
-                        layout_rotation_deg=layout_rotation_deg,
-                        connectivity_snapshot=connectivity_snapshot,
-                    ),
-                )
-                wait_enter_or_timeout(WIFI_SUCCESS_AUTO_ADVANCE_SEC)
+                if network["connectivity_captive_portal"] != "required":
+                    connectivity_snapshot = connectivity_snapshot_from_network(network)
+                    display.show(
+                        "02-wifi-result",
+                        wifi_success_screen_svg(
+                            layout_rotation_deg=layout_rotation_deg,
+                            connectivity_snapshot=connectivity_snapshot,
+                        ),
+                    )
+                    wait_enter_or_timeout(WIFI_SUCCESS_AUTO_ADVANCE_SEC)
                 return network
 
             restored = bool(network["previous_profile_restored"])
@@ -4235,6 +4357,7 @@ def build_visual_status(
             "connectivity_transport": network["connectivity_transport"],
             "connectivity_observed_transport": network["connectivity_observed_transport"],
             "connectivity_wifi_signal": network["connectivity_wifi_signal"],
+            "captive_portal": network["connectivity_captive_portal"],
             "connectivity_source": network["connectivity_source"],
             "connected": network["connected"],
             "connection_type": network["connection_type"],
@@ -4260,6 +4383,8 @@ def build_visual_status(
             "ip_written_to_public_status": False,
             "mac_written_to_public_status": False,
             "dns_written_to_public_status": False,
+            "portal_url_written_to_public_status": False,
+            "portal_content_written_to_public_status": False,
         },
         "environment": {
             "mode": setup.SELECTION_MODE_MANUAL,
@@ -4359,6 +4484,7 @@ def build_visual_summary(status: dict[str, Any]) -> str:
             f"connectivity_transport: {status['network']['connectivity_transport']}",
             f"connectivity_observed_transport: {status['network']['connectivity_observed_transport']}",
             f"connectivity_wifi_signal: {status['network']['connectivity_wifi_signal']}",
+            f"captive_portal: {status['network']['captive_portal']}",
             f"connectivity_source: {status['network']['connectivity_source']}",
             f"internet_external_check: {str(status['network']['internet_external_check']).lower()}",
             f"connection_type: {status['network']['connection_type']}",
@@ -4583,6 +4709,9 @@ def write_visual_artifacts(
     public_orientation_path: pathlib.Path | None = None,
     environment_preflight: EnvironmentPreflight | None = None,
 ) -> dict[str, Any]:
+    retain_live_portal_requirement(network)
+    if not network_is_ready(network):
+        raise VisualWizardError("Libere o acesso da rede antes de salvar.")
     prepare_private_dir(out_dir)
     generated_at = utc_timestamp()
     candidate = setup.build_candidate_config(
@@ -4787,12 +4916,14 @@ def review_and_confirm(
     environment_ready = bool(
         environment_id.strip() and (environment_status == "retained" or environment_preflight is not None)
     )
-    ready = bool(network is not None and environment_ready)
-    network_note = network_review_note(network, network_status)
     environment_note = environment_review_note(environment_id, environment_preflight, environment_status)
     focus_area = "steps" if initial_focus_area == "steps" else "content"
     focused_step = 3
     while True:
+        retain_live_portal_requirement(network)
+        network_ready = network_is_ready(network)
+        ready = bool(network_ready and environment_ready)
+        network_note = network_review_note(network, network_status)
         if APPLY_CONTEXT == "real-write":
             subtitle = "Continue para a confirmacao final."
             primary = "Enter continua"
@@ -4830,7 +4961,11 @@ def review_and_confirm(
                             f'{rotation["label"]} ({step_status_label(WizardState(rotation, rotation_status), 0)})',
                             "confirmed" if rotation_status == "confirmed" else "neutral",
                         ),
-                        ("Wi-Fi", network_note, "confirmed" if network is not None else "pending"),
+                        (
+                            "Wi-Fi",
+                            network_note,
+                            "confirmed" if network_ready else ("blocked" if network is not None else "pending"),
+                        ),
                         (
                             "Ambiente",
                             environment_note,
@@ -4859,7 +4994,8 @@ def review_and_confirm(
             focused_step = 3
             continue
         if key == "enter":
-            return ready
+            retain_live_portal_requirement(network)
+            return bool(network_is_ready(network) and environment_ready)
         if key in {"b", "B", "back", "escape"}:
             return None
         if key in {"q", "Q"}:
@@ -5904,6 +6040,16 @@ def run_visual_wizard(
                                 c1523_phase("wifi_step_done", network_step=state.network["network_step"])
                             else:
                                 raise VisualWizardError("Esta opcao de conexao nao esta disponivel.")
+                            resolved_network = resolve_captive_portal_requirement(
+                                display,
+                                state.network,
+                                layout_rotation_deg=layout_rotation_deg,
+                            )
+                            if resolved_network is None:
+                                state.network = None
+                                state.network_status = "pending"
+                                continue
+                            state.network = resolved_network
                             state.network_status = "confirmed"
                             active_step = 2
                             entry_focus_area = "content"
@@ -7541,12 +7687,34 @@ def run_self_test() -> None:
         assert_true('data-internet="limited"' in wifi_limited_svg, "limited state should be explicit")
         assert_true('x="412" y="34" width="76" height="34"' in wifi_limited_svg, "portrait indicator should fit before the clock")
         assert_true("#f59e0b" in wifi_limited_svg and ">!</text>" in wifi_limited_svg, "limited should not rely on color alone")
-        portal_is_unknown = normalize_connectivity_snapshot(
-            {"transport": "wifi", "wifi_signal": "strong", "internet": "portal"}
+        wifi_portal_svg = connectivity_indicator_svg(
+            screen_layout(0),
+            {
+                "transport": "wifi",
+                "wifi_signal": "strong",
+                "internet": "limited",
+                "captive_portal": "required",
+            },
         )
         assert_true(
-            portal_is_unknown["internet"] == "unknown",
-            "portal must remain outside the accepted M9.4-6 connectivity contract",
+            'data-internet="limited"' in wifi_portal_svg
+            and 'data-captive-portal="required"' in wifi_portal_svg
+            and ">P</text>" in wifi_portal_svg,
+            "portal should be additive, explicit, and distinguishable without relying on color",
+        )
+        portal_snapshot = normalize_connectivity_snapshot(
+            {
+                "transport": "wifi",
+                "wifi_signal": "strong",
+                "internet": "limited",
+                "captive_portal": "required",
+                "guardrails": {"external_connectivity_probe": True},
+            }
+        )
+        assert_true(
+            portal_snapshot["internet"] == "limited"
+            and portal_snapshot["captive_portal"] == "required",
+            "portal evidence must be additive to the legacy limited connectivity state",
         )
         probed_snapshot = normalize_connectivity_snapshot(
             {
@@ -7578,6 +7746,16 @@ def run_self_test() -> None:
                 "#f59e0b",
             ),
             (
+                {
+                    "transport": "wifi",
+                    "wifi_signal": "strong",
+                    "internet": "limited",
+                    "captive_portal": "required",
+                },
+                "Wi-Fi associado | Acesso pendente",
+                "#f59e0b",
+            ),
+            (
                 {"transport": "none", "internet": "online"},
                 "Sem conexao ativa",
                 "#ef4444",
@@ -7606,9 +7784,203 @@ def run_self_test() -> None:
             and connected_network["connectivity_transport"] == "wifi"
             and connected_network["connectivity_observed_transport"] == "wifi"
             and connected_network["connectivity_wifi_signal"] == "strong"
+            and connected_network["connectivity_captive_portal"] == "not_detected"
             and connected_network["connectivity_probe_attempted"] is True,
             "sanitized connectivity should reach the selected network contract",
         )
+        portal_network = apply_connectivity_snapshot(
+            network_defaults(
+                network_step="wifi_persistent",
+                connection_type="wifi",
+                wifi_link_ready=True,
+            ),
+            portal_snapshot,
+        )
+        assert_true(
+            portal_network["connectivity"] == "limited"
+            and portal_network["connectivity_captive_portal"] == "required"
+            and "acesso pendente" in network_review_note(portal_network),
+            "portal should remain additive in persisted status and explicit in review",
+        )
+        portal_screen = wifi_portal_required_screen_svg(
+            layout_rotation_deg=0,
+            connectivity_snapshot=portal_snapshot,
+        )
+        assert_true(
+            "Acesso a rede pendente" in portal_screen
+            and "R verifica" in portal_screen
+            and "Enter troca rede" in portal_screen
+            and "Esc sai" in portal_screen
+            and 'data-captive-portal="required"' in portal_screen,
+            "portal recovery should expose one bounded set of user actions",
+        )
+        original_read_key = globals()["read_key"]
+        original_collect_connectivity_snapshot_now = globals()["collect_connectivity_snapshot_now"]
+        original_current_connectivity_snapshot = globals()["current_connectivity_snapshot"]
+        try:
+            retry_keys = iter(("r", "r"))
+            globals()["read_key"] = lambda timeout_sec=None: next(retry_keys)
+            retry_snapshots = iter(
+                (
+                    normalize_connectivity_snapshot(
+                        {
+                            "transport": "wifi",
+                            "wifi_signal": "strong",
+                            "internet": "limited",
+                            "captive_portal": "unknown",
+                        }
+                    ),
+                    normalize_connectivity_snapshot(
+                        {
+                            "transport": "wifi",
+                            "wifi_signal": "strong",
+                            "internet": "online",
+                            "captive_portal": "not_detected",
+                        }
+                    ),
+                )
+            )
+            globals()["collect_connectivity_snapshot_now"] = lambda: next(retry_snapshots)
+            portal_retry_display = VisualDisplay(root / "portal-retry", enabled=False)
+            resolved_portal = resolve_captive_portal_requirement(
+                portal_retry_display,
+                portal_network,
+                layout_rotation_deg=0,
+            )
+            assert_true(
+                resolved_portal is not None
+                and resolved_portal["connectivity"] == "online"
+                and resolved_portal["connectivity_captive_portal"] == "not_detected"
+                and portal_retry_display.sequence == 2,
+                "portal retry should stay visible through ambiguity and clear only after a non-portal proof",
+            )
+            choose_other_keys = iter(("enter",))
+            globals()["read_key"] = lambda timeout_sec=None: next(choose_other_keys)
+            assert_true(
+                resolve_captive_portal_requirement(
+                    VisualDisplay(root / "portal-choose-other", enabled=False),
+                    portal_network,
+                    layout_rotation_deg=0,
+                )
+                is None,
+                "portal should return to network choice without opening a browser",
+            )
+            exit_keys = iter(("escape",))
+            globals()["read_key"] = lambda timeout_sec=None: next(exit_keys)
+            try:
+                resolve_captive_portal_requirement(
+                    VisualDisplay(root / "portal-exit", enabled=False),
+                    portal_network,
+                    layout_rotation_deg=0,
+                )
+            except VisualWizardAbort:
+                pass
+            else:
+                raise AssertionError("portal escape should abort settings and return to playback")
+            portal_preflight = preflight_with_confirmation(
+                environment_preflight_unavailable(requires_confirmation=True)
+            )
+            portal_commit_state = WizardState(
+                rotation=rotation_selection_from_degrees(0),
+                rotation_status="confirmed",
+                network=portal_network,
+                network_status="confirmed",
+                environment_id=primary_environment_id,
+                environment_preflight=portal_preflight,
+                environment_status="confirmed",
+            )
+            assert_true(
+                not wizard_can_commit(portal_commit_state)
+                and first_incomplete_step(portal_commit_state) == 1
+                and step_status_label(portal_commit_state, 1) == "Pendente",
+                "portal-required networks must remain blocked at every final readiness boundary",
+            )
+            assert_raises(
+                lambda: write_visual_artifacts(
+                    root / "portal-write-blocked",
+                    primary_environment_id,
+                    portal_commit_state.rotation,
+                    portal_network,
+                    environment_preflight=portal_preflight,
+                ),
+                "direct artifact writes must reject a portal-required network",
+            )
+            review_keys = iter(("enter",))
+            globals()["read_key"] = lambda timeout_sec=None: next(review_keys)
+            blocked_review_display = VisualDisplay(root / "portal-review-blocked", enabled=False)
+            assert_true(
+                review_and_confirm(
+                    blocked_review_display,
+                    primary_environment_id,
+                    portal_commit_state.rotation,
+                    portal_network,
+                    environment_preflight=portal_preflight,
+                    environment_status="confirmed",
+                    network_status="confirmed",
+                )
+                is False
+                and "Pendencias antes de concluir" in blocked_review_display.current_svg
+                and 'data-summary-state="blocked"' in blocked_review_display.current_svg,
+                "review must show and enforce a blocked portal-required network",
+            )
+            live_portal_network = dict(connected_network)
+            live_snapshot_calls = 0
+
+            def live_portal_transition(now_monotonic: float | None = None) -> dict[str, Any]:
+                del now_monotonic
+                nonlocal live_snapshot_calls
+                live_snapshot_calls += 1
+                return (
+                    normalize_connectivity_snapshot(
+                        {
+                            "transport": "wifi",
+                            "wifi_signal": "strong",
+                            "internet": "online",
+                            "captive_portal": "not_detected",
+                        }
+                    )
+                    if live_snapshot_calls == 1
+                    else portal_snapshot
+                )
+
+            globals()["current_connectivity_snapshot"] = live_portal_transition
+            live_review_keys = iter(("enter",))
+            globals()["read_key"] = lambda timeout_sec=None: next(live_review_keys)
+            live_review_display = VisualDisplay(root / "portal-review-live-transition", enabled=False)
+            assert_true(
+                review_and_confirm(
+                    live_review_display,
+                    primary_environment_id,
+                    portal_commit_state.rotation,
+                    live_portal_network,
+                    environment_preflight=portal_preflight,
+                    environment_status="confirmed",
+                    network_status="confirmed",
+                )
+                is False
+                and live_portal_network["connectivity_captive_portal"] == "required"
+                and 'data-captive-portal="required"' in live_review_display.current_svg,
+                "a portal detected while review is open must block the final Enter and update stored readiness",
+            )
+            direct_live_portal_network = dict(connected_network)
+            assert_raises(
+                lambda: write_visual_artifacts(
+                    root / "portal-live-write-blocked",
+                    primary_environment_id,
+                    portal_commit_state.rotation,
+                    direct_live_portal_network,
+                    environment_preflight=portal_preflight,
+                ),
+                "direct writes must recheck and reject a newly observed live portal",
+            )
+            assert_true(
+                direct_live_portal_network["connectivity_captive_portal"] == "required",
+                "the direct-write guard should retain the live portal requirement",
+            )
+        finally:
+            globals()["read_key"] = original_read_key
+            globals()["collect_connectivity_snapshot_now"] = original_collect_connectivity_snapshot_now
+            globals()["current_connectivity_snapshot"] = original_current_connectivity_snapshot
         mismatched_network = apply_connectivity_snapshot(
             network_defaults(
                 network_step="wifi_persistent",

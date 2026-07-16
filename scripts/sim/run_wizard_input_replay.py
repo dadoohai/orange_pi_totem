@@ -795,6 +795,12 @@ def replay_wifi_state_matrix(r: Replay) -> None:
         "ethernet_online": {"transport": "ethernet", "internet": "online"},
         "wifi_online": {"transport": "wifi", "wifi_signal": "strong", "internet": "online"},
         "wifi_limited": {"transport": "wifi", "wifi_signal": "weak", "internet": "limited"},
+        "wifi_portal": {
+            "transport": "wifi",
+            "wifi_signal": "strong",
+            "internet": "limited",
+            "captive_portal": "required",
+        },
         "offline": {"transport": "none", "internet": "offline"},
         "unknown": {"transport": "unknown", "internet": "unknown"},
     }
@@ -808,12 +814,16 @@ def replay_wifi_state_matrix(r: Replay) -> None:
                 active_step=1,
                 title="Wi-Fi",
                 subtitle="Estado atual da conexao.",
-                footer="Enter confirma | Esc volta",
+                footer=(
+                    "Enter continua | Esc volta"
+                    if snapshot.get("captive_portal") == "required"
+                    else "Enter confirma | Esc volta"
+                ),
                 options=wizard.network_options_for_ui(
                     configured_wifi_available=True,
                     ethernet_available=True,
                 ),
-                selected_index=0,
+                selected_index=1 if snapshot.get("transport") == "wifi" else 0,
                 panel_title="Conexao atual",
                 panel_items=[copy.headline, copy.detail, "Nova rede com rollback."],
                 accent=copy.accent,
@@ -855,6 +865,63 @@ def replay_wifi_state_matrix(r: Replay) -> None:
             and expected_copy in rendered
             and forbidden_copy not in rendered,
         )
+
+    portal_snapshot = {
+        "transport": "wifi",
+        "wifi_signal": "strong",
+        "internet": "limited",
+        "captive_portal": "required",
+    }
+    r.screen(
+        scenario,
+        "portal",
+        "02-portal-required",
+        wizard.wifi_portal_required_screen_svg(
+            layout_rotation_deg=0,
+            connectivity_snapshot=portal_snapshot,
+        ),
+        "enter",
+        "choose_another_network",
+    )
+    r.screen(
+        scenario,
+        "portal",
+        "02-portal-retry",
+        wizard.wifi_portal_required_screen_svg(
+            layout_rotation_deg=0,
+            connectivity_snapshot=portal_snapshot,
+        ),
+        "r",
+        "recheck_connectivity",
+    )
+    r.screen(
+        scenario,
+        "portal",
+        "02-portal-exit",
+        wizard.wifi_portal_required_screen_svg(
+            layout_rotation_deg=0,
+            connectivity_snapshot=portal_snapshot,
+        ),
+        "escape",
+        "return_to_playback",
+    )
+    portal_rendered = r.screen_paths[(scenario, "02-portal-required")].read_text(encoding="utf-8")
+    r.assert_true(
+        scenario,
+        "portal_is_distinct_and_actionable",
+        "Acesso a rede pendente" in portal_rendered
+        and "R verifica" in portal_rendered
+        and "Enter troca rede" in portal_rendered
+        and "Esc sai" in portal_rendered
+        and 'data-captive-portal="required"' in portal_rendered,
+    )
+    r.assert_true(
+        scenario,
+        "portal_material_is_not_rendered",
+        "portal.invalid" not in portal_rendered
+        and "Location" not in portal_rendered
+        and "<form" not in portal_rendered,
+    )
 
     failure_cases = (
         ("auth", "auth_failed_suspected", True, "Autenticacao nao concluida"),

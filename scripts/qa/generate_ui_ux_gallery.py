@@ -788,25 +788,39 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             ("ethernet-online", {"transport": "ethernet", "internet": "online"}),
             ("wifi-online", {"transport": "wifi", "wifi_signal": "strong", "internet": "online"}),
             ("wifi-limited", {"transport": "wifi", "wifi_signal": "weak", "internet": "limited"}),
+            (
+                "wifi-portal",
+                {
+                    "transport": "wifi",
+                    "wifi_signal": "strong",
+                    "internet": "limited",
+                    "captive_portal": "required",
+                },
+            ),
             ("offline", {"transport": "none", "internet": "offline"}),
             ("unknown", {"transport": "unknown", "internet": "unknown"}),
         ):
             copy = wizard.connectivity_presentation(snapshot)
+            connectivity_footer = (
+                "Enter continua | Esc volta"
+                if snapshot.get("captive_portal") == "required"
+                else "Enter confirma | Esc volta"
+            )
             add_wifi_matrix_screen(
                 screen_id=f"wizard.wifi.connectivity.{state_name}.{orientation}",
                 orientation=orientation,
                 title="Wi-Fi",
                 subtitle="Estado atual da conexao.",
-                footer="Enter confirma | Esc volta",
+                footer=connectivity_footer,
                 body_items=[copy.headline, copy.detail, "Nova rede com rollback."],
                 system_state=f"wizard_connectivity_{state_name}",
                 svg=wizard.build_screen_svg(
                     active_step=1,
                     title="Wi-Fi",
                     subtitle="Estado atual da conexao.",
-                    footer="Enter confirma | Esc volta",
+                    footer=connectivity_footer,
                     options=network_options,
-                    selected_index=0,
+                    selected_index=1 if snapshot.get("transport") == "wifi" else 0,
                     panel_title="Conexao atual",
                     panel_items=[copy.headline, copy.detail, "Nova rede com rollback."],
                     accent=copy.accent,
@@ -905,6 +919,31 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                 system_state=f"wizard_wifi_success_{result_name}",
                 svg=result_svg,
             )
+
+        portal_snapshot = {
+            "transport": "wifi",
+            "wifi_signal": "strong",
+            "internet": "limited",
+            "captive_portal": "required",
+        }
+        add_wifi_matrix_screen(
+            screen_id=f"wizard.wifi.portal-required.{orientation}",
+            orientation=orientation,
+            title="Acesso a rede pendente",
+            subtitle="A rede conectou, mas pede uma etapa de acesso.",
+            footer="R verifica | Enter troca rede | Esc sai",
+            body_items=[
+                "Nenhum dado do portal foi salvo.",
+                "Tente verificar ou escolha outra rede.",
+                "A exibicao volta ao sair.",
+            ],
+            system_state="wizard_wifi_portal_required",
+            svg=wizard.wifi_portal_required_screen_svg(
+                layout_rotation_deg=rotation,
+                connectivity_snapshot=portal_snapshot,
+            ),
+            error_state=True,
+        )
 
     for screen_id, title, subtitle, footer, field_label, value_hint, field_note, items in (
         (

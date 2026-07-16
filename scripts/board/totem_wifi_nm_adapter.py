@@ -47,6 +47,11 @@ PRIVATE_FILE_MODE = 0o600
 UNKNOWN = "unknown"
 CONNECTIVITY_PROBE_URL = "https://api-lbyvh5uf6q-uc.a.run.app/health"
 CONNECTIVITY_PROBE_USER_AGENT = "Dadooh-Totem-Connectivity/1"
+CAPTIVE_PORTAL_PROBE_URL = "http://api-lbyvh5uf6q-uc.a.run.app/health"
+CAPTIVE_PORTAL_EXPECTED_REDIRECT = CONNECTIVITY_PROBE_URL
+CAPTIVE_PORTAL_PROBE_USER_AGENT = "Dadooh-Totem-Portal-Check/1"
+CAPTIVE_PORTAL_MAX_BODY_BYTES = 4096
+CAPTIVE_PORTAL_MAX_LOCATION_CHARS = 2048
 CONNECTIVITY_PROBE_INTERNAL_ARG = "--connectivity-probe-internal"
 CONNECTIVITY_PROBE_SOCKET_TIMEOUT_SEC = 0.75
 READ_ONLY_PROCESS_REAP_RESERVE_SEC = 0.05
@@ -703,14 +708,107 @@ def probe_dadooh_service(opener: Any | None = None) -> bool:
         return False
 
 
+def read_bounded_probe_body(response: Any) -> bytes | None:
+    try:
+        body = response.read(CAPTIVE_PORTAL_MAX_BODY_BYTES + 1)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(body, bytes):
+        return None
+    return body[:CAPTIVE_PORTAL_MAX_BODY_BYTES]
+
+
+def portal_html_evidence(content_type: str, body: bytes | None) -> bool:
+    if body is None or not body:
+        return False
+    lowered_type = content_type.split(";", 1)[0].strip().lower()
+    prefix = body[:512].lower()
+    return lowered_type in {"text/html", "application/xhtml+xml"} or any(
+        marker in prefix for marker in (b"<!doctype html", b"<html", b"<form")
+    )
+
+
+def classify_captive_portal_response(
+    *,
+    status: int,
+    location: str,
+    content_type: str,
+    body: bytes | None,
+) -> str:
+    location_is_bounded = len(location) <= CAPTIVE_PORTAL_MAX_LOCATION_CHARS
+    safe_location = location if location_is_bounded else ""
+    if (
+        status in {301, 302, 307, 308}
+        and safe_location == CAPTIVE_PORTAL_EXPECTED_REDIRECT
+        and body == b""
+    ):
+        return "clear"
+    if status == 511:
+        return "portal"
+    if 300 <= status < 400 and location and (
+        not location_is_bounded or safe_location != CAPTIVE_PORTAL_EXPECTED_REDIRECT
+    ):
+        return "portal"
+    if status == 200 and portal_html_evidence(content_type, body):
+        return "portal"
+    return "inconclusive"
+
+
+def probe_captive_portal(opener: Any | None = None) -> str:
+    request = urllib_request.Request(
+        CAPTIVE_PORTAL_PROBE_URL,
+        headers={"User-Agent": CAPTIVE_PORTAL_PROBE_USER_AGENT},
+        method="GET",
+    )
+    active_opener = connectivity_probe_opener() if opener is None else opener
+    try:
+        with active_opener.open(request, timeout=CONNECTIVITY_PROBE_SOCKET_TIMEOUT_SEC) as response:
+            return classify_captive_portal_response(
+                status=int(response.status),
+                location=str(response.headers.get("Location", "")),
+                content_type=str(response.headers.get("Content-Type", "")),
+                body=read_bounded_probe_body(response),
+            )
+    except urllib_error.HTTPError as exc:
+        return classify_captive_portal_response(
+            status=int(exc.code),
+            location=str(exc.headers.get("Location", "")),
+            content_type=str(exc.headers.get("Content-Type", "")),
+            body=read_bounded_probe_body(exc),
+        )
+    except (OSError, ValueError, urllib_error.URLError):
+        return "inconclusive"
+
+
+def probe_connectivity_state(
+    *,
+    service_opener: Any | None = None,
+    portal_opener: Any | None = None,
+) -> str:
+    if probe_dadooh_service(service_opener):
+        return "reachable"
+    portal_state = probe_captive_portal(portal_opener)
+    if portal_state == "clear":
+        return "limited"
+    if portal_state == "portal":
+        return "portal_required"
+    return "inconclusive"
+
+
 def parse_connectivity_probe_result(result: CommandResult) -> str:
     if not command_result_stdout_is_bounded(result, allowed_statuses=frozenset({"ok", "failed"})):
         return UNKNOWN
     lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     if result.status == "ok" and result.returncode == 0 and lines == ["reachable"] and not result.stderr:
         return "reachable"
-    if result.status == "failed" and result.returncode == 1 and lines == ["unreachable"] and not result.stderr:
-        return "unreachable"
+    expected_failures = {
+        1: "limited",
+        2: "portal_required",
+        3: "inconclusive",
+    }
+    expected = expected_failures.get(result.returncode)
+    if result.status == "failed" and expected is not None and lines == [expected] and not result.stderr:
+        return expected
     return UNKNOWN
 
 
@@ -1231,6 +1329,7 @@ def collect_connectivity_indicator(
         "wifi_active_devices": [],
     }
     service_reachability = UNKNOWN
+    captive_portal = UNKNOWN
     external_probe_attempted = False
 
     if nmcli_available:
@@ -1322,21 +1421,30 @@ def collect_connectivity_indicator(
 
     if transport == "none":
         internet = "offline"
+        captive_portal = "not_applicable"
     elif transport == UNKNOWN or not route_verified:
         internet = UNKNOWN
     elif service_reachability == "reachable":
         internet = "online"
-    elif service_reachability == "unreachable":
+        captive_portal = "not_detected"
+    elif service_reachability == "limited":
+        internet = "limited"
+        captive_portal = "not_detected"
+    elif service_reachability == "portal_required":
+        internet = "limited"
+        captive_portal = "required"
+    elif service_reachability == "inconclusive":
         internet = "limited"
     else:
         internet = UNKNOWN
 
     return {
-        "schema_version": "dadooh.c20.connectivity_indicator.v1",
+        "schema_version": "dadooh.c20.connectivity_indicator.v2",
         "generated_at_utc": utc_timestamp(),
         "transport": transport,
         "wifi_signal": wifi_signal,
         "internet": internet,
+        "captive_portal": captive_portal,
         "read_only_checks": checks,
         "guardrails": {
             "read_only_commands_only": True,
@@ -1346,6 +1454,8 @@ def collect_connectivity_indicator(
             "wifi_rescan_executed": False,
             "ssid_collected": False,
             "credentials_collected": False,
+            "portal_url_collected": False,
+            "portal_content_persisted": False,
             "history_persisted": False,
             "writer_called": False,
         },
@@ -2900,16 +3010,26 @@ def run_self_test() -> None:
         "an exact successful probe result should authorize reachability",
     )
     assert_true(
-        parse_connectivity_probe_result(CommandResult("failed", "unreachable\n", "", 1)) == "unreachable",
+        parse_connectivity_probe_result(CommandResult("failed", "limited\n", "", 1)) == "limited",
         "an exact failed probe result should classify degraded reachability",
+    )
+    assert_true(
+        parse_connectivity_probe_result(CommandResult("failed", "portal_required\n", "", 2)) == "portal_required",
+        "an exact portal result should remain distinct from degraded reachability",
+    )
+    assert_true(
+        parse_connectivity_probe_result(CommandResult("failed", "inconclusive\n", "", 3)) == "inconclusive",
+        "an exact inconclusive result should fail closed",
     )
     for malformed_probe_result in (
         CommandResult("ok", "reachable\nextra\n", "", 0),
         CommandResult("ok", "reachable\n", "warning", 0),
-        CommandResult("ok", "unreachable\n", "", 0),
+        CommandResult("ok", "limited\n", "", 0),
         CommandResult("failed", "reachable\n", "", 1),
-        CommandResult("failed", "unreachable\n", "warning", 1),
-        CommandResult("failed", "unreachable\n", "", 2),
+        CommandResult("failed", "limited\n", "warning", 1),
+        CommandResult("failed", "limited\n", "", 2),
+        CommandResult("failed", "portal_required\n", "", 1),
+        CommandResult("failed", "inconclusive\n", "", 1),
         CommandResult("timeout", "", "", None),
         CommandResult("busy", "", "", None),
     ):
@@ -2918,13 +3038,32 @@ def run_self_test() -> None:
             "ambiguous probe results must fail closed",
         )
 
+    class FakeProbeHeaders:
+        def __init__(self, values: dict[str, str] | None = None) -> None:
+            self.values = values or {}
+
+        def get(self, key: str, default: str = "") -> str:
+            return self.values.get(key, default)
+
     class FakeProbeResponse:
-        def __init__(self, status: int, url: str) -> None:
+        def __init__(
+            self,
+            status: int,
+            url: str,
+            *,
+            headers: dict[str, str] | None = None,
+            body: bytes = b"",
+        ) -> None:
             self.status = status
             self.url = url
+            self.headers = FakeProbeHeaders(headers)
+            self.body = body
 
         def geturl(self) -> str:
             return self.url
+
+        def read(self, size: int = -1) -> bytes:
+            return self.body if size < 0 else self.body[:size]
 
         def __enter__(self) -> "FakeProbeResponse":
             return self
@@ -2965,6 +3104,158 @@ def run_self_test() -> None:
     assert_true(
         probe_dadooh_service(FakeProbeOpener(urllib_error.URLError("offline"))) is False,
         "network errors must fail closed",
+    )
+    clear_portal_opener = FakeProbeOpener(
+        FakeProbeResponse(
+            302,
+            CAPTIVE_PORTAL_PROBE_URL,
+            headers={"Location": CAPTIVE_PORTAL_EXPECTED_REDIRECT, "Content-Type": "text/html"},
+        )
+    )
+    assert_true(
+        probe_captive_portal(clear_portal_opener) == "clear",
+        "the exact Dadooh HTTP redirect should prove that the canary was not intercepted",
+    )
+    portal_redirect_opener = FakeProbeOpener(
+        FakeProbeResponse(
+            302,
+            CAPTIVE_PORTAL_PROBE_URL,
+            headers={"Location": "http://portal.invalid/login", "Content-Type": "text/html"},
+        )
+    )
+    assert_true(
+        probe_captive_portal(portal_redirect_opener) == "portal",
+        "an unexpected redirect should be positive portal evidence",
+    )
+    portal_html_opener = FakeProbeOpener(
+        FakeProbeResponse(
+            200,
+            CAPTIVE_PORTAL_PROBE_URL,
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            body=b"<!doctype html><html><form></form></html>",
+        )
+    )
+    assert_true(
+        probe_captive_portal(portal_html_opener) == "portal",
+        "an intercepted HTML response should be positive portal evidence",
+    )
+    assert_true(
+        classify_captive_portal_response(
+            status=511,
+            location="",
+            content_type="text/plain",
+            body=b"authentication required",
+        )
+        == "portal",
+        "HTTP 511 should be positive portal evidence",
+    )
+    assert_true(
+        classify_captive_portal_response(
+            status=302,
+            location="x" * (CAPTIVE_PORTAL_MAX_LOCATION_CHARS + 1),
+            content_type="text/html",
+            body=b"",
+        )
+        == "portal",
+        "an oversized redirect cannot be the exact expected path and should remain positive interception evidence",
+    )
+    assert_true(
+        classify_captive_portal_response(
+            status=302,
+            location=CAPTIVE_PORTAL_EXPECTED_REDIRECT,
+            content_type="text/html",
+            body=b"<html></html>",
+        )
+        == "inconclusive",
+        "the expected redirect with an unexpected body must not prove a clear path",
+    )
+    assert_true(
+        read_bounded_probe_body(
+            FakeProbeResponse(
+                200,
+                CAPTIVE_PORTAL_PROBE_URL,
+                body=b"<html>" + b"x" * CAPTIVE_PORTAL_MAX_BODY_BYTES,
+            )
+        )
+        == (b"<html>" + b"x" * CAPTIVE_PORTAL_MAX_BODY_BYTES)[:CAPTIVE_PORTAL_MAX_BODY_BYTES],
+        "an oversized portal response should be truncated to the bounded prefix",
+    )
+    assert_true(
+        classify_captive_portal_response(
+            status=200,
+            location="",
+            content_type="text/html",
+            body=read_bounded_probe_body(
+                FakeProbeResponse(
+                    200,
+                    CAPTIVE_PORTAL_PROBE_URL,
+                    body=b"<html>" + b"x" * CAPTIVE_PORTAL_MAX_BODY_BYTES,
+                )
+            ),
+        )
+        == "portal",
+        "a large intercepted HTML page should remain detectable from its bounded prefix",
+    )
+    assert_true(
+        probe_captive_portal(
+            FakeProbeOpener(
+                FakeProbeResponse(
+                    200,
+                    CAPTIVE_PORTAL_PROBE_URL,
+                    headers={"Content-Type": "application/octet-stream"},
+                    body=b"unexpected",
+                )
+            )
+        )
+        == "inconclusive",
+        "an unexpected non-HTML response must not be overclaimed as a portal",
+    )
+    assert_true(
+        probe_captive_portal(FakeProbeOpener(urllib_error.URLError("offline"))) == "inconclusive",
+        "a failed canary must not be called a portal",
+    )
+    assert_true(
+        probe_connectivity_state(
+            service_opener=successful_probe_opener,
+            portal_opener=portal_redirect_opener,
+        )
+        == "reachable",
+        "verified HTTPS must remain the decisive online proof",
+    )
+    assert_true(
+        probe_connectivity_state(
+            service_opener=FakeProbeOpener(urllib_error.URLError("offline")),
+            portal_opener=clear_portal_opener,
+        )
+        == "limited",
+        "a clear HTTP canary with unavailable Dadooh HTTPS should remain limited",
+    )
+    assert_true(
+        probe_connectivity_state(
+            service_opener=FakeProbeOpener(urllib_error.URLError("offline")),
+            portal_opener=portal_redirect_opener,
+        )
+        == "portal_required",
+        "positive interception should become a separate access requirement",
+    )
+    assert_true(
+        probe_connectivity_state(
+            service_opener=FakeProbeOpener(urllib_error.URLError("offline")),
+            portal_opener=FakeProbeOpener(urllib_error.URLError("offline")),
+        )
+        == "inconclusive",
+        "two unavailable probes must remain inconclusive",
+    )
+    portal_request, portal_timeout = clear_portal_opener.requests[0]
+    assert_true(portal_request.get_method() == "GET", "portal canary must use GET")
+    assert_true(portal_request.full_url == CAPTIVE_PORTAL_PROBE_URL, "portal canary URL must remain exact")
+    assert_true(
+        set(portal_request.header_items()) == {("User-agent", CAPTIVE_PORTAL_PROBE_USER_AGENT)},
+        "portal canary must not send credentials, cookies, or device identifiers",
+    )
+    assert_true(
+        portal_timeout == CONNECTIVITY_PROBE_SOCKET_TIMEOUT_SEC,
+        "portal canary timeout should remain bounded",
     )
     strict_probe_opener = connectivity_probe_opener()
     assert_true(
@@ -3543,7 +3834,7 @@ def run_self_test() -> None:
         def dual_link_runner(args: list[str], timeout_sec: float) -> CommandResult:
             if is_allowed_connectivity_probe_command(args):
                 service_probe_calls.append(args)
-                return CommandResult("failed", "unreachable\n", "", 1)
+                return CommandResult("failed", "limited\n", "", 1)
             return runner_with_route(fake_runner, dual_route_json_fixture)(args, timeout_sec)
 
         dual_link_indicator = collect_connectivity_indicator(
@@ -3559,6 +3850,46 @@ def run_self_test() -> None:
         assert_true(
             service_probe_calls == [connectivity_probe_command()],
             "a verified snapshot must execute exactly one fixed service probe",
+        )
+
+        def portal_required_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if is_allowed_connectivity_probe_command(args):
+                return CommandResult("failed", "portal_required\n", "", 2)
+            return runner_with_route(fake_runner, wifi_route_json_fixture)(args, timeout_sec)
+
+        portal_required_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=portal_required_runner,
+            nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
+        )
+        assert_true(
+            portal_required_indicator["transport"] == "wifi"
+            and portal_required_indicator["internet"] == "limited"
+            and portal_required_indicator["captive_portal"] == "required",
+            "positive portal evidence should be additive to the legacy limited state",
+        )
+        assert_true(
+            portal_required_indicator["guardrails"]["portal_url_collected"] is False
+            and portal_required_indicator["guardrails"]["portal_content_persisted"] is False,
+            "portal classification must not persist intercepted material",
+        )
+
+        def inconclusive_portal_runner(args: list[str], timeout_sec: float) -> CommandResult:
+            if is_allowed_connectivity_probe_command(args):
+                return CommandResult("failed", "inconclusive\n", "", 3)
+            return runner_with_route(fake_runner, wifi_route_json_fixture)(args, timeout_sec)
+
+        inconclusive_portal_indicator = collect_connectivity_indicator(
+            timeout_sec=1,
+            command_runner=inconclusive_portal_runner,
+            nmcli_path="/usr/bin/nmcli",
+            ip_path="/usr/sbin/ip",
+        )
+        assert_true(
+            inconclusive_portal_indicator["internet"] == "limited"
+            and inconclusive_portal_indicator["captive_portal"] == UNKNOWN,
+            "ambiguous portal evidence must preserve legacy limited without becoming a portal claim",
         )
 
         def malformed_service_probe_runner(args: list[str], timeout_sec: float) -> CommandResult:
@@ -4286,9 +4617,14 @@ def main(argv: list[str]) -> int:
     args = parse_args(argv)
     try:
         if args.connectivity_probe_internal:
-            reachable = probe_dadooh_service()
-            print("reachable" if reachable else "unreachable")
-            return 0 if reachable else 1
+            state = probe_connectivity_state()
+            print(state)
+            return {
+                "reachable": 0,
+                "limited": 1,
+                "portal_required": 2,
+                "inconclusive": 3,
+            }[state]
         if args.timeout_sec <= 0 or args.timeout_sec > 120:
             raise AdapterError("timeout-sec must be between 1 and 120")
         if args.self_test:
