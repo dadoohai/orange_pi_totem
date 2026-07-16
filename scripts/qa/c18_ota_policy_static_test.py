@@ -3585,7 +3585,9 @@ exec "$C18_REAL_PYTHON3" "$@"
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            timeout=60,
+            # This 24-vector gate takes about 52s alone on the reference WSL
+            # host, so the former 60s ceiling was not reliable under suite load.
+            timeout=120,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         result = subprocess.run(
