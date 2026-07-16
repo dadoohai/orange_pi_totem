@@ -1,0 +1,47 @@
+{
+  "artifact_id": "20260716T160720Z-c21-20-wifi-product-flow-board-e2e",
+  "board_final": {
+    "current": "c21.20-wifi-product-flow-20260716T154014Z-1d36dd3",
+    "ethernet_connected": true,
+    "hdmi_connected": true,
+    "player_active": true,
+    "player_restarts": 0,
+    "previous": "c21.19-wifi-transactional-20260715T145334Z-a214648",
+    "settings_inactive": true,
+    "stable_policy_restored": true,
+    "timer_enabled_and_active": true,
+    "wifi_connected": true
+  },
+  "candidate": {
+    "channel": "homologation",
+    "component": "totem-core",
+    "manifest_sha256": "25329f346610b843aaa0eeef7f1380308ebab604735876d0905f2ddfdada8136",
+    "payload_sha256": "e7812eb6737182ab95b0f43259e19d156c74dc5a21553795d5817c26dee060a0",
+    "source_commit": "1d36dd34ea26a4fa1fdfeda047a7aa69c1f10920",
+    "version": "c21.20-wifi-product-flow-20260716T154014Z-1d36dd3"
+  },
+  "checks": {
+    "bench_option_hidden_in_production": true,
+    "connection_options_match_live_state": true,
+    "exact_package_release_gate_84_of_84": true,
+    "generic_release_gate_84_of_84": true,
+    "governed_apply_rollback_reapply": true,
+    "installed_self_tests_passed": true,
+    "player_preserved_without_restart": true,
+    "protected_wifi_flow_shortened": true,
+    "retry_context_preserved_and_password_masked": true,
+    "stable_policy_blocked_homologation": true,
+    "visual_cancel_left_persistent_state_unchanged": true
+  },
+  "independent_final_audit": "pending",
+  "non_claims": [
+    "not_a_stable_promotion",
+    "not_a_public_release",
+    "not_a_new_reference_image",
+    "not_open_wifi_support",
+    "not_captive_portal_support",
+    "not_a_repeat_of_c21_19_real_wifi_replacement"
+  ],
+  "passed": true,
+  "schema": "dadooh.c20.wifi_product_flow_candidate_closure.v1"
+}

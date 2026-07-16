@@ -1,0 +1,11 @@
+utc=2026-07-16T15:57:35Z
+boot_id=41dd24dd-a601-462e-92af-64fd6f6a3def
+current=c21.19-wifi-transactional-20260715T145334Z-a214648
+previous=c21.18-wizard-connectivity-verified-20260715T045523Z-3bdbd18
+player_active=active
+player_restarts=0
+settings_active=inactive
+timer_active=active
+timer_enabled=enabled
+end0:ethernet:connected
+wlan0:wifi:connected

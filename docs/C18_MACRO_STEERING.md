@@ -301,7 +301,7 @@ Plano de decisao e criterios:
 
 ### M9 - Wi-Fi De Produto E UX De Conexao
 
-Status: em andamento desde 2026-07-16.
+Status: em andamento desde 2026-07-16; itens 1 e 2 fechados na placa.
 
 Valor: permitir que um usuario configure a conectividade local sem caminho
 impossivel, mensagem enganosa ou repeticao desnecessaria, preservando a rede
@@ -334,6 +334,14 @@ Fila detalhada e criterios de aceite:
 Este marco nao reabre a mecanica transacional fechada em C21.19 salvo regressao
 comprovada. Portal cativo e uma vertical posterior dentro do mesmo marco e nao
 deve bloquear redes abertas comuns, copy correta e simplificacao do fluxo.
+
+Fechamento M9.1-2 em 2026-07-16: C21.20 passou os gates `84/84`, foi bloqueado
+pela policy stable, aplicado, rollbackado para C21.19 e reaplicado. A captura
+real mostrou somente Ethernet ativa, Wi-Fi atual e escolha de outra rede; modo
+de bancada ficou oculto. O player terminou ativo sem restart, o timer/policy
+stable foi restaurado e a sessao visual nao alterou estado persistente.
+Evidencia:
+`docs/evidence/c20-totem-core-ota/20260716T160720Z-c21-20-wifi-product-flow-board-e2e/`.
 
 ## Checklist Contra Hiperfoco
 
@@ -436,11 +444,10 @@ Enquanto nada mudar, a ordem de execucao e:
     nao foi incluido por inferencia no pacote. C21.12/prod14 continua a
     referencia publica. Evidencia:
     `docs/evidence/c20-totem-core-ota/20260715T161137Z-c21-19-wifi-transactional-board-e2e/`.
-15. Rodada atual: executar M9 pela fila priorizada registrada em
-    `docs/C20_UX_ACCUMULATION_PLAN.md`. Os itens 1 e 2 estao implementados
-    off-board: opcoes e cancelamento refletem somente o estado comprovado da
-    sessao atual, e rede protegida usa fluxo curto com retry direto. Falta
-    fechar gate, pacote e placa. Rede aberta comum permanece como item 3;
-    estados, diagnostico, portal cativo e navegador restrito avancam depois,
-    sem reabrir a base transacional C21.19. Cada recorte fechado entra no
-    acumulo `totem-core` e na proxima imagem de referencia.
+15. M9 itens 1 e 2 foram fechados na candidata C21.20: gates `84/84`,
+    bloqueio stable, apply/rollback/reapply, captura real e estado final da
+    placa passaram sem restart do player ou escrita persistente na sessao
+    visual. Rede aberta comum e o proximo item; estados, diagnostico, portal
+    cativo e navegador restrito avancam depois, sem reabrir a base
+    transacional C21.19. Cada recorte fechado entra no acumulo `totem-core` e
+    na proxima imagem de referencia.

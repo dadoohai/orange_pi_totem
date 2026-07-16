@@ -679,8 +679,8 @@ auto-pull publico.
 
 ## Fila Priorizada Atual - Wi-Fi De Produto
 
-Estado: itens 1 e 2 implementados off-board em 2026-07-16 sobre a candidata
-C21.19; gate final, pacote e placa pendentes.
+Estado: itens 1 e 2 fechados na placa em 2026-07-16 pela candidata C21.20.
+Rede aberta comum e o proximo item.
 
 Objetivo: transformar a base transacional ja comprovada em uma jornada curta,
 verdadeira e utilizavel por cliente. A ordem abaixo prioriza maior valor com
@@ -737,9 +737,15 @@ Implementado:
 - status de uma execucao antiga nao pode contaminar o cancelamento atual;
 - quatro redes ficam integralmente visiveis por pagina em retrato.
 
-Aceite local: self-tests, replay completo, galeria visual e verificacao de
-segredo verdes. Fechamento exige pacote homologacao, apply/rollback/reapply e
-captura real na placa. Rede aberta comum continua sendo o item 3.
+Fechamento: self-tests, replay completo, galeria visual e verificacao de
+segredo passaram. O pacote homologation C21.20 passou os gates `84/84`; a
+policy stable o bloqueou; apply, rollback para C21.19 e reaplicacao passaram.
+A captura real mostrou as tres opcoes validas, sem modo de bancada, e a sessao
+visual encerrou sem escrita persistente. Player, timer e policy terminaram
+saudaveis. Evidencia:
+`docs/evidence/c20-totem-core-ota/20260716T160720Z-c21-20-wifi-product-flow-board-e2e/`.
+
+Rede aberta comum continua sendo o item 3.
 
 ## Criterio De Fechamento Da Frente
 

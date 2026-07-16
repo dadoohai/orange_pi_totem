@@ -1,0 +1,2 @@
+e7812eb6737182ab95b0f43259e19d156c74dc5a21553795d5817c26dee060a0  dadooh-totem-core-c21.20-wifi-product-flow-20260716T154014Z-1d36dd3.tar.gz
+25329f346610b843aaa0eeef7f1380308ebab604735876d0905f2ddfdada8136  dadooh-totem-core-c21.20-wifi-product-flow-20260716T154014Z-1d36dd3.manifest.json

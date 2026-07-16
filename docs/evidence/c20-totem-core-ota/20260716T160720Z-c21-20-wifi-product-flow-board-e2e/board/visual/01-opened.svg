@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="1024" viewBox="0 0 768 1024" data-display-rotation-deg="90" data-layout-mode="portrait" role="img" aria-label="Dadooh setup visual wizard">
+  <rect width="768" height="1024" fill="#07111f"/>
+  <rect x="0" y="0" width="768" height="12" fill="#06b6d4"/>
+  <rect x="0" y="12" width="768" height="136" fill="#111827"/>
+  <rect x="48" y="32" width="120" height="38" rx="8" fill="#12324a" stroke="#06b6d4"/>
+  <text x="66" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#f8fafc">Dadooh</text>
+  <text x="188" y="57" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="#94a3b8">Configuracao do Totem</text>
+  <!-- dadooh-connectivity-indicator:start -->
+  <g id="connectivity-indicator" data-transport="unknown" data-wifi-signal="unknown" data-internet="unknown"><rect x="412" y="34" width="76" height="34" rx="8" fill="#172033"/><rect x="421" y="54" width="4" height="6" rx="2" fill="#334155"/><rect x="428" y="50" width="4" height="10" rx="2" fill="#334155"/><rect x="435" y="46" width="4" height="14" rx="2" fill="#334155"/><rect x="442" y="42" width="4" height="18" rx="2" fill="#334155"/><rect x="457" y="41" width="2" height="20" rx="1" fill="#334155"/><rect x="463" y="41" width="20" height="20" rx="6" fill="#64748b"/><text x="470" y="56" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#07111f">?</text></g>
+  <!-- dadooh-connectivity-indicator:end -->
+  <text x="500" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="#94a3b8">16/07/2026 13:04</text>
+  <rect x="48" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="60" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">1. Tela</text>
+  <rect x="180" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="192" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">2. Wi-Fi</text>
+  <rect x="312" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="324" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">3. Amb.</text>
+  <rect x="444" y="86" width="124" height="42" rx="8" fill="#12324a" stroke="#164e63" stroke-width="1"/><rect x="444" y="86" width="6" height="42" rx="3" fill="#64748b"/><text x="456" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">4. Revisao</text>
+  <rect x="576" y="86" width="124" height="42" rx="8" fill="#172033" stroke="#334155" stroke-width="1"/><text x="588" y="114" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">5. Fim</text>
+  <text x="48" y="188" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="#f8fafc">Pronto para concluir</text>
+  <text x="50" y="224" font-family="Arial, DejaVu Sans, sans-serif" font-size="19" fill="#cbd5e1"><tspan x="50" dy="0">Continue para a confirmacao final.</tspan></text>
+  
+  
+  
+  <rect id="info-panel" x="48" y="650" width="672" height="270" rx="8" fill="#151d2a" stroke="#2f3d4a"/>
+  <rect x="48" y="650" width="7" height="270" rx="4" fill="#06b6d4"/>
+  <text x="80" y="690" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="700" fill="#f8fafc">Antes de salvar</text>
+  <rect x="79" y="695" width="10" height="10" rx="3" fill="#22d3ee"/><text x="104" y="708" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="104" dy="0">Tela usa default atual.</tspan></text> <rect x="79" y="749" width="10" height="10" rx="3" fill="#22d3ee"/><text x="104" y="762" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="104" dy="0">Dados privados ocultos.</tspan></text> <rect x="79" y="803" width="10" height="10" rx="3" fill="#22d3ee"/><text x="104" y="816" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" fill="#cbd5e1"><tspan x="104" dy="0">Esc volta.</tspan></text>
+
+  <g data-summary-state="neutral"><rect x="48" y="292" width="672" height="82" rx="8" fill="#111827" stroke="#2f3d4a" stroke-width="2"/><rect x="48" y="292" width="8" height="82" rx="4" fill="#94a3b8"/><text x="80" y="324" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="#94a3b8">Tela</text><text x="80" y="354" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" fill="#94a3b8" font-weight="700"><tspan x="80" dy="0">Retrato para direita (Default)</tspan></text></g>
+  <g data-summary-state="confirmed"><rect x="48" y="386" width="672" height="82" rx="8" fill="#111827" stroke="#2f3d4a" stroke-width="2"/><rect x="48" y="386" width="8" height="82" rx="4" fill="#22c55e"/><text x="80" y="418" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="#94a3b8">Wi-Fi</text><text x="80" y="448" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" fill="#22c55e" font-weight="700"><tspan x="80" dy="0">Wi-Fi atual (mantido)</tspan></text></g>
+  <g data-summary-state="confirmed"><rect x="48" y="480" width="672" height="82" rx="8" fill="#111827" stroke="#2f3d4a" stroke-width="2"/><rect x="48" y="480" width="8" height="82" rx="4" fill="#22c55e"/><text x="80" y="512" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="700" fill="#94a3b8">Ambiente</text><text x="80" y="542" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" fill="#22c55e" font-weight="700"><tspan x="80" dy="0">Ambiente atual (mantido)</tspan></text></g>
+  
+  <rect x="0" y="942" width="768" height="82" fill="#050b14"/>
+  <rect x="0" y="942" width="768" height="3" fill="#164e63"/>
+  <rect x="48" y="960" width="182" height="46" rx="8" fill="#22d3ee"/><text x="70" y="990" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#111827">Enter continua</text> <rect x="238" y="960" width="132" height="46" rx="8" fill="#12324a"/><text x="260" y="990" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#f8fafc">Cima menu</text> <rect x="378" y="960" width="132" height="46" rx="8" fill="#111827"/><text x="400" y="990" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" font-weight="700" fill="#f8fafc">Esc volta</text>
+
+</svg>

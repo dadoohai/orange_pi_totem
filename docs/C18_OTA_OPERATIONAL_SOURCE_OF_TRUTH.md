@@ -825,8 +825,11 @@ podemos escolher entre:
     navegador restrito e fechamento por placa/OTA. Se o navegador exigir
     runtime novo, a dependencia entra na proxima imagem. Nao criar fila
     paralela.
-13. Em 2026-07-16, M9 itens 1 e 2 ficaram verdes off-board: opcoes dinamicas,
-    cancelamento limitado a sessao atual, rede protegida sem confirmacoes
-    repetidas, retry direto e lista retrato sem item oculto. O recorte ainda nao
-    e claim de placa nem release: falta gate final, pacote homologacao e
-    apply/rollback/reapply com evidencia real. Rede aberta permanece o item 3.
+13. Em 2026-07-16, M9 itens 1 e 2 fecharam na placa como C21.20: opcoes
+    dinamicas, cancelamento limitado a sessao atual, rede protegida sem
+    confirmacoes repetidas, retry direto e lista retrato sem item oculto. Os
+    gates passaram `84/84`; stable bloqueou o prerelease; apply, rollback para
+    C21.19, reaplicacao e captura visual real passaram. A placa terminou com
+    player sem restart, policy/timer stable e estado persistente inalterado
+    pela sessao visual. Rede aberta permanece o item 3. Evidencia:
+    `docs/evidence/c20-totem-core-ota/20260716T160720Z-c21-20-wifi-product-flow-board-e2e/`.

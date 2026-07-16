@@ -1,0 +1,2 @@
+2026-07-16T15:57:37Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-16T15:57:37Z ERROR local_manifest_validate_failed err=manifest channel rejected by policy: component='totem-core' channel='homologation' device_channel='stable' reason=channel_incompatible_with_device_policy

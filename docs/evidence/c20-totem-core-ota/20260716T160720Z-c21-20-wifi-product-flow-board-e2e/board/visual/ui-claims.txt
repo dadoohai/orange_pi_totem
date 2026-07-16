@@ -1,0 +1,5 @@
+ethernet_option=true
+configured_wifi_option=true
+choose_wifi_option=true
+bench_option=false
+option_count=3
