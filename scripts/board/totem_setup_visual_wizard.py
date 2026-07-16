@@ -117,6 +117,22 @@ CONNECTIVITY_INDICATOR_TIMEOUT_SEC = 2.0
 CONNECTIVITY_INDICATOR_POLL_SEC = 0.1
 CONNECTIVITY_INDICATOR_START = "<!-- dadooh-connectivity-indicator:start -->"
 CONNECTIVITY_INDICATOR_END = "<!-- dadooh-connectivity-indicator:end -->"
+CONNECTIVITY_INTERNET_STATES = frozenset({"online", "limited", "offline", "unknown"})
+WIFI_FAILURE_CATEGORIES = frozenset(
+    {
+        "none",
+        "timeout",
+        "auth_failed_suspected",
+        "network_not_found_suspected",
+        "signal_or_range_suspected",
+        "dhcp_timeout_suspected",
+        "device_unavailable",
+        "ip_not_acquired",
+        "nm_profile_load_failed",
+        "nm_activation_failed_generic",
+        "unknown",
+    }
+)
 MAX_SCREEN_ARTIFACTS = 64
 MAX_MPV_IPC_REQUEST_ID = 2_147_483_647
 ACTIVE_SETTINGS_CONTEXT_MAX_AGE_SEC = 300
@@ -292,6 +308,22 @@ class ScreenLayout:
     @property
     def portrait(self) -> bool:
         return self.mode == "portrait"
+
+
+@dataclass(frozen=True)
+class ConnectivityPresentation:
+    headline: str
+    detail: str
+    accent: str
+
+
+@dataclass(frozen=True)
+class WifiFailurePresentation:
+    title: str
+    subtitle: str
+    footer: str
+    hint: str
+    retry_mode: str
 
 
 def normalize_rotation_deg(value: int | str) -> int:
@@ -532,16 +564,20 @@ def header_note_position(layout: ScreenLayout) -> tuple[int, int]:
     return layout.width - layout.margin_x - 156, 54
 
 
-def normalize_connectivity_snapshot(snapshot: dict[str, Any] | None) -> dict[str, str]:
+def normalize_connectivity_snapshot(snapshot: dict[str, Any] | None) -> dict[str, Any]:
     raw = snapshot if isinstance(snapshot, dict) else {}
     transport = str(raw.get("transport", "unknown")).strip().lower()
     wifi_signal = str(raw.get("wifi_signal", "unknown")).strip().lower()
     internet = str(raw.get("internet", "unknown")).strip().lower()
+    guardrails = raw.get("guardrails") if isinstance(raw.get("guardrails"), dict) else {}
+    probe_attempted = bool(
+        raw.get("probe_attempted", guardrails.get("external_connectivity_probe", False))
+    )
     if transport not in {"ethernet", "wifi", "none", "unknown"}:
         transport = "unknown"
     if wifi_signal not in {"weak", "medium", "strong", "unknown"} or transport != "wifi":
         wifi_signal = "unknown"
-    if internet not in {"online", "limited", "portal", "offline", "unknown"}:
+    if internet not in CONNECTIVITY_INTERNET_STATES:
         internet = "unknown"
     if transport == "none":
         internet = "offline"
@@ -551,7 +587,128 @@ def normalize_connectivity_snapshot(snapshot: dict[str, Any] | None) -> dict[str
         "transport": transport,
         "wifi_signal": wifi_signal,
         "internet": internet,
+        "probe_attempted": probe_attempted,
+        "source": "dadooh_health_probe" if probe_attempted else "local_network_state",
     }
+
+
+def connectivity_presentation(snapshot: dict[str, Any] | None) -> ConnectivityPresentation:
+    state = normalize_connectivity_snapshot(snapshot)
+    transport = state["transport"]
+    internet = state["internet"]
+    if transport == "ethernet":
+        local = "Ethernet conectada"
+    elif transport == "wifi":
+        local = "Wi-Fi associado"
+    elif transport == "none":
+        return ConnectivityPresentation(
+            "Sem conexao ativa",
+            "Conecte o cabo ou escolha um Wi-Fi.",
+            "#ef4444",
+        )
+    else:
+        return ConnectivityPresentation(
+            "Estado da rede inconclusivo",
+            "Nao foi possivel confirmar agora.",
+            "#64748b",
+        )
+
+    if internet == "online":
+        return ConnectivityPresentation(
+            f"{local} | Dadooh acessivel",
+            (
+                {
+                    "strong": "Sinal Wi-Fi forte.",
+                    "medium": "Sinal Wi-Fi medio.",
+                    "weak": "Sinal Wi-Fi fraco.",
+                }.get(state["wifi_signal"], "Acesso do produto confirmado.")
+                if transport == "wifi"
+                else "Acesso do produto confirmado."
+            ),
+            "#22c55e",
+        )
+    if internet == "limited":
+        return ConnectivityPresentation(
+            local,
+            "Servico Dadooh indisponivel agora.",
+            "#f59e0b",
+        )
+    if internet == "offline":
+        return ConnectivityPresentation(
+            local,
+            "Sem acesso ao servico Dadooh.",
+            "#ef4444",
+        )
+    return ConnectivityPresentation(
+        local,
+        "Acesso ao Dadooh inconclusivo.",
+        "#64748b",
+    )
+
+
+def collect_connectivity_snapshot_now() -> dict[str, Any]:
+    try:
+        snapshot = wifi_adapter.collect_connectivity_indicator(
+            timeout_sec=CONNECTIVITY_INDICATOR_TIMEOUT_SEC,
+        )
+    except Exception:
+        snapshot = None
+    return normalize_connectivity_snapshot(snapshot)
+
+
+def connectivity_snapshot_for_network(
+    network: dict[str, Any],
+    snapshot: dict[str, Any] | None,
+) -> dict[str, Any]:
+    state = normalize_connectivity_snapshot(snapshot)
+    expected_transport = str(network.get("connection_type", "")).strip().lower()
+    observed_transport = state["transport"]
+    if expected_transport not in {"ethernet", "wifi"}:
+        return {
+            **state,
+            "observed_transport": observed_transport,
+        }
+    if observed_transport == expected_transport:
+        return {
+            **state,
+            "observed_transport": observed_transport,
+        }
+    return {
+        "transport": expected_transport,
+        "observed_transport": observed_transport,
+        "wifi_signal": "unknown",
+        "internet": "unknown",
+        "probe_attempted": False,
+        "source": "default_route_transport_mismatch",
+    }
+
+
+def connectivity_snapshot_from_network(network: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "transport": network.get("connectivity_transport", "unknown"),
+        "wifi_signal": network.get("connectivity_wifi_signal", "unknown"),
+        "internet": network.get("connectivity", "unknown"),
+        "probe_attempted": network.get("connectivity_probe_attempted", False),
+    }
+
+
+def apply_connectivity_snapshot(
+    network: dict[str, Any],
+    snapshot: dict[str, Any] | None,
+) -> dict[str, Any]:
+    state = connectivity_snapshot_for_network(network, snapshot)
+    updated = dict(network)
+    updated.update(
+        {
+            "connectivity": state["internet"],
+            "connectivity_transport": state["transport"],
+            "connectivity_observed_transport": state["observed_transport"],
+            "connectivity_wifi_signal": state["wifi_signal"],
+            "connectivity_probe_attempted": state["probe_attempted"],
+            "connectivity_source": state["source"],
+        }
+    )
+    return updated
 
 
 def set_connectivity_indicator_runtime(enabled: bool) -> None:
@@ -735,7 +892,6 @@ def connectivity_indicator_svg(layout: ScreenLayout, snapshot: dict[str, Any] | 
     badge_color, badge_symbol = {
         "online": ("#22c55e", "OK"),
         "limited": ("#f59e0b", "!"),
-        "portal": ("#f59e0b", "!"),
         "offline": ("#ef4444", "X"),
         "unknown": ("#64748b", "?"),
     }[internet]
@@ -1960,11 +2116,17 @@ def choose_option(
     layout_rotation_deg: int = 0,
     initial_selected_index: int = 0,
     initial_focus_area: str = "content",
+    context_provider: Callable[[], tuple[list[str], str, dict[str, Any]]] | None = None,
 ) -> Option | None:
     selected = max(0, min(len(options) - 1, int(initial_selected_index))) if options else 0
     focus_area = "steps" if initial_focus_area == "steps" else "content"
     focused_step = active_step
     while True:
+        rendered_panel_items = panel_items
+        rendered_accent = "#06b6d4"
+        rendered_connectivity: object = _CONNECTIVITY_SNAPSHOT_AUTO
+        if context_provider is not None:
+            rendered_panel_items, rendered_accent, rendered_connectivity = context_provider()
         footer = option_footer(focus_area=focus_area, primary="Enter confirma", allow_back=allow_back)
         display.show(
             screen_id,
@@ -1977,11 +2139,19 @@ def choose_option(
                 footer=footer,
                 options=options,
                 selected_index=selected,
-                panel_items=panel_items,
+                panel_items=rendered_panel_items,
+                accent=rendered_accent,
                 layout_rotation_deg=layout_rotation_deg,
+                connectivity_snapshot=rendered_connectivity,
             ),
         )
-        key = read_key()
+        key = (
+            read_key(timeout_sec=CONNECTIVITY_INDICATOR_REFRESH_SEC)
+            if context_provider is not None
+            else read_key()
+        )
+        if key == "timeout":
+            continue
         if focus_area == "steps":
             if allow_back and key in {"b", "B", "back", "escape"}:
                 return None
@@ -2863,6 +3033,11 @@ def network_defaults(**overrides: Any) -> dict[str, Any]:
         "network_step": "bench_mock",
         "label": "Modo de bancada",
         "connectivity": "not_checked",
+        "connectivity_transport": "unknown",
+        "connectivity_observed_transport": "unknown",
+        "connectivity_wifi_signal": "unknown",
+        "connectivity_probe_attempted": False,
+        "connectivity_source": "not_checked",
         "connected": "unknown",
         "connection_type": "unknown",
         "read_only_check": False,
@@ -2882,6 +3057,8 @@ def network_defaults(**overrides: Any) -> dict[str, Any]:
         "selected_network_present": False,
         "selected_network_signal_bucket": "unknown",
         "selected_network_security_present": "unknown",
+        "failure_category": "none",
+        "previous_profile_available": False,
     }
     payload.update(overrides)
     return payload
@@ -2938,10 +3115,21 @@ def network_review_note(network: dict[str, Any] | None, status: str = "pending")
         "bench_mock": "Bancada",
     }.get(str(network.get("network_step", "")), "Rede")
     if status == "default":
-        return f"{base} (default)"
-    if status == "retained":
-        return f"{base} (mantido)"
-    return base
+        base = f"{base} (default)"
+    elif status == "retained":
+        base = f"{base} (mantido)"
+    connectivity = str(network.get("connectivity", ""))
+    expected_transport = str(network.get("connection_type", ""))
+    claimed_transport = str(network.get("connectivity_transport", ""))
+    if expected_transport in {"ethernet", "wifi"} and claimed_transport != expected_transport:
+        connectivity = "unknown"
+    connectivity_note = {
+        "online": "Dadooh OK",
+        "limited": "Dadooh indisponivel",
+        "offline": "sem acesso",
+        "unknown": "acesso inconclusivo",
+    }.get(connectivity, "")
+    return f"{base} | {connectivity_note}" if connectivity_note else base
 
 
 def environment_review_note(
@@ -3253,6 +3441,14 @@ def apply_wifi_refresh_result(
     return [], 0, "Falha na atualizacao."
 
 
+def effective_wifi_list_status(scan_status: str, networks: list[dict[str, Any]]) -> str:
+    if scan_status == "ok":
+        return "ok"
+    if networks:
+        return "cached"
+    return "unavailable"
+
+
 def wifi_list_screen_svg(
     *,
     networks: list[dict[str, Any]],
@@ -3276,26 +3472,51 @@ def wifi_list_screen_svg(
         selected_line = f"Rede {selected_index + 1} de {len(networks)}"
         selected_network = networks[max(0, min(len(networks) - 1, selected_index))]
         primary_action = "Enter conecta" if selected_network.get("security_present") is False else "Enter escolhe"
+        footer = f"{primary_action} | Setas rolam | R atualiza | Esc volta"
     else:
         position = "Nenhuma rede encontrada"
         selected_line = "Use R para atualizar"
         primary_action = "Enter atualiza"
-    updated_line = "Atualizando..." if refreshing else f"Atualizado ha {max(0, updated_age_sec)}s"
+        footer = "Enter atualiza | R atualiza | Esc volta"
+    cached = list_status == "cached"
+    unavailable = list_status not in {"ok", "cached"}
+    if refreshing:
+        subtitle = "Atualizando redes locais."
+    elif cached:
+        subtitle = "Lista anterior. Ultima lista disponivel."
+    elif unavailable:
+        subtitle = "Lista indisponivel. Tente atualizar."
+    else:
+        subtitle = f"Atualizada ha {max(0, updated_age_sec)}s. Sinal e seguranca."
+    panel_message = refresh_message
+    if cached:
+        panel_message = "Atualizacao falhou."
+    elif not networks and "Nenhuma rede encontrada" in panel_message:
+        panel_message = "Tente atualizar a lista."
     panel_items = [
         position,
         selected_line,
-        refresh_message or (f"Pagina {page_index + 1} de {page_count}" if networks else "Pagina 0 de 0"),
+        panel_message or (f"Pagina {page_index + 1} de {page_count}" if networks else "Pagina 0 de 0"),
     ]
+    attention = bool(refresh_message and "saiu da lista" in refresh_message)
+    if refreshing or cached or attention:
+        accent = "#f59e0b"
+    elif unavailable:
+        accent = "#ef4444"
+    elif networks:
+        accent = "#06b6d4"
+    else:
+        accent = "#64748b"
     return build_screen_svg(
         active_step=1,
         title="Selecionar Wi-Fi",
-        subtitle=f"{updated_line}. Sinal e seguranca.",
-        footer=f"{primary_action} | Setas rolam | R atualiza | Esc volta",
+        subtitle=subtitle,
+        footer=footer,
         options=options,
         selected_index=selected_on_page,
         panel_title="Lista local",
         panel_items=panel_items,
-        accent="#f59e0b" if refreshing else ("#ef4444" if not networks else "#06b6d4"),
+        accent=accent,
         layout_rotation_deg=layout_rotation_deg,
     )
 
@@ -3317,20 +3538,115 @@ def wifi_connecting_screen_svg(*, layout_rotation_deg: int, security_present: bo
     )
 
 
-def wifi_success_screen_svg(*, layout_rotation_deg: int) -> str:
+def wifi_success_screen_svg(
+    *,
+    layout_rotation_deg: int,
+    connectivity_snapshot: dict[str, Any] | None = None,
+) -> str:
+    presentation = connectivity_presentation(connectivity_snapshot)
+    state = normalize_connectivity_snapshot(connectivity_snapshot)
+    if state["internet"] == "online":
+        subtitle = "Rede salva e servico Dadooh acessivel."
+        panel_title = "Pronto"
+    elif state["internet"] == "limited":
+        subtitle = "Rede salva; servico Dadooh indisponivel."
+        panel_title = "Conexao local pronta"
+    elif state["internet"] == "offline":
+        subtitle = "Rede salva; sem acesso ao servico Dadooh."
+        panel_title = "Conexao local pronta"
+    else:
+        subtitle = "Rede salva; acesso ao Dadooh inconclusivo."
+        panel_title = "Conexao local pronta"
     return build_screen_svg(
         active_step=1,
         title="Wi-Fi conectado",
-        subtitle="A rede foi salva neste totem.",
+        subtitle=subtitle,
         footer="Avancando... | Enter continua",
-        panel_title="Pronto",
+        panel_title=panel_title,
         panel_items=[
             "Endereco de rede recebido.",
             "Reconexao automatica ativa.",
-            "Internet ainda nao verificada.",
+            presentation.detail,
         ],
-        accent="#22c55e",
+        accent=presentation.accent if state["internet"] != "offline" else "#f59e0b",
         layout_rotation_deg=layout_rotation_deg,
+        connectivity_snapshot=state,
+    )
+
+
+def normalize_wifi_failure_category(value: Any) -> str:
+    category = str(value or "unknown").strip().lower()
+    return category if category in WIFI_FAILURE_CATEGORIES else "unknown"
+
+
+def wifi_failure_presentation(
+    *,
+    failure_category: Any,
+    security_present: bool,
+) -> WifiFailurePresentation:
+    category = normalize_wifi_failure_category(failure_category)
+    if category == "auth_failed_suspected" and security_present:
+        return WifiFailurePresentation(
+            "Autenticacao nao concluida",
+            "Confira a senha e tente novamente.",
+            "Enter corrige senha | Esc troca rede",
+            "Senha mantida para corrigir.",
+            "edit_password",
+        )
+    if category == "timeout":
+        return WifiFailurePresentation(
+            "Tempo de conexao esgotado",
+            "A rede nao respondeu no tempo esperado.",
+            "Enter tenta novamente | Esc troca rede",
+            "Contexto mantido para repetir.",
+            "retry_direct",
+        )
+    if category == "network_not_found_suspected":
+        return WifiFailurePresentation(
+            "Rede nao disponivel",
+            "A rede saiu do alcance ou nao esta disponivel.",
+            "Enter tenta novamente | Esc troca rede",
+            "Selecao mantida para repetir.",
+            "retry_direct",
+        )
+    if category == "signal_or_range_suspected":
+        return WifiFailurePresentation(
+            "Sinal insuficiente",
+            "Aproxime o totem ou tente novamente.",
+            "Enter tenta novamente | Esc troca rede",
+            "Selecao mantida para repetir.",
+            "retry_direct",
+        )
+    if category in {"dhcp_timeout_suspected", "ip_not_acquired"}:
+        return WifiFailurePresentation(
+            "Wi-Fi sem endereco de rede",
+            "A rede nao forneceu um endereco IP.",
+            "Enter tenta novamente | Esc troca rede",
+            "Conexao local nao ficou pronta.",
+            "retry_direct",
+        )
+    if category == "device_unavailable":
+        return WifiFailurePresentation(
+            "Wi-Fi indisponivel",
+            "O adaptador Wi-Fi nao esta disponivel agora.",
+            "Enter tenta novamente | Esc troca rede",
+            "Tente novamente apos alguns segundos.",
+            "retry_direct",
+        )
+    if category == "nm_profile_load_failed":
+        return WifiFailurePresentation(
+            "Conexao nao preparada",
+            "Nao foi possivel preparar a rede com seguranca.",
+            "Enter tenta novamente | Esc troca rede",
+            "Nenhuma conexao incompleta foi mantida.",
+            "retry_direct",
+        )
+    return WifiFailurePresentation(
+        "Wi-Fi nao conectado",
+        "Tente novamente ou escolha outra rede.",
+        "Enter tenta novamente | Esc troca rede",
+        "Contexto mantido para repetir.",
+        "retry_direct",
     )
 
 
@@ -3339,30 +3655,29 @@ def wifi_failure_screen_svg(
     restored: bool,
     security_present: bool,
     layout_rotation_deg: int,
+    failure_category: Any = "nm_activation_failed_generic",
+    previous_profile_available: bool = False,
 ) -> str:
-    if security_present:
-        subtitle = "A rede anterior foi restaurada." if restored else "Confira a senha ou escolha outra rede."
-        footer = "Enter corrige senha | Esc troca rede"
-        panel_items = (
-            ["Rede anterior restaurada.", "Senha mantida para corrigir.", "Ethernet nao foi alterado."]
-            if restored
-            else ["Senha mantida para corrigir.", "Pode escolher outra rede.", "Ethernet nao foi alterado."]
-        )
+    presentation = wifi_failure_presentation(
+        failure_category=failure_category,
+        security_present=security_present,
+    )
+    if restored:
+        restoration = "Wi-Fi anterior restaurado."
+    elif previous_profile_available:
+        restoration = "Wi-Fi anterior nao confirmado."
     else:
-        subtitle = "A rede anterior foi restaurada." if restored else "Tente novamente ou escolha outra rede."
-        footer = "Enter tenta novamente | Esc troca rede"
-        panel_items = (
-            ["Rede anterior restaurada.", "Nenhuma senha foi solicitada.", "Ethernet nao foi alterado."]
-            if restored
-            else ["Rede aberta, sem senha.", "Pode tentar novamente.", "Ethernet nao foi alterado."]
-        )
+        restoration = "Nenhum Wi-Fi anterior foi removido."
+    hint = presentation.hint
+    if not security_present:
+        hint = "Rede aberta, sem senha."
     return build_screen_svg(
         active_step=1,
-        title="Nova rede nao conectada" if restored else "Wi-Fi nao conectado",
-        subtitle=subtitle,
-        footer=footer,
-        panel_title="Sem conexao",
-        panel_items=panel_items,
+        title=presentation.title,
+        subtitle=presentation.subtitle,
+        footer=presentation.footer,
+        panel_title="Recuperacao",
+        panel_items=[hint, restoration, "Ethernet nao foi alterado."],
         accent="#ef4444",
         layout_rotation_deg=layout_rotation_deg,
     )
@@ -3397,14 +3712,16 @@ def choose_wifi_network(
     initial_selected_security_present: bool | str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
     if initial_networks is None:
-        networks, list_status = wifi_adapter.list_wifi_networks_for_local_ui(
+        networks, scan_status = wifi_adapter.list_wifi_networks_for_local_ui(
             timeout_sec=WIFI_LIST_TIMEOUT_SEC,
             rescan=True,
         )
         refresh_message = ""
+        list_status = effective_wifi_list_status(scan_status, networks)
     else:
         networks = list(initial_networks)
-        list_status = "ok"
+        scan_status = "cached"
+        list_status = "cached"
         refresh_message = "Lista anterior mantida."
     page_size = wifi_list_page_size(layout_rotation_deg)
     selected_index = 0
@@ -3418,7 +3735,8 @@ def choose_wifi_network(
             if same_ssid and same_security:
                 selected_index = index
                 break
-    last_refresh = time.monotonic()
+    last_refresh_attempt = time.monotonic()
+    last_successful_refresh = last_refresh_attempt if scan_status == "ok" else None
     needs_render = True
     while True:
         now = time.monotonic()
@@ -3429,14 +3747,14 @@ def choose_wifi_network(
                     networks=networks,
                     selected_index=selected_index,
                     list_status=list_status,
-                    updated_age_sec=int(now - last_refresh),
+                    updated_age_sec=int(now - (last_successful_refresh or last_refresh_attempt)),
                     refresh_message=refresh_message,
                     layout_rotation_deg=layout_rotation_deg,
                 ),
             )
             needs_render = False
 
-        wait_sec = max(0.0, WIFI_LIST_REFRESH_SEC - (time.monotonic() - last_refresh))
+        wait_sec = max(0.0, WIFI_LIST_REFRESH_SEC - (time.monotonic() - last_refresh_attempt))
         key = read_key(timeout_sec=wait_sec)
         if key == "timeout":
             display.show(
@@ -3445,7 +3763,7 @@ def choose_wifi_network(
                     networks=networks,
                     selected_index=selected_index,
                     list_status=list_status,
-                    updated_age_sec=int(time.monotonic() - last_refresh),
+                    updated_age_sec=int(time.monotonic() - (last_successful_refresh or last_refresh_attempt)),
                     refresh_message="Atualizacao automatica.",
                     layout_rotation_deg=layout_rotation_deg,
                     refreshing=True,
@@ -3461,8 +3779,11 @@ def choose_wifi_network(
                 refreshed_status,
                 selected_index,
             )
-            list_status = refreshed_status
-            last_refresh = time.monotonic()
+            refreshed_at = time.monotonic()
+            if refreshed_status == "ok":
+                last_successful_refresh = refreshed_at
+            list_status = effective_wifi_list_status(refreshed_status, networks)
+            last_refresh_attempt = refreshed_at
             needs_render = True
             continue
         if key in {"r", "R"}:
@@ -3472,7 +3793,7 @@ def choose_wifi_network(
                     networks=networks,
                     selected_index=selected_index,
                     list_status=list_status,
-                    updated_age_sec=int(time.monotonic() - last_refresh),
+                    updated_age_sec=int(time.monotonic() - (last_successful_refresh or last_refresh_attempt)),
                     refresh_message="Atualizacao manual.",
                     layout_rotation_deg=layout_rotation_deg,
                     refreshing=True,
@@ -3488,8 +3809,11 @@ def choose_wifi_network(
                 refreshed_status,
                 selected_index,
             )
-            list_status = refreshed_status
-            last_refresh = time.monotonic()
+            refreshed_at = time.monotonic()
+            if refreshed_status == "ok":
+                last_successful_refresh = refreshed_at
+            list_status = effective_wifi_list_status(refreshed_status, networks)
+            last_refresh_attempt = refreshed_at
             needs_render = True
             continue
         if key in {"up", "left"} and networks:
@@ -3521,7 +3845,7 @@ def choose_wifi_network(
                     networks=networks,
                     selected_index=selected_index,
                     list_status=list_status,
-                    updated_age_sec=int(time.monotonic() - last_refresh),
+                    updated_age_sec=int(time.monotonic() - (last_successful_refresh or last_refresh_attempt)),
                     refresh_message="Atualizacao manual.",
                     layout_rotation_deg=layout_rotation_deg,
                     refreshing=True,
@@ -3537,8 +3861,11 @@ def choose_wifi_network(
                 refreshed_status,
                 selected_index,
             )
-            list_status = refreshed_status
-            last_refresh = time.monotonic()
+            refreshed_at = time.monotonic()
+            if refreshed_status == "ok":
+                last_successful_refresh = refreshed_at
+            list_status = effective_wifi_list_status(refreshed_status, networks)
+            last_refresh_attempt = refreshed_at
             needs_render = True
             continue
         if key in {"b", "B", "back", "escape"}:
@@ -3601,6 +3928,8 @@ def wifi_network_from_status(
         connected="yes" if success else ("no" if activation_result in {"failure", "timeout"} else "unknown"),
         connection_type="wifi",
         connectivity="not_checked",
+        failure_category=normalize_wifi_failure_category(adapter_status.get("failure_category")),
+        previous_profile_available=bool(adapter_status.get("wifi_profile_replaced", False)),
         read_only_check=False,
         wifi_real_test_attempted=bool(adapter_status.get("wifi_activation_attempted", False)),
         wifi_activation_result=activation_result,
@@ -3753,9 +4082,10 @@ def run_wifi_persistent(
         selected_security_present = next_security_present
         selection_metadata = wifi_adapter.wifi_selection_public_metadata(networks, selected_network)
         security_present = selected_network.get("security_present") is not False
+        prompt_for_password = security_present
 
         while True:
-            if security_present:
+            if security_present and prompt_for_password:
                 entered_psk = collect_wifi_password(
                     display,
                     selected_network=selected_network,
@@ -3775,9 +4105,17 @@ def run_wifi_persistent(
                 layout_rotation_deg=layout_rotation_deg,
             )
             if network["wifi_link_ready"]:
+                network = apply_connectivity_snapshot(
+                    network,
+                    collect_connectivity_snapshot_now(),
+                )
+                connectivity_snapshot = connectivity_snapshot_from_network(network)
                 display.show(
                     "02-wifi-result",
-                    wifi_success_screen_svg(layout_rotation_deg=layout_rotation_deg),
+                    wifi_success_screen_svg(
+                        layout_rotation_deg=layout_rotation_deg,
+                        connectivity_snapshot=connectivity_snapshot,
+                    ),
                 )
                 wait_enter_or_timeout(WIFI_SUCCESS_AUTO_ADVANCE_SEC)
                 return network
@@ -3789,10 +4127,19 @@ def run_wifi_persistent(
                     restored=restored,
                     security_present=security_present,
                     layout_rotation_deg=layout_rotation_deg,
+                    failure_category=network["failure_category"],
+                    previous_profile_available=bool(network["previous_profile_available"]),
                 ),
             )
             action = read_advertised_action("enter", "b", "B", "back", "escape")
             if action == "enter":
+                prompt_for_password = (
+                    wifi_failure_presentation(
+                        failure_category=network["failure_category"],
+                        security_present=security_present,
+                    ).retry_mode
+                    == "edit_password"
+                )
                 continue
             break
 
@@ -3885,10 +4232,14 @@ def build_visual_status(
         "network": {
             "network_step": network["network_step"],
             "connectivity": network["connectivity"],
+            "connectivity_transport": network["connectivity_transport"],
+            "connectivity_observed_transport": network["connectivity_observed_transport"],
+            "connectivity_wifi_signal": network["connectivity_wifi_signal"],
+            "connectivity_source": network["connectivity_source"],
             "connected": network["connected"],
             "connection_type": network["connection_type"],
             "read_only_check": network["read_only_check"],
-            "internet_external_check": False,
+            "internet_external_check": network["connectivity_probe_attempted"],
             "wifi_real_test_attempted": network["wifi_real_test_attempted"],
             "wifi_activation_result": network["wifi_activation_result"],
             "wifi_link_ready": network["wifi_link_ready"],
@@ -3903,6 +4254,7 @@ def build_visual_status(
             "selected_network_present": network["selected_network_present"],
             "selected_network_signal_bucket": network["selected_network_signal_bucket"],
             "selected_network_security_present": network["selected_network_security_present"],
+            "failure_category": network["failure_category"],
             "ssid_written_to_public_status": False,
             "password_written_to_public_status": False,
             "ip_written_to_public_status": False,
@@ -4004,8 +4356,14 @@ def build_visual_summary(status: dict[str, Any]) -> str:
             f"orientation_layout_mode: {status['orientation']['wizard_layout_mode']}",
             f"network_step: {status['network']['network_step']}",
             f"connectivity: {status['network']['connectivity']}",
+            f"connectivity_transport: {status['network']['connectivity_transport']}",
+            f"connectivity_observed_transport: {status['network']['connectivity_observed_transport']}",
+            f"connectivity_wifi_signal: {status['network']['connectivity_wifi_signal']}",
+            f"connectivity_source: {status['network']['connectivity_source']}",
+            f"internet_external_check: {str(status['network']['internet_external_check']).lower()}",
             f"connection_type: {status['network']['connection_type']}",
             f"wifi_activation_result: {status['network']['wifi_activation_result']}",
+            f"failure_category: {status['network']['failure_category']}",
             f"rollback_after_test: {status['network']['rollback_after_test']}",
             f"dedicated_profile_present_final: {status['network']['dedicated_profile_present_final']}",
             f"dedicated_profile_persistent: {str(status['network']['dedicated_profile_persistent']).lower()}",
@@ -5451,6 +5809,45 @@ def run_visual_wizard(
 
                     if active_step == 1:
                         c1523_phase("wifi_step_entered", mode="selection")
+                        display.show(
+                            "02-connection-check",
+                            build_screen_svg(
+                                active_step=1,
+                                title="Verificando conexao",
+                                subtitle="Confirmando rede local e acesso Dadooh.",
+                                footer="Aguarde...",
+                                panel_title="Leitura segura",
+                                panel_items=[
+                                    "Sem alterar a rede.",
+                                    "Sem teste de velocidade.",
+                                    "Resultado em poucos segundos.",
+                                ],
+                                accent="#f59e0b",
+                                layout_rotation_deg=layout_rotation_deg,
+                            ),
+                        )
+                        connectivity_context: dict[str, Any] = {
+                            "snapshot": collect_connectivity_snapshot_now(),
+                            "collected_at": time.monotonic(),
+                        }
+
+                        def connection_context_provider() -> tuple[list[str], str, dict[str, Any]]:
+                            now = time.monotonic()
+                            if now - float(connectivity_context["collected_at"]) >= CONNECTIVITY_INDICATOR_REFRESH_SEC:
+                                connectivity_context["snapshot"] = collect_connectivity_snapshot_now()
+                                connectivity_context["collected_at"] = now
+                            snapshot = normalize_connectivity_snapshot(connectivity_context["snapshot"])
+                            copy = connectivity_presentation(snapshot)
+                            return (
+                                [
+                                    copy.headline,
+                                    copy.detail,
+                                    "Nova rede com rollback.",
+                                ],
+                                copy.accent,
+                                snapshot,
+                            )
+
                         network_options = current_network_options()
                         has_verified_current = any(
                             option.key in {"configured_wifi", "ethernet"} for option in network_options
@@ -5466,17 +5863,14 @@ def run_visual_wizard(
                                 else "Escolha uma rede Wi-Fi para conectar."
                             ),
                             options=network_options,
-                            panel_items=[
-                                "Conexao atual verificada." if has_verified_current else "Lista de redes locais.",
-                                "Nova rede com rollback.",
-                                "Senha somente quando necessaria.",
-                            ],
+                            panel_items=connection_context_provider()[0],
                             layout_rotation_deg=layout_rotation_deg,
                             initial_selected_index=network_option_index_for_step(
                                 state.network.get("network_step") if state.network else None,
                                 network_options,
                             ),
                             initial_focus_area=entry_focus_area,
+                            context_provider=connection_context_provider,
                         )
                         if selected_network is None:
                             active_step = 0
@@ -5484,10 +5878,16 @@ def run_visual_wizard(
                             continue
                         try:
                             if selected_network.key == "configured_wifi":
-                                state.network = use_configured_wifi_network()
+                                state.network = apply_connectivity_snapshot(
+                                    use_configured_wifi_network(),
+                                    collect_connectivity_snapshot_now(),
+                                )
                                 c1523_phase("wifi_step_done", network_step="existing_configured_wifi")
                             elif selected_network.key == "ethernet":
-                                state.network = use_ethernet_network()
+                                state.network = apply_connectivity_snapshot(
+                                    use_ethernet_network(),
+                                    collect_connectivity_snapshot_now(),
+                                )
                                 c1523_phase("wifi_step_done", network_step="existing_ethernet")
                             elif selected_network.key == "wifi_select":
                                 maybe_network = run_wifi_persistent(display, out_dir, layout_rotation_deg=layout_rotation_deg)
@@ -5687,6 +6087,12 @@ def run_visual_wizard(
 
 def generate_preview_screens(out_dir: pathlib.Path) -> None:
     display = VisualDisplay(out_dir, enabled=False)
+    preview_connectivity = {
+        "transport": "ethernet",
+        "wifi_signal": "unknown",
+        "internet": "online",
+    }
+    preview_connectivity_copy = connectivity_presentation(preview_connectivity)
     display.show(
         "01-orientation",
         build_screen_svg(
@@ -5768,11 +6174,12 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
             ),
             selected_index=0,
             panel_items=[
-                "Conexao atual verificada.",
+                preview_connectivity_copy.headline,
+                preview_connectivity_copy.detail,
                 "Nova rede com rollback.",
-                "Senha somente quando necessaria.",
             ],
             layout_rotation_deg=90,
+            connectivity_snapshot=preview_connectivity,
         ),
     )
     preview_networks = synthetic_wifi_networks_for_preview()
@@ -6431,6 +6838,8 @@ def run_self_test() -> None:
                     "wifi_link_ready": False,
                     "ip_acquired": False,
                     "network_changed": True,
+                    "wifi_profile_replaced": True,
+                    "failure_category": "auth_failed_suspected",
                     "rollback_status": "previous_profile_restored",
                     "previous_profile_restored": True,
                 },
@@ -6442,6 +6851,11 @@ def run_self_test() -> None:
                 restored_wifi["previous_profile_restored"] is True,
                 "failed replacement should disclose that the prior network was preserved",
             )
+            assert_true(
+                restored_wifi["failure_category"] == "auth_failed_suspected"
+                and restored_wifi["previous_profile_available"] is True,
+                "sanitized adapter diagnosis and prior-profile presence should reach recovery UX",
+            )
         finally:
             globals()["dedicated_profile_present"] = original_profile_present
 
@@ -6451,6 +6865,7 @@ def run_self_test() -> None:
         original_apply_wifi_attempt = globals()["apply_wifi_persistent_attempt"]
         original_read_advertised_action = globals()["read_advertised_action"]
         original_wait_enter_or_timeout = globals()["wait_enter_or_timeout"]
+        original_collect_connectivity_snapshot_now = globals()["collect_connectivity_snapshot_now"]
         retry_password_inputs: list[str] = []
         retry_apply_count = 0
         retry_networks = [
@@ -6512,6 +6927,7 @@ def run_self_test() -> None:
                 wifi_link_ready=retry_apply_count == 2,
                 previous_profile_restored=retry_apply_count == 1,
                 network_changed=True,
+                failure_category="none" if retry_apply_count == 2 else "timeout",
             )
 
         try:
@@ -6520,6 +6936,9 @@ def run_self_test() -> None:
             globals()["apply_wifi_persistent_attempt"] = fake_apply_wifi_persistent_attempt
             globals()["read_advertised_action"] = lambda *keys: "enter"
             globals()["wait_enter_or_timeout"] = lambda timeout_sec: None
+            globals()["collect_connectivity_snapshot_now"] = lambda: normalize_connectivity_snapshot(
+                {"transport": "wifi", "wifi_signal": "strong", "internet": "online"}
+            )
             retried_network = run_wifi_persistent(
                 retry_display,
                 root / "wifi-retry-output",
@@ -6531,14 +6950,15 @@ def run_self_test() -> None:
             globals()["apply_wifi_persistent_attempt"] = original_apply_wifi_attempt
             globals()["read_advertised_action"] = original_read_advertised_action
             globals()["wait_enter_or_timeout"] = original_wait_enter_or_timeout
+            globals()["collect_connectivity_snapshot_now"] = original_collect_connectivity_snapshot_now
             retry_display.stop()
         assert_true(
             retried_network is not None and retried_network["wifi_link_ready"] is True,
             "direct retry should advance after the corrected attempt succeeds",
         )
         assert_true(
-            retry_apply_count == 2 and retry_password_inputs == ["", synthetic_password],
-            "failed Wi-Fi retry should not force the user to repeat selection or password entry",
+            retry_apply_count == 2 and retry_password_inputs == [""],
+            "non-auth Wi-Fi retry should reuse the in-memory password without reopening its field",
         )
 
         open_retry_display = VisualDisplay(root / "open-wifi-retry-flow", enabled=False)
@@ -6609,6 +7029,7 @@ def run_self_test() -> None:
                 network_changed=True,
                 credentials_collected=False,
                 selected_network_security_present=False,
+                failure_category="none" if open_retry_apply_count == 2 else "timeout",
             )
 
         try:
@@ -6617,6 +7038,9 @@ def run_self_test() -> None:
             globals()["apply_wifi_persistent_attempt"] = fake_apply_open_wifi
             globals()["read_advertised_action"] = lambda *keys: "enter"
             globals()["wait_enter_or_timeout"] = lambda timeout_sec: None
+            globals()["collect_connectivity_snapshot_now"] = lambda: normalize_connectivity_snapshot(
+                {"transport": "wifi", "wifi_signal": "strong", "internet": "online"}
+            )
             open_retried_network = run_wifi_persistent(
                 open_retry_display,
                 root / "open-wifi-retry-output",
@@ -6628,6 +7052,7 @@ def run_self_test() -> None:
             globals()["apply_wifi_persistent_attempt"] = original_apply_wifi_attempt
             globals()["read_advertised_action"] = original_read_advertised_action
             globals()["wait_enter_or_timeout"] = original_wait_enter_or_timeout
+            globals()["collect_connectivity_snapshot_now"] = original_collect_connectivity_snapshot_now
             open_retry_display.stop()
         assert_true(
             open_retried_network is not None and open_retried_network["wifi_link_ready"] is True,
@@ -6642,8 +7067,8 @@ def run_self_test() -> None:
             for path in (root / "open-wifi-retry-flow" / "screens").glob("*.svg")
         )
         assert_true(
-            "Nenhuma senha foi" in open_retry_text
-            and "solicitada." in open_retry_text
+            "Rede aberta, sem" in open_retry_text
+            and "senha." in open_retry_text
             and "Enter corrige senha" not in open_retry_text
             and "Senha mantida para corrigir" not in open_retry_text,
             "open Wi-Fi failure copy must remain passwordless",
@@ -6781,6 +7206,45 @@ def run_self_test() -> None:
             )
         finally:
             globals()["read_key"] = original_action_read_key
+        original_choose_read_key = globals()["read_key"]
+        dynamic_choice_display = VisualDisplay(root / "dynamic-network-choice", enabled=False)
+        dynamic_context_states = iter(
+            (
+                {"transport": "ethernet", "internet": "online"},
+                {"transport": "none", "internet": "offline"},
+            )
+        )
+        dynamic_choice_keys = iter(("timeout", "enter"))
+        dynamic_context_calls = 0
+
+        def dynamic_choice_context() -> tuple[list[str], str, dict[str, Any]]:
+            nonlocal dynamic_context_calls
+            dynamic_context_calls += 1
+            snapshot = next(dynamic_context_states)
+            copy = connectivity_presentation(snapshot)
+            return [copy.headline, copy.detail], copy.accent, normalize_connectivity_snapshot(snapshot)
+
+        try:
+            globals()["read_key"] = lambda timeout_sec=None: next(dynamic_choice_keys)
+            dynamic_choice = choose_option(
+                dynamic_choice_display,
+                screen_id="dynamic-network-choice",
+                active_step=1,
+                title="Wi-Fi",
+                subtitle="Estado atual da conexao.",
+                options=[ETHERNET_OPTION],
+                panel_items=["Leitura pendente."],
+                context_provider=dynamic_choice_context,
+            )
+            assert_true(
+                dynamic_choice == ETHERNET_OPTION
+                and dynamic_context_calls == 2
+                and "Sem conexao ativa" in dynamic_choice_display.current_svg
+                and 'data-internet="offline"' in dynamic_choice_display.current_svg,
+                "an idle network choice should refresh its panel and header before accepting input",
+            )
+        finally:
+            globals()["read_key"] = original_choose_read_key
         original_review_read_key = globals()["read_key"]
         review_display = VisualDisplay(root / "review-key-contract", enabled=False)
         review_keys = iter(("right", "tab", "down", "enter"))
@@ -7077,6 +7541,119 @@ def run_self_test() -> None:
         assert_true('data-internet="limited"' in wifi_limited_svg, "limited state should be explicit")
         assert_true('x="412" y="34" width="76" height="34"' in wifi_limited_svg, "portrait indicator should fit before the clock")
         assert_true("#f59e0b" in wifi_limited_svg and ">!</text>" in wifi_limited_svg, "limited should not rely on color alone")
+        portal_is_unknown = normalize_connectivity_snapshot(
+            {"transport": "wifi", "wifi_signal": "strong", "internet": "portal"}
+        )
+        assert_true(
+            portal_is_unknown["internet"] == "unknown",
+            "portal must remain outside the accepted M9.4-6 connectivity contract",
+        )
+        probed_snapshot = normalize_connectivity_snapshot(
+            {
+                "transport": "wifi",
+                "wifi_signal": "strong",
+                "internet": "online",
+                "guardrails": {"external_connectivity_probe": True},
+            }
+        )
+        assert_true(
+            probed_snapshot["probe_attempted"] is True
+            and probed_snapshot["source"] == "dadooh_health_probe",
+            "a bounded product probe should remain explicit in the sanitized contract",
+        )
+        connectivity_cases = (
+            (
+                {"transport": "ethernet", "internet": "online"},
+                "Ethernet conectada | Dadooh acessivel",
+                "#22c55e",
+            ),
+            (
+                {"transport": "wifi", "wifi_signal": "medium", "internet": "online"},
+                "Wi-Fi associado | Dadooh acessivel",
+                "#22c55e",
+            ),
+            (
+                {"transport": "wifi", "wifi_signal": "weak", "internet": "limited"},
+                "Wi-Fi associado",
+                "#f59e0b",
+            ),
+            (
+                {"transport": "none", "internet": "online"},
+                "Sem conexao ativa",
+                "#ef4444",
+            ),
+            (
+                {"transport": "unknown", "internet": "online"},
+                "Estado da rede inconclusivo",
+                "#64748b",
+            ),
+        )
+        for connectivity_case, expected_headline, expected_accent in connectivity_cases:
+            presentation = connectivity_presentation(connectivity_case)
+            assert_true(
+                presentation.headline == expected_headline and presentation.accent == expected_accent,
+                f"connectivity copy should stay truthful for {connectivity_case}",
+            )
+        connected_network = apply_connectivity_snapshot(
+            network_defaults(
+                network_step="existing_configured_wifi",
+                connection_type="wifi",
+            ),
+            probed_snapshot,
+        )
+        assert_true(
+            connected_network["connectivity"] == "online"
+            and connected_network["connectivity_transport"] == "wifi"
+            and connected_network["connectivity_observed_transport"] == "wifi"
+            and connected_network["connectivity_wifi_signal"] == "strong"
+            and connected_network["connectivity_probe_attempted"] is True,
+            "sanitized connectivity should reach the selected network contract",
+        )
+        mismatched_network = apply_connectivity_snapshot(
+            network_defaults(
+                network_step="wifi_persistent",
+                connection_type="wifi",
+                wifi_link_ready=True,
+            ),
+            {
+                "transport": "ethernet",
+                "internet": "online",
+                "guardrails": {"external_connectivity_probe": True},
+            },
+        )
+        mismatched_success_svg = wifi_success_screen_svg(
+            layout_rotation_deg=0,
+            connectivity_snapshot=connectivity_snapshot_from_network(mismatched_network),
+        )
+        assert_true(
+            mismatched_network["connectivity"] == "unknown"
+            and mismatched_network["connectivity_transport"] == "wifi"
+            and mismatched_network["connectivity_observed_transport"] == "ethernet"
+            and mismatched_network["connectivity_probe_attempted"] is False
+            and mismatched_network["connectivity_source"] == "default_route_transport_mismatch",
+            "a default-route probe must never be attributed to a different selected transport",
+        )
+        assert_true(
+            'data-transport="wifi"' in mismatched_success_svg
+            and 'data-internet="unknown"' in mismatched_success_svg
+            and "servico Dadooh acessivel" not in mismatched_success_svg
+            and "Dadooh OK" not in network_review_note(mismatched_network),
+            "success, header and review must share the same transport-scoped connectivity claim",
+        )
+        offline_success_svg = wifi_success_screen_svg(
+            layout_rotation_deg=0,
+            connectivity_snapshot={
+                "transport": "wifi",
+                "wifi_signal": "strong",
+                "internet": "offline",
+            },
+        )
+        assert_true(
+            'data-internet="offline"' in offline_success_svg
+            and "sem acesso ao servico Dadooh" in offline_success_svg
+            and "acesso ao Dadooh inconclusivo" not in offline_success_svg,
+            "offline Wi-Fi success should not be described as an inconclusive product check",
+        )
         offline_svg = connectivity_indicator_svg(
             screen_layout(0),
             {"transport": "none", "wifi_signal": "strong", "internet": "online"},
@@ -8051,6 +8628,84 @@ def run_self_test() -> None:
         failed_networks, failed_index, failed_message = apply_wifi_refresh_result(page_fixture[:3], [], "timeout", 1)
         assert_true(failed_networks == page_fixture[:3], "failed refresh should keep last valid list")
         assert_true(failed_index == 1 and "lista anterior" in failed_message, "failed refresh should keep safe selection")
+        assert_true(
+            effective_wifi_list_status("timeout", failed_networks) == "cached"
+            and effective_wifi_list_status("timeout", []) == "unavailable"
+            and effective_wifi_list_status("ok", []) == "ok",
+            "Wi-Fi list state should distinguish a valid empty scan from stale cache and scan failure",
+        )
+        cached_list_svg = wifi_list_screen_svg(
+            networks=failed_networks,
+            selected_index=failed_index,
+            list_status="cached",
+            updated_age_sec=90,
+            refresh_message=failed_message,
+            layout_rotation_deg=0,
+        )
+        unavailable_list_svg = wifi_list_screen_svg(
+            networks=[],
+            selected_index=0,
+            list_status="unavailable",
+            updated_age_sec=0,
+            refresh_message="Falha na atualizacao.",
+            layout_rotation_deg=90,
+        )
+        assert_true(
+            "Lista anterior. Ultima lista disponivel." in cached_list_svg
+            and "Atualizacao falhou." in cached_list_svg
+            and "Atualizada ha 90s" not in cached_list_svg,
+            "cached networks must never be presented as a fresh scan",
+        )
+        assert_true(
+            "Lista indisponivel" in unavailable_list_svg
+            and "Enter atualiza" in unavailable_list_svg,
+            "a failed empty scan should expose a recoverable unavailable state",
+        )
+        failure_cases = (
+            ("auth_failed_suspected", True, "Autenticacao nao concluida", "edit_password"),
+            ("timeout", True, "Tempo de conexao esgotado", "retry_direct"),
+            ("network_not_found_suspected", True, "Rede nao disponivel", "retry_direct"),
+            ("signal_or_range_suspected", True, "Sinal insuficiente", "retry_direct"),
+            ("ip_not_acquired", True, "Wi-Fi sem endereco de rede", "retry_direct"),
+            ("device_unavailable", True, "Wi-Fi indisponivel", "retry_direct"),
+            ("nm_profile_load_failed", True, "Conexao nao preparada", "retry_direct"),
+            ("nm_activation_failed_generic", False, "Wi-Fi nao conectado", "retry_direct"),
+        )
+        for category, protected, expected_title, expected_retry in failure_cases:
+            failure_presentation = wifi_failure_presentation(
+                failure_category=category,
+                security_present=protected,
+            )
+            failure_svg = wifi_failure_screen_svg(
+                restored=True,
+                security_present=protected,
+                layout_rotation_deg=0,
+                failure_category=category,
+                previous_profile_available=True,
+            )
+            assert_true(
+                failure_presentation.title == expected_title
+                and failure_presentation.retry_mode == expected_retry
+                and expected_title in failure_svg,
+                f"failure category {category} should have one safe recovery path",
+            )
+            assert_true(
+                "Wi-Fi anterior" in failure_svg and "Ethernet nao foi" in failure_svg,
+                f"failure category {category} should disclose restoration scope",
+            )
+        unknown_failure_svg = wifi_failure_screen_svg(
+            restored=False,
+            security_present=True,
+            layout_rotation_deg=90,
+            failure_category="RAW_SECRET_DIAGNOSIS",
+            previous_profile_available=True,
+        )
+        assert_true(
+            normalize_wifi_failure_category("RAW_SECRET_DIAGNOSIS") == "unknown"
+            and "RAW_SECRET_DIAGNOSIS" not in unknown_failure_svg
+            and "Wi-Fi anterior nao" in unknown_failure_svg,
+            "unknown diagnostics must fail closed without rendering raw adapter text",
+        )
         assert_true(signal_bars(90) == "[####]" and signal_label(90) == "Forte", "90 signal should be four bars")
         assert_true(signal_bars(70) == "[###.]" and signal_label(70) in {"Forte", "Bom"}, "70 signal should be three bars")
         assert_true(signal_bars(40) == "[##..]" and signal_label(40) == "Medio", "40 signal should be two bars")
@@ -8174,6 +8829,17 @@ def run_self_test() -> None:
         assert_true(status["interface"]["mpv_video_mode"] == MPV_VIDEO_MODE, "MPV video mode should be recorded")
         assert_true(status["network"]["network_step"] == "existing_configured_wifi", "network step should use configured Wi-Fi")
         assert_true(status["network"]["dedicated_profile_persistent"] is True, "configured Wi-Fi should be persistent")
+        assert_true(
+            status["network"]["connectivity_transport"] == "unknown"
+            and status["network"]["connectivity_wifi_signal"] == "unknown"
+            and status["network"]["connectivity_source"] == "not_checked"
+            and status["network"]["internet_external_check"] is False,
+            "scripted status should expose the additive sanitized connectivity contract",
+        )
+        assert_true(
+            status["network"]["failure_category"] == "none",
+            "a successful scripted path should not invent a Wi-Fi failure",
+        )
         assert_true(status["environment"]["environment_id_present"] is True, "environment should be present")
         assert_true(status["guardrails"]["real_config_read"] is False, "real config should not be read")
         assert_true(status["guardrails"]["real_config_written"] is False, "real config should not be written")

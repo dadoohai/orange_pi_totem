@@ -314,6 +314,56 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
     pending_state = wizard.initial_wizard_state(0, "")
     wifi3 = synthetic_wifi_networks(3)
     wifi18 = synthetic_wifi_networks(18)
+    connection_snapshot = {
+        "transport": "ethernet",
+        "wifi_signal": "unknown",
+        "internet": "online",
+    }
+    connection_copy = wizard.connectivity_presentation(connection_snapshot)
+
+    def add_wifi_matrix_screen(
+        *,
+        screen_id: str,
+        orientation: str,
+        title: str,
+        subtitle: str,
+        footer: str,
+        body_items: list[str],
+        system_state: str,
+        svg: str,
+        error_state: bool = False,
+    ) -> None:
+        add_screen(
+            specs,
+            gallery_dir,
+            ScreenSpec(
+                screen_id=screen_id,
+                journey="wizard_wifi_m9",
+                screen_type="wizard",
+                orientation=orientation,
+                function="Explicar um estado real de conectividade ou recuperacao Wi-Fi.",
+                operator_task="Entender o estado e seguir a acao principal.",
+                primary_action=footer.split("|", 1)[0].strip() if footer else "Aguardar",
+                secondary_action=footer.split("|", 1)[1].strip() if "|" in footer else "Nenhuma.",
+                message_main=title,
+                system_state=system_state,
+                next_step_expected="Continuar, repetir ou escolher outra rede conforme o estado.",
+                confusion_risk="low",
+                dependencies=["wizard SVG", "adapter Wi-Fi governado"],
+                dynamic_feedback_needed=True,
+                error_state_needed=error_state,
+                preview_covered=True,
+                title=title,
+                subtitle=subtitle,
+                body_items=body_items,
+                footer=footer,
+                option_text=[],
+                status_feedback=True,
+                back_applicable=True,
+                error_recovery_available=error_state,
+            ),
+            svg,
+        )
 
     add_screen(
         specs,
@@ -465,7 +515,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             preview_covered=True,
             title="Wi-Fi",
             subtitle="Continue com a conexao atual ou escolha outra rede.",
-            body_items=["Conexao atual verificada.", "Nova rede com rollback.", "Senha protegida."],
+            body_items=[connection_copy.headline, connection_copy.detail, "Nova rede com rollback."],
             footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
             option_text=wizard_option_text(network_options),
             back_applicable=False,
@@ -478,8 +528,9 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
             options=network_options,
             selected_index=0,
-            panel_items=["Conexao atual verificada.", "Nova rede com rollback.", "Senha protegida."],
+            panel_items=[connection_copy.headline, connection_copy.detail, "Nova rede com rollback."],
             layout_rotation_deg=90,
+            connectivity_snapshot=connection_snapshot,
         ),
     )
 
@@ -553,7 +604,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             wizard.wifi_list_screen_svg(
                 networks=networks,
                 selected_index=selected,
-                list_status="timeout" if "scan_failure" in screen_id else "ok",
+                list_status="cached" if "scan_failure" in screen_id else "ok",
                 updated_age_sec=10 if refreshing else 4,
                 refresh_message=refresh_message,
                 layout_rotation_deg=90,
@@ -641,10 +692,10 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
         (
             "wizard.wifi.success",
             "Wi-Fi conectado",
-            "A rede foi salva neste totem.",
+            "Rede salva e servico Dadooh acessivel.",
             "Avancando... | Enter continua",
             "Pronto",
-            ["Endereco de rede recebido.", "Reconexao automatica ativa.", "Internet ainda nao verificada."],
+            ["Endereco de rede recebido.", "Reconexao automatica ativa.", "Sinal Wi-Fi forte."],
             "#22c55e",
         ),
     ):
@@ -683,7 +734,14 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
                     security_present=not screen_id.endswith("open_connecting"),
                 )
                 if screen_id.endswith("connecting")
-                else wizard.wifi_success_screen_svg(layout_rotation_deg=90)
+                else wizard.wifi_success_screen_svg(
+                    layout_rotation_deg=90,
+                    connectivity_snapshot={
+                        "transport": "wifi",
+                        "wifi_signal": "strong",
+                        "internet": "online",
+                    },
+                )
             ),
         )
 
@@ -699,7 +757,7 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             operator_task="Tentar novamente ou escolher outra rede.",
             primary_action="Enter tenta novamente",
             secondary_action="Esc troca rede",
-            message_main="Nova rede nao conectada",
+            message_main="Tempo de conexao esgotado",
             system_state="wizard_wifi_open_failure_restored",
             next_step_expected="Repetir apply sem senha ou voltar para a lista.",
             confusion_risk="low",
@@ -707,9 +765,9 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             dynamic_feedback_needed=True,
             error_state_needed=True,
             preview_covered=True,
-            title="Nova rede nao conectada",
-            subtitle="A rede anterior foi restaurada.",
-            body_items=["Rede anterior restaurada.", "Nenhuma senha foi solicitada.", "Ethernet nao foi alterado."],
+            title="Tempo de conexao esgotado",
+            subtitle="A rede nao respondeu no tempo esperado.",
+            body_items=["Rede aberta, sem senha.", "Wi-Fi anterior restaurado.", "Ethernet nao foi alterado."],
             footer="Enter tenta novamente | Esc troca rede",
             option_text=[],
             status_feedback=True,
@@ -720,8 +778,133 @@ def add_wizard_screens(specs: list[ScreenSpec], gallery_dir: pathlib.Path) -> No
             restored=True,
             security_present=False,
             layout_rotation_deg=90,
+            failure_category="timeout",
+            previous_profile_available=True,
         ),
     )
+
+    for rotation, orientation in ((0, "landscape"), (90, "portrait")):
+        for state_name, snapshot in (
+            ("ethernet-online", {"transport": "ethernet", "internet": "online"}),
+            ("wifi-online", {"transport": "wifi", "wifi_signal": "strong", "internet": "online"}),
+            ("wifi-limited", {"transport": "wifi", "wifi_signal": "weak", "internet": "limited"}),
+            ("offline", {"transport": "none", "internet": "offline"}),
+            ("unknown", {"transport": "unknown", "internet": "unknown"}),
+        ):
+            copy = wizard.connectivity_presentation(snapshot)
+            add_wifi_matrix_screen(
+                screen_id=f"wizard.wifi.connectivity.{state_name}.{orientation}",
+                orientation=orientation,
+                title="Wi-Fi",
+                subtitle="Estado atual da conexao.",
+                footer="Enter confirma | Esc volta",
+                body_items=[copy.headline, copy.detail, "Nova rede com rollback."],
+                system_state=f"wizard_connectivity_{state_name}",
+                svg=wizard.build_screen_svg(
+                    active_step=1,
+                    title="Wi-Fi",
+                    subtitle="Estado atual da conexao.",
+                    footer="Enter confirma | Esc volta",
+                    options=network_options,
+                    selected_index=0,
+                    panel_title="Conexao atual",
+                    panel_items=[copy.headline, copy.detail, "Nova rede com rollback."],
+                    accent=copy.accent,
+                    layout_rotation_deg=rotation,
+                    connectivity_snapshot=snapshot,
+                ),
+            )
+
+        for list_name, networks, list_status, refresh_message, refreshing in (
+            ("empty", [], "ok", "Nenhuma rede encontrada.", False),
+            ("cached", wifi3, "cached", "Falha na atualizacao; lista anterior mantida.", False),
+            ("refreshing", wifi3, "ok", "Atualizacao manual.", True),
+        ):
+            list_svg = wizard.wifi_list_screen_svg(
+                networks=networks,
+                selected_index=0,
+                list_status=list_status,
+                updated_age_sec=90 if list_status == "cached" else 3,
+                refresh_message=refresh_message,
+                layout_rotation_deg=rotation,
+                refreshing=refreshing,
+            )
+            add_wifi_matrix_screen(
+                screen_id=f"wizard.wifi.list.{list_name}.{orientation}",
+                orientation=orientation,
+                title="Selecionar Wi-Fi",
+                subtitle=(
+                    "Mostrando a ultima lista disponivel."
+                    if list_status == "cached"
+                    else ("Buscando redes locais." if refreshing else "Redes locais.")
+                ),
+                footer="Enter escolhe | R atualiza | Esc volta",
+                body_items=[refresh_message],
+                system_state=f"wizard_wifi_list_{list_name}",
+                svg=list_svg,
+                error_state=list_status == "cached",
+            )
+
+        for failure_name, category, protected in (
+            ("authentication", "auth_failed_suspected", True),
+            ("timeout", "timeout", True),
+            ("network-unavailable", "network_not_found_suspected", True),
+            ("weak-signal", "signal_or_range_suspected", True),
+            ("no-ip", "ip_not_acquired", True),
+            ("device-unavailable", "device_unavailable", True),
+            ("generic-open", "nm_activation_failed_generic", False),
+        ):
+            presentation = wizard.wifi_failure_presentation(
+                failure_category=category,
+                security_present=protected,
+            )
+            add_wifi_matrix_screen(
+                screen_id=f"wizard.wifi.failure.{failure_name}.{orientation}",
+                orientation=orientation,
+                title=presentation.title,
+                subtitle=presentation.subtitle,
+                footer=presentation.footer,
+                body_items=[
+                    presentation.hint if protected else "Rede aberta, sem senha.",
+                    "Wi-Fi anterior restaurado.",
+                    "Ethernet nao foi alterado.",
+                ],
+                system_state=f"wizard_wifi_failure_{failure_name}",
+                svg=wizard.wifi_failure_screen_svg(
+                    restored=True,
+                    security_present=protected,
+                    layout_rotation_deg=rotation,
+                    failure_category=category,
+                    previous_profile_available=True,
+                ),
+                error_state=True,
+            )
+
+        for result_name, snapshot in (
+            ("online", {"transport": "wifi", "wifi_signal": "strong", "internet": "online"}),
+            ("limited", {"transport": "wifi", "wifi_signal": "medium", "internet": "limited"}),
+            ("offline", {"transport": "wifi", "wifi_signal": "medium", "internet": "offline"}),
+            ("unknown", {"transport": "wifi", "wifi_signal": "medium", "internet": "unknown"}),
+        ):
+            result_svg = wizard.wifi_success_screen_svg(
+                layout_rotation_deg=rotation,
+                connectivity_snapshot=snapshot,
+            )
+            result_copy = wizard.connectivity_presentation(snapshot)
+            add_wifi_matrix_screen(
+                screen_id=f"wizard.wifi.success.{result_name}.{orientation}",
+                orientation=orientation,
+                title="Wi-Fi conectado",
+                subtitle=result_copy.detail,
+                footer="Enter continua",
+                body_items=[
+                    "Endereco de rede recebido.",
+                    "Reconexao automatica ativa.",
+                    result_copy.detail,
+                ],
+                system_state=f"wizard_wifi_success_{result_name}",
+                svg=result_svg,
+            )
 
     for screen_id, title, subtitle, footer, field_label, value_hint, field_note, items in (
         (

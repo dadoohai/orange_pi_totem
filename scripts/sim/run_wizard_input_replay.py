@@ -32,6 +32,7 @@ SCENARIOS = [
     "wifi_success_fake",
     "wifi_wrong_password_fake",
     "wifi_open_retry_fake",
+    "wifi_state_matrix_fake",
     "api_unavailable_fake",
     "reopen_configured",
     "cancel_flow",
@@ -225,6 +226,12 @@ def orientation_screen(selected_index: int = 0, layout_rotation_deg: int = 0) ->
 
 
 def connection_screen() -> str:
+    connectivity_snapshot = {
+        "transport": "ethernet",
+        "wifi_signal": "unknown",
+        "internet": "online",
+    }
+    connectivity_copy = wizard.connectivity_presentation(connectivity_snapshot)
     options = wizard.network_options_for_ui(
         configured_wifi_available=False,
         ethernet_available=True,
@@ -236,8 +243,13 @@ def connection_screen() -> str:
         footer="Enter confirma | Cima menu | Baixo escolhe | Esc cancela",
         options=options,
         selected_index=0,
-        panel_items=["Conexao atual verificada.", "Nova rede com rollback.", "Senha protegida."],
+        panel_items=[
+            connectivity_copy.headline,
+            connectivity_copy.detail,
+            "Nova rede com rollback.",
+        ],
         layout_rotation_deg=90,
+        connectivity_snapshot=connectivity_snapshot,
     )
 
 
@@ -495,23 +507,28 @@ def replay_wifi_wrong_password(r: Replay) -> None:
         "enter",
         "fake_failure",
     )
-    r.render_standard_screen(
+    r.screen(
         scenario,
-        step="wifi_error",
-        screen_id="02-wifi-wrong-password",
-        key="enter",
-        result="retry",
-        active_step=1,
-        title="Nova rede nao conectada",
-        subtitle="A rede anterior foi restaurada.",
-        footer="Enter corrige senha | Esc troca rede",
-        panel_items=["Rede anterior restaurada.", "Senha mantida para corrigir.", "Ethernet nao foi alterado."],
-        layout_rotation_deg=90,
-        accent="#ef4444",
+        "wifi_error",
+        "02-wifi-wrong-password",
+        wizard.wifi_failure_screen_svg(
+            restored=True,
+            security_present=True,
+            layout_rotation_deg=90,
+            failure_category="auth_failed_suspected",
+            previous_profile_available=True,
+        ),
+        "enter",
+        "retry",
     )
     password_svg = r.screen_paths[(scenario, "02-wifi-psk")].read_text(encoding="utf-8")
+    failure_svg = r.screen_paths[(scenario, "02-wifi-wrong-password")].read_text(encoding="utf-8")
     r.assert_true(scenario, "password_value_not_rendered", "TEST_PASSWORD" not in password_svg)
-    r.assert_true(scenario, "retry_path_available", True)
+    r.assert_true(
+        scenario,
+        "retry_path_available",
+        "Autenticacao nao concluida" in failure_svg and "Enter corrige senha" in failure_svg,
+    )
 
 
 def replay_wifi_success(r: Replay) -> None:
@@ -563,7 +580,15 @@ def replay_wifi_success(r: Replay) -> None:
         scenario,
         "wifi_success",
         "02-wifi-result",
-        wizard.wifi_success_screen_svg(layout_rotation_deg=90),
+        wizard.wifi_success_screen_svg(
+            layout_rotation_deg=90,
+            connectivity_snapshot={
+                "transport": "wifi",
+                "wifi_signal": "strong",
+                "internet": "online",
+                "guardrails": {"external_connectivity_probe": True},
+            },
+        ),
         "enter_or_timeout",
         "connected",
     )
@@ -652,6 +677,8 @@ def replay_wifi_open_retry(r: Replay) -> None:
             restored=True,
             security_present=False,
             layout_rotation_deg=90,
+            failure_category="timeout",
+            previous_profile_available=True,
         ),
         "enter",
         "retry_without_password",
@@ -668,7 +695,14 @@ def replay_wifi_open_retry(r: Replay) -> None:
         scenario,
         "wifi_success",
         "02-wifi-open-result",
-        wizard.wifi_success_screen_svg(layout_rotation_deg=90),
+        wizard.wifi_success_screen_svg(
+            layout_rotation_deg=90,
+            connectivity_snapshot={
+                "transport": "wifi",
+                "wifi_signal": "strong",
+                "internet": "unknown",
+            },
+        ),
         "enter_or_timeout",
         "connected",
     )
@@ -701,17 +735,185 @@ def replay_wifi_open_retry(r: Replay) -> None:
     r.assert_true(
         scenario,
         "open_failure_retries_directly",
-        "Enter tenta novamente" in failure_svg and "Nenhuma senha foi solicitada" in failure_svg,
+        "Enter tenta novamente" in failure_svg
+        and "Rede aberta, sem" in failure_svg
+        and "senha." in failure_svg,
     )
     r.assert_true(
         scenario,
-        "open_success_claims_link_not_internet",
+        "open_success_keeps_product_access_inconclusive",
         "Endereco de rede recebido" in success_svg
-        and "Internet ainda nao" in success_svg
-        and "verificada." in success_svg
+        and "acesso ao Dadooh inconclusivo" in success_svg
         and "Wi-Fi conectado" in success_svg,
     )
     r.assert_true(scenario, "open_result_reaches_completion", (scenario, "06-complete") in r.screen_paths)
+    r.assert_true(scenario, "networkmanager_not_called_by_replay", not r.external_process_calls)
+
+
+def replay_wifi_state_matrix(r: Replay) -> None:
+    scenario = "wifi_state_matrix_fake"
+    networks = [
+        {
+            "ssid": "TEST_WIFI_MATRIX",
+            "signal_percent": 62,
+            "signal_bucket": "medium",
+            "security_present": True,
+        }
+    ]
+    r.screen(
+        scenario,
+        "empty_list",
+        "02-wifi-empty",
+        wizard.wifi_list_screen_svg(
+            networks=[],
+            selected_index=0,
+            list_status="ok",
+            updated_age_sec=2,
+            refresh_message="Nenhuma rede encontrada.",
+            layout_rotation_deg=90,
+        ),
+        "r",
+        "refresh",
+    )
+    r.screen(
+        scenario,
+        "cached_list",
+        "02-wifi-cached",
+        wizard.wifi_list_screen_svg(
+            networks=networks,
+            selected_index=0,
+            list_status="cached",
+            updated_age_sec=90,
+            refresh_message="Falha na atualizacao; lista anterior mantida.",
+            layout_rotation_deg=0,
+        ),
+        "enter",
+        "select_cached",
+    )
+
+    connectivity_cases = {
+        "ethernet_online": {"transport": "ethernet", "internet": "online"},
+        "wifi_online": {"transport": "wifi", "wifi_signal": "strong", "internet": "online"},
+        "wifi_limited": {"transport": "wifi", "wifi_signal": "weak", "internet": "limited"},
+        "offline": {"transport": "none", "internet": "offline"},
+        "unknown": {"transport": "unknown", "internet": "unknown"},
+    }
+    for index, (state_name, snapshot) in enumerate(connectivity_cases.items()):
+        copy = wizard.connectivity_presentation(snapshot)
+        r.screen(
+            scenario,
+            "connectivity",
+            f"02-connectivity-{state_name}",
+            wizard.build_screen_svg(
+                active_step=1,
+                title="Wi-Fi",
+                subtitle="Estado atual da conexao.",
+                footer="Enter confirma | Esc volta",
+                options=wizard.network_options_for_ui(
+                    configured_wifi_available=True,
+                    ethernet_available=True,
+                ),
+                selected_index=0,
+                panel_title="Conexao atual",
+                panel_items=[copy.headline, copy.detail, "Nova rede com rollback."],
+                accent=copy.accent,
+                layout_rotation_deg=90 if index % 2 else 0,
+                connectivity_snapshot=snapshot,
+            ),
+            "wait",
+            state_name,
+        )
+
+    success_cases = (
+        ("online", "online", "servico Dadooh acessivel", "inconclusivo"),
+        ("limited", "limited", "servico Dadooh indisponivel", "inconclusivo"),
+        ("offline", "offline", "sem acesso ao servico Dadooh", "inconclusivo"),
+        ("unknown", "unknown", "acesso ao Dadooh inconclusivo", "servico Dadooh acessivel"),
+    )
+    for index, (state_name, internet, expected_copy, forbidden_copy) in enumerate(success_cases):
+        screen_id = f"02-success-{state_name}"
+        r.screen(
+            scenario,
+            "success",
+            screen_id,
+            wizard.wifi_success_screen_svg(
+                layout_rotation_deg=90 if index % 2 else 0,
+                connectivity_snapshot={
+                    "transport": "wifi",
+                    "wifi_signal": "medium",
+                    "internet": internet,
+                },
+            ),
+            "enter",
+            "continue",
+        )
+        rendered = r.screen_paths[(scenario, screen_id)].read_text(encoding="utf-8")
+        r.assert_true(
+            scenario,
+            f"success_{state_name}_is_consistent",
+            f'data-internet="{internet}"' in rendered
+            and expected_copy in rendered
+            and forbidden_copy not in rendered,
+        )
+
+    failure_cases = (
+        ("auth", "auth_failed_suspected", True, "Autenticacao nao concluida"),
+        ("timeout", "timeout", True, "Tempo de conexao esgotado"),
+        ("missing", "network_not_found_suspected", True, "Rede nao disponivel"),
+        ("signal", "signal_or_range_suspected", True, "Sinal insuficiente"),
+        ("ip", "ip_not_acquired", True, "Wi-Fi sem endereco de rede"),
+        ("device", "device_unavailable", True, "Wi-Fi indisponivel"),
+        ("generic_open", "nm_activation_failed_generic", False, "Wi-Fi nao conectado"),
+    )
+    for index, (state_name, category, protected, expected_title) in enumerate(failure_cases):
+        r.screen(
+            scenario,
+            "failure",
+            f"02-failure-{state_name}",
+            wizard.wifi_failure_screen_svg(
+                restored=index % 2 == 0,
+                security_present=protected,
+                layout_rotation_deg=90 if index % 2 else 0,
+                failure_category=category,
+                previous_profile_available=True,
+            ),
+            "enter",
+            "retry",
+        )
+        rendered = r.screen_paths[(scenario, f"02-failure-{state_name}")].read_text(encoding="utf-8")
+        r.assert_true(
+            scenario,
+            f"failure_{state_name}_is_specific",
+            expected_title in rendered,
+        )
+
+    secret_marker = "RAW_SECRET_DIAGNOSIS"
+    unknown_svg = wizard.wifi_failure_screen_svg(
+        restored=False,
+        security_present=True,
+        layout_rotation_deg=90,
+        failure_category=secret_marker,
+        previous_profile_available=True,
+    )
+    r.screen(scenario, "failure", "02-failure-unknown", unknown_svg, "escape", "back")
+    all_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for (scenario_name, _), path in r.screen_paths.items()
+        if scenario_name == scenario
+    )
+    r.assert_true(
+        scenario,
+        "cached_list_is_not_fresh",
+        "Lista anterior. Ultima lista disponivel." in all_text
+        and "Atualizacao falhou." in all_text
+        and "Atualizada ha 90s" not in all_text,
+    )
+    r.assert_true(
+        scenario,
+        "connectivity_matrix_is_explicit",
+        all(f'data-internet="{snapshot["internet"]}"' in all_text for snapshot in connectivity_cases.values()),
+    )
+    r.assert_true(scenario, "raw_failure_text_not_rendered", secret_marker not in all_text)
     r.assert_true(scenario, "networkmanager_not_called_by_replay", not r.external_process_calls)
 
 
@@ -823,6 +1025,7 @@ SCENARIO_RUNNERS: dict[str, Callable[[Replay], None]] = {
     "wifi_success_fake": replay_wifi_success,
     "wifi_wrong_password_fake": replay_wifi_wrong_password,
     "wifi_open_retry_fake": replay_wifi_open_retry,
+    "wifi_state_matrix_fake": replay_wifi_state_matrix,
     "api_unavailable_fake": replay_api_unavailable,
     "reopen_configured": replay_reopen_configured,
     "cancel_flow": replay_cancel_flow,
