@@ -29,11 +29,15 @@
     "installed_self_tests_passed": true,
     "player_preserved_without_restart": true,
     "protected_wifi_flow_shortened": true,
+    "production_supported_path_singleton": true,
     "retry_context_preserved_and_password_masked": true,
     "stable_policy_blocked_homologation": true,
     "visual_cancel_left_persistent_state_unchanged": true
   },
-  "independent_final_audit": "pending",
+  "independent_final_audit": "go_zero_unresolved_blockers_after_full_path_tiebreak",
+  "open_hardenings": [
+    "make_the_legacy_wifi_secrets_scratch_path_session_scoped_for_unsupported_direct_privileged_invocation"
+  ],
   "non_claims": [
     "not_a_stable_promotion",
     "not_a_public_release",

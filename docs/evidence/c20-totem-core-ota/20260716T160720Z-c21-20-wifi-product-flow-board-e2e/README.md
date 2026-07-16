@@ -28,7 +28,8 @@ It is not a stable promotion, public OTA release or new reference image.
   Ethernet, active product Wi-Fi and selection of another Wi-Fi network.
 - Production mode did not expose the bench-only option.
 - The real visual session exited without changing product configuration,
-  private settings, OTA policy or the NetworkManager profile.
+  private settings, OTA policy or the NetworkManager profile. Sanitized
+  before/after hashes bind this claim.
 - The board finished with C21.20 current, C21.19 previous, player active with
   zero restarts, settings inactive, stable policy restored and the stable
   update timer enabled and active.
@@ -59,6 +60,9 @@ It is not a stable promotion, public OTA release or new reference image.
   was not published or consumed by the public stable timer.
 - No credential, SSID value, IP address, token or raw NetworkManager profile
   is included in this evidence.
+- The supported product path serializes settings sessions before the wizard is
+  launched. The fixed legacy temporary secrets path is still recorded as
+  defense-in-depth hardening for unsupported direct privileged invocation.
 
 ## Evidence map
 
@@ -67,4 +71,5 @@ It is not a stable promotion, public OTA release or new reference image.
 - `board/transaction/`: stable block, apply, rollback, reapply and final state.
 - `board/visual/`: real framebuffer captures and sanitized UI assertions.
 - `board/self-tests/`: installed wizard and adapter self-tests.
-- `audits/`: final independent adversarial review.
+- `audits/`: evidence audit, focused code audit, full-path tie-break and central
+  decision.

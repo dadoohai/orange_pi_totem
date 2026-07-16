@@ -1,0 +1,15 @@
+utc=2026-07-16T16:26:31Z
+current=c21.20-wifi-product-flow-20260716T154014Z-1d36dd3
+previous=c21.19-wifi-transactional-20260715T145334Z-a214648
+player_active=active
+player_restarts=0
+settings_active=inactive
+settings_lock=absent
+settings_request=absent
+timer_active=active
+timer_enabled=enabled
+policy_channel=stable
+policy_allow_prerelease=false
+policy_allowed_components=totem-core
+ethernet=connected
+wifi=connected

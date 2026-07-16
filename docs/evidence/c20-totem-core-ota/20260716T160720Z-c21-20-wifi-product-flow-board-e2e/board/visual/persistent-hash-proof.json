@@ -1,0 +1,34 @@
+{
+  "artifacts": [
+    {
+      "after_sha256": "b1892547d9ec523e01121f9460702cd8e842fb8ba37d953101d5ec56733ace51",
+      "before_sha256": "b1892547d9ec523e01121f9460702cd8e842fb8ba37d953101d5ec56733ace51",
+      "label": "product_config",
+      "matches": true
+    },
+    {
+      "after_sha256": "c52d501519ff22e36f06bba6e50e7a9c774c3534a97d13214a6c72f0b57ec7c3",
+      "before_sha256": "c52d501519ff22e36f06bba6e50e7a9c774c3534a97d13214a6c72f0b57ec7c3",
+      "label": "private_settings",
+      "matches": true
+    },
+    {
+      "after_sha256": "6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f",
+      "before_sha256": "6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f",
+      "label": "ota_policy",
+      "matches": true
+    },
+    {
+      "after_sha256": "d1330736d4a5a4ba03046bf29daf7c1dfd295189bfecaec7879ceb30c4114c41",
+      "before_sha256": "d1330736d4a5a4ba03046bf29daf7c1dfd295189bfecaec7879ceb30c4114c41",
+      "label": "dedicated_wifi_profile",
+      "matches": true
+    }
+  ],
+  "all_match": true,
+  "privacy": {
+    "raw_paths_included": false,
+    "ssid_included": false
+  },
+  "schema": "dadooh.c20.wifi_product_flow.persistent_hash_proof.v1"
+}

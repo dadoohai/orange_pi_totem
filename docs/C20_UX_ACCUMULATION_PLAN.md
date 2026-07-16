@@ -747,6 +747,11 @@ saudaveis. Evidencia:
 
 Rede aberta comum continua sendo o item 3.
 
+Hardening nao bloqueante registrado: o caminho de produto ja serializa a
+sessao antes de abrir o wizard, mas o scratch legado de segredo Wi-Fi ainda
+pode ser tornado especifico por sessao contra invocacao privilegiada direta.
+Isso nao reabre C21.20 nem precede o item 3.
+
 ## Criterio De Fechamento Da Frente
 
 - nenhuma opcao selecionavel leva a caminho impossivel;
