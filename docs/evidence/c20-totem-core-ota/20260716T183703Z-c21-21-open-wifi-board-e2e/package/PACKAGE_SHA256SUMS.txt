@@ -1,0 +1,2 @@
+9e6a8e78f612c9e645227d0707fea736546c9b0424e100bde31093597ed6729d  releases/core-updates/c21.21-open-wifi-20260716T171724Z-4b294c8/dadooh-totem-core-c21.21-open-wifi-20260716T171724Z-4b294c8.manifest.json
+87a7f8c65ec4f3e0e84b1bad5cb99bab1672472f6bca773e10b1931b7fd79683  releases/core-updates/c21.21-open-wifi-20260716T171724Z-4b294c8/dadooh-totem-core-c21.21-open-wifi-20260716T171724Z-4b294c8.tar.gz

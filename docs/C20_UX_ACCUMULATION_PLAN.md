@@ -679,8 +679,9 @@ auto-pull publico.
 
 ## Fila Priorizada Atual - Wi-Fi De Produto
 
-Estado: itens 1 e 2 fechados na placa em 2026-07-16 pela candidata C21.20.
-Rede aberta comum e o proximo item.
+Estado: itens 1 e 2 fechados na placa pela C21.20. O item 3 foi implementado,
+empacotado e exercitado por OTA na C21.21; falta somente a prova de associacao
+em um AP aberto real.
 
 Objetivo: transformar a base transacional ja comprovada em uma jornada curta,
 verdadeira e utilizavel por cliente. A ordem abaixo prioriza maior valor com
@@ -745,12 +746,33 @@ visual encerrou sem escrita persistente. Player, timer e policy terminaram
 saudaveis. Evidencia:
 `docs/evidence/c20-totem-core-ota/20260716T160720Z-c21-20-wifi-product-flow-board-e2e/`.
 
-Rede aberta comum continua sendo o item 3.
-
 Hardening nao bloqueante registrado: o caminho de produto ja serializa a
 sessao antes de abrir o wizard, mas o scratch legado de segredo Wi-Fi ainda
 pode ser tornado especifico por sessao contra invocacao privilegiada direta.
 Isso nao reabre C21.20 nem precede o item 3.
+
+### Rodada M9.3 - Rede Aberta Comum
+
+Implementado:
+
+- rede aberta aparece como `Aberta | Sem senha` e segue direto para conexao;
+- o perfil NetworkManager aberto omite WPA, PSK e qualquer credencial;
+- sucesso continua exigindo ativacao e endereco IPv4;
+- falha restaura exatamente o perfil anterior e permite retry direto;
+- redes abertas e protegidas com o mesmo SSID permanecem escolhas distintas;
+- o status final registra ausencia de credencial sem publicar SSID;
+- o fluxo protegido anterior e seus retries permanecem cobertos.
+
+Fechamento tecnico: os gates de fonte e pacote passaram `84/84`. A policy
+stable bloqueou a candidata homologation com rc `41`; apply, rollback para
+C21.20 e reaplicacao da C21.21 passaram com rc `0`. Player, Ethernet, Wi-Fi,
+timer e policy terminaram saudaveis, sem restart do player. Evidencia:
+`docs/evidence/c20-totem-core-ota/20260716T183703Z-c21-21-open-wifi-board-e2e/`.
+
+Limite honesto: a placa nao trocou sua rede atual porque nao havia AP aberto
+disponivel. Assim, M9.3 esta pronta como candidata e validada no OTA, mas o
+aceite fisico final de associacao aberta permanece pendente. Isso nao bloqueia
+o inicio dos itens 4 e 5.
 
 ## Criterio De Fechamento Da Frente
 

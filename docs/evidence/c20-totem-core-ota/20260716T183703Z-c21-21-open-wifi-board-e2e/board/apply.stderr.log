@@ -1,0 +1,6 @@
+2026-07-16T18:15:36Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-16T18:15:36Z INFO apply_start source=local:dadooh-totem-core-c21.21-open-wifi-20260716T171724Z-4b294c8.manifest.json manifest=/tmp/c21-21-package/dadooh-totem-core-c21.21-open-wifi-20260716T171724Z-4b294c8.manifest.json
+2026-07-16T18:15:36Z INFO local_payload_staged bytes=211406 sha256=87a7f8c65ec4f3e0e84b1bad5cb99bab1672472f6bca773e10b1931b7fd79683
+2026-07-16T18:15:44Z INFO totem_core_health_check_starting
+2026-07-16T18:15:52Z INFO apply_success version=c21.21-open-wifi-20260716T171724Z-4b294c8
+2026-07-16T18:15:52Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c21.21-open-wifi-20260716T171724Z-4b294c8

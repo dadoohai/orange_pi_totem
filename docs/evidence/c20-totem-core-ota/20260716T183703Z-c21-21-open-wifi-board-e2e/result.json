@@ -1,0 +1,57 @@
+{
+  "artifact_id": "20260716T183703Z-c21-21-open-wifi-board-e2e",
+  "board_final": {
+    "current": "c21.21-open-wifi-20260716T171724Z-4b294c8",
+    "ethernet_connected": true,
+    "existing_wifi_connected": true,
+    "player_active": true,
+    "player_restarts": 0,
+    "previous": "c21.20-wifi-product-flow-20260716T154014Z-1d36dd3",
+    "settings_inactive": true,
+    "stable_policy_restored": true,
+    "timer_enabled_and_active": true
+  },
+  "candidate": {
+    "channel": "homologation",
+    "component": "totem-core",
+    "manifest_sha256": "9e6a8e78f612c9e645227d0707fea736546c9b0424e100bde31093597ed6729d",
+    "payload_sha256": "87a7f8c65ec4f3e0e84b1bad5cb99bab1672472f6bca773e10b1931b7fd79683",
+    "source_commit": "4b294c8c95e7d7715d9f0abdce5cab1e8f2dcf34",
+    "version": "c21.21-open-wifi-20260716T171724Z-4b294c8"
+  },
+  "checks": {
+    "exact_package_release_gate_84_of_84": true,
+    "generic_release_gate_84_of_84": true,
+    "governed_apply_rollback_reapply": true,
+    "installed_self_tests_passed": true,
+    "open_and_protected_same_ssid_distinct": true,
+    "open_profile_omits_wpa_and_psk": true,
+    "open_retry_skips_password": true,
+    "player_preserved_without_restart": true,
+    "pre_package_low_findings_resolved": true,
+    "prior_profile_exact_restore_simulated": true,
+    "protected_wifi_regression_green": true,
+    "public_artifacts_exclude_ssid_and_credentials": true,
+    "stable_policy_blocked_homologation": true,
+    "success_requires_ipv4": true
+  },
+  "independent_final_audits": {
+    "code_review": "go_candidate_ota",
+    "evidence_review": "go_candidate_ota",
+    "unresolved_blockers": 0
+  },
+  "non_claims": [
+    "not_a_stable_promotion",
+    "not_a_public_release",
+    "not_a_new_reference_image",
+    "not_captive_portal_support",
+    "not_real_open_ap_association_proof",
+    "not_internet_reachability_proof"
+  ],
+  "open_hardenings": [
+    "make_the_legacy_wifi_secrets_scratch_path_session_scoped_for_unsupported_direct_privileged_invocation"
+  ],
+  "passed": true,
+  "physical_open_ap_validation_pending": true,
+  "schema": "dadooh.c20.open_wifi_candidate_closure.v1"
+}

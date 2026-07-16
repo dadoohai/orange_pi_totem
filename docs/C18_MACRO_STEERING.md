@@ -301,7 +301,9 @@ Plano de decisao e criterios:
 
 ### M9 - Wi-Fi De Produto E UX De Conexao
 
-Status: em andamento desde 2026-07-16; itens 1 e 2 fechados na placa.
+Status: em andamento desde 2026-07-16; itens 1 e 2 fechados na C21.20. O item
+3 esta implementado e validado no pacote/OTA C21.21, com associacao em AP
+aberto real ainda pendente.
 
 Valor: permitir que um usuario configure a conectividade local sem caminho
 impossivel, mensagem enganosa ou repeticao desnecessaria, preservando a rede
@@ -342,6 +344,15 @@ de bancada ficou oculto. O player terminou ativo sem restart, o timer/policy
 stable foi restaurado e a sessao visual nao alterou estado persistente.
 Evidencia:
 `docs/evidence/c20-totem-core-ota/20260716T160720Z-c21-20-wifi-product-flow-board-e2e/`.
+
+Fechamento tecnico M9.3 em 2026-07-16: C21.21 adicionou rede aberta sem senha,
+IPv4 obrigatorio, rollback exato e retry direto, preservando WPA e privacidade.
+Os gates de fonte e pacote passaram `84/84`; stable bloqueou com rc `41`; apply,
+rollback para C21.20 e reaplicacao passaram com player sem restart. A placa
+terminou em C21.21, policy/timer stable e ambas as conexoes atuais preservadas.
+Falta somente repetir o fluxo com um AP aberto fisico; esse non-claim nao
+impede avancar estados visuais e estado real da conexao. Evidencia:
+`docs/evidence/c20-totem-core-ota/20260716T183703Z-c21-21-open-wifi-board-e2e/`.
 
 ## Checklist Contra Hiperfoco
 

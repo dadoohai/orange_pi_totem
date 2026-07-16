@@ -1,0 +1,61 @@
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c21.20-wifi-product-flow-20260716T154014Z-1d36dd3",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c21.19-wifi-transactional-20260715T145334Z-a214648",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-16T15:58:26Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-16T15:40:14Z",
+      "path": "/data/core/totem/releases/c21.20-wifi-product-flow-20260716T154014Z-1d36dd3",
+      "payload_sha256": "e7812eb6737182ab95b0f43259e19d156c74dc5a21553795d5817c26dee060a0",
+      "source": "local:dadooh-totem-core-c21.20-wifi-product-flow-20260716T154014Z-1d36dd3.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "1d36dd34ea26a4fa1fdfeda047a7aa69c1f10920",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.20-wifi-product-flow-20260716T154014Z-1d36dd3"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-16T15:58:34Z",
+      "source": "local:dadooh-totem-core-c21.20-wifi-product-flow-20260716T154014Z-1d36dd3.manifest.json",
+      "started_at_utc": "2026-07-16T15:58:18Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c21.20-wifi-product-flow-20260716T154014Z-1d36dd3"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-16T15:58:16Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-15T14:53:40Z",
+      "path": "/data/core/totem/releases/c21.19-wifi-transactional-20260715T145334Z-a214648",
+      "payload_sha256": "c9f743106203fb87809ce5f36f13b115bcf1fb553b1ba825ec8f40c918f706cf",
+      "source": "local:dadooh-totem-core-c21.19-wifi-transactional-20260715T145334Z-a214648.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "a214648540cf8a11791cffdb9d25bf7d57196f01",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c21.19-wifi-transactional-20260715T145334Z-a214648",
+      "via": "manual_rollback"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-14T17:32:45Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": true,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "homologation",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}

@@ -1,0 +1,7 @@
+passed=true
+version=c21.21-open-wifi-20260716T171724Z-4b294c8
+stable_block_rc=41
+apply_rc=0
+rollback_rc=0
+reapply_rc=0
+player_restarts=0

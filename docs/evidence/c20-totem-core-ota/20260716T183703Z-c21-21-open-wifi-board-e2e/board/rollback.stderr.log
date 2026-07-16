@@ -1,0 +1,2 @@
+2026-07-16T18:15:58Z INFO update_lock_acquired operation=rollback:totem-core lock=/run/totem-updatectl.lock
+2026-07-16T18:16:14Z INFO manual_rollback_ok rolled_to=c21.20-wifi-product-flow-20260716T154014Z-1d36dd3
