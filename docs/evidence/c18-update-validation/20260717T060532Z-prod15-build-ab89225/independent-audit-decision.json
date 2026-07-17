@@ -1,0 +1,71 @@
+{
+  "schema": "dadooh.c18.production_image.independent_audit_decision.v1",
+  "recorded_at_utc": "2026-07-17T06:05:32Z",
+  "image_tag": "c18-hwdecode-prod-15",
+  "image_version": "c18.image-prod.15",
+  "image_sha256": "cff33f16e3a0f62327b0b75fb2378c08da9e51e14f9a9550ded72730e2218d09",
+  "image_bytes": 1971322880,
+  "source_commit": "ab892251e434aa1bcd4fa4ab773fc5f0025ee468",
+  "source_tree": "2067083bcb79885b23b22e2ba370687ddd5be285",
+  "approved_for_board_flash": true,
+  "approved_flash_count": 1,
+  "approval_condition": "this_complete_evidence_set_is_committed_and_git_status_is_clean",
+  "approved_for_broad_production": false,
+  "approved_as_distribution_reference": false,
+  "review_count": 3,
+  "review_scope": "independent_read_only_trust_path_binary_image_and_post_flash_operation_for_one_controlled_board_flash",
+  "blockers": [],
+  "artifact_bindings": {
+    "artifact_ready_sha256": "f06c6e14e853eb36e4c72821cd6a9403617cab8f336a3e726b3f104521acbe76",
+    "build_manifest_sha256": "3391373009daa268bc4055e22734fa7ff2aafe014f9746da25a9609bc0dc2af9",
+    "offline_validation_sha256": "39392c5934f524c8c1333ebdb2f3dc4b3b80ab37229292dd4da1c932cfd94902",
+    "build_log_sha256": "91c643bab0e6a42064127678d6bf14bbc71474c85f37b3c314d9d2a8868db416",
+    "image_sha256_file_sha256": "c68196ba47855b69a38b6bcf74af98d38af0337c39cea3ba583f6238fad451f2",
+    "source_release_gate_sha256": "26b3e1185262393e70afef01e6322b7d60c10229cdba97d0a1a854fda6479d2a",
+    "trust_path_audit_sha256": "dd807c1edd5d73b46e48c60009e9a24f0bf54684d96fb54293e50bead596e67e",
+    "operation_audit_sha256": "97bf5bd2f1a442088020c8c52fdcc4a521a7ee0b214044401a6da25c64a4dfe4",
+    "binary_audit_sha256": "1a1da6a8df97ca68caa940d198063c162c57fd7d7980abe0d8097e09618f412a"
+  },
+  "verified": {
+    "source_release_gate": "84/84",
+    "offline_validation": "67/67",
+    "filesystem_clean": true,
+    "production_zerofree_summary": "0/58392/480256",
+    "embedded_ssh_host_keys_absent": true,
+    "machine_id_empty": true,
+    "real_configuration_absent": true,
+    "plaintext_support_credential_absent": true,
+    "prepartition_boot_region_identical_to_prod14": true,
+    "kernel_initrd_dtb_uboot_preserved": true,
+    "player_runtime_c25b_preserved": true,
+    "media_stack_preserved": true,
+    "totem_core_c21_24_exact": true,
+    "playback_health_summary_image_bound_fix_exact": true,
+    "unexpected_critical_deltas": 0
+  },
+  "physical_acceptance_required": [
+    "hdmi_connected_before_first_boot",
+    "first_boot_completed_without_failed_units",
+    "rootfs_expanded_to_card_capacity",
+    "ssh_identity_created_and_persistent",
+    "wizard_configuration_and_return_to_player_passed",
+    "player_runtime_c25b_playback_and_deep_health_passed",
+    "totem_core_c21_24_embedded_state_passed",
+    "totem_core_timer_noop_rollback_restore_passed",
+    "player_runtime_public_freeze_rc44_passed",
+    "post_roundtrip_reboot_marker_adoption_and_playback_passed"
+  ],
+  "accepted_non_blocking_risks": [
+    "shared_high_entropy_support_password_rotated_for_prod15",
+    "support_password_hash_present_by_design",
+    "builder_ready_json_remains_false_until_external_audit_decision",
+    "manifest_wording_refers_to_c21_24_core_baseline_not_prod15_image_promotion"
+  ],
+  "non_claims": [
+    "not_prod15_board_validated",
+    "not_prod15_e2e_validated",
+    "not_distribution_reference",
+    "not_broad_production_rollout_approved",
+    "not_future_player_runtime_targets_authorized"
+  ]
+}

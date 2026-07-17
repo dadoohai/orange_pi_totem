@@ -2,8 +2,9 @@
 
 Estado atual aceito: imagem `prod14` + player-runtime C25B exato. A stable
 publica atual do totem-core e C21.24; a placa `prod14` adotou essa release pelo
-timer real, passou por no-op, rollback, restauracao e reboot. A `prod15` ainda
-nao e baseline de distribuicao enquanto nao for construida, gravada e validada.
+timer real, passou por no-op, rollback, restauracao e reboot. A `prod15` foi
+construida e auditada, mas ainda nao e baseline de distribuicao enquanto nao
+for gravada e validada na placa.
 
 ## Alvo
 
@@ -19,8 +20,8 @@ Gerar a sucessora `prod15` com:
 1. [concluido] Empacotar o conteudo C21.23 como C21.24 stable, sem mudar seus arquivos.
 2. [concluido] Provar o pacote exato localmente na prod14: apply, rollback e reaplicacao.
 3. [concluido] Publicar a stable e provar timer real, no-op, rollback, restauracao e reboot.
-4. [em andamento] Construir e auditar a prod15 ja com essa stable embutida.
-5. [pendente] Gravar a imagem em cartao limpo e validar jornada, player, OTA e reboot.
+4. [concluido] Construir e auditar a prod15 ja com essa stable embutida.
+5. [em andamento] Gravar a imagem em cartao limpo e validar jornada, player, OTA e reboot.
 6. [pendente] Somente entao declarar a prod15 como nova baseline de distribuicao.
 
 ## Limites
