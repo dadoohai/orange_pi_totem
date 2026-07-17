@@ -1,0 +1,2 @@
+2026-07-17T03:44:01Z INFO update_lock_acquired operation=rollback:totem-core lock=/run/totem-updatectl.lock
+2026-07-17T03:44:17Z INFO manual_rollback_ok rolled_to=c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8

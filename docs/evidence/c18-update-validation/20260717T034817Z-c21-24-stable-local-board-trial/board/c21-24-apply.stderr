@@ -1,0 +1,6 @@
+2026-07-17T03:43:06Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-17T03:43:06Z INFO apply_start source=local:dadooh-totem-core-c21.24-product-stable-20260717T025907Z-076e18b.manifest.json manifest=/tmp/dadooh-totem-core-c21.24-product-stable-20260717T025907Z-076e18b.manifest.json
+2026-07-17T03:43:06Z INFO local_payload_staged bytes=221752 sha256=2ceb8801d2f9c6b79df2295a38a289334069971701ba724d68a4cc086fbc553c
+2026-07-17T03:43:14Z INFO totem_core_health_check_starting
+2026-07-17T03:43:22Z INFO apply_success version=c21.24-product-stable-20260717T025907Z-076e18b
+2026-07-17T03:43:22Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c21.24-product-stable-20260717T025907Z-076e18b

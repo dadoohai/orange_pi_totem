@@ -1,0 +1,38 @@
+{
+  "schema": "dadooh.c18.totem_core.stable_local_board_trial.v1",
+  "passed": true,
+  "image_tag": "c18-hwdecode-prod-14",
+  "candidate": {
+    "version": "c21.24-product-stable-20260717T025907Z-076e18b",
+    "channel": "stable",
+    "source_commit": "076e18b4de08ddb98d45d0f47fc9a960f133bc80",
+    "payload_sha256": "2ceb8801d2f9c6b79df2295a38a289334069971701ba724d68a4cc086fbc553c"
+  },
+  "release_gate": {
+    "passed": true,
+    "steps_passed": 84,
+    "steps_total": 84
+  },
+  "transactions": {
+    "apply_rc": 0,
+    "rollback_rc": 0,
+    "reapply_rc": 0,
+    "final_rollback_rc": 0
+  },
+  "checks": {
+    "source_files_byte_identical_to_c21_23": true,
+    "player_active_all_collections": true,
+    "player_restarts_max": 0,
+    "player_runtime_freeze_rc": 44,
+    "stable_policy_preserved": true,
+    "timer_enabled_and_isolated_during_trial": true,
+    "settings_guard_clear": true,
+    "final_current_is_c21_23": true,
+    "final_previous_is_c21_24": true
+  },
+  "non_claims": [
+    "not_public_timer_adoption_evidence",
+    "not_prod15_image_validation",
+    "not_player_runtime_thaw"
+  ]
+}

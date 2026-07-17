@@ -1,0 +1,1 @@
+Files /data/core/totem/releases/c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8/bin/__pycache__/totem_status_render_preview.cpython-311.pyc and /data/core/totem/releases/c21.24-product-stable-20260717T025907Z-076e18b/bin/__pycache__/totem_status_render_preview.cpython-311.pyc differ
