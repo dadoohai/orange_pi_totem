@@ -58,8 +58,11 @@ e tres perspectivas independentes fecharam sem blocker para a baseline.
 O M5 anterior nao deve ser reaberto. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
 para roadmap. A prioridade atual e M10: recuperacao local simples para o
-usuario, reutilizando a base de wizard, estados e Wi-Fi ja validada. A protecao
-de rollback OTA permanece interna e nao vira controle local. M4 continua em
+usuario. O recorte aprovado, ainda nao implementado, mantera `F10` abrindo o
+wizard atual e adicionara acesso discreto apenas a configurar novamente,
+reiniciar o totem e desligar com seguranca. Diagnostico granular, factory reset
+e novos atalhos nao entram neste recorte. A protecao de rollback OTA permanece
+interna e nao vira controle local. M4 continua em
 paralelo; grupos, dashboard e telemetria seguem no roadmap.
 
 ## Repositorio de entrega

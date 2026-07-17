@@ -1,203 +1,156 @@
 # 202 - C26 - Recuperacao local pelo usuario
 
-Status: decisao de produto aprovada para execucao. Nao declara implementacao.
+Status: decisao refinada e aprovada para implementacao. Nao declara que os
+novos controles ja existem.
 
 Data: 2026-07-17
 
 ## Missao
 
-Reduzir visitas tecnicas permitindo que uma pessoa nao tecnica identifique e
-resolva localmente as falhas comuns do totem, sem internet e sem colocar em
-risco a baseline `prod15`.
+Reduzir visitas tecnicas dando a uma pessoa nao tecnica poucos comandos locais
+capazes de recuperar o totem ou devolve-lo a uma configuracao valida. O fluxo
+deve funcionar sem suporte remoto, ter baixo atrito cognitivo e preservar a
+baseline `prod15`.
 
-A solucao deve continuar simples: mostrar o estado, indicar uma unica proxima
-acao e preservar dados. Nao sera um painel tecnico nem um reset geral.
+Prioridade: primeiro oferecer ancoras amplas e previsiveis. Diagnostico
+granular e tratamento de casos especificos evoluem depois, a partir de falhas
+reais.
 
-## Base existente
+## Base preservada
 
 - `prod15 + C25B + C21.24` continua sendo a referencia aceita.
-- Retry, cache offline, watchdog e restart do servico ja tratam automaticamente
-  varias falhas. A protecao de rollback OTA continua interna ao sistema e nao
-  vira acao do usuario.
-- Wi-Fi ja usa troca transacional com retorno ao perfil anterior.
-- Config ja usa candidata, validacao, backup e escrita atomica.
-- `F10` abre o configurador local sem depender da rede.
-- `92_C10_10_2_SHUTDOWN_UX.md` ja validou visualmente em duas placas os
-  splashes separados de reboot e desligamento, mas nao executou poweroff real
-  nem criou o controle para o usuario.
-- A matriz historica `40_MATRIZ_RESET_RECUPERACAO_PRODUTO_V1.md` definiu os
-  tipos de recuperacao, mas nao implementou os resets ali descritos.
+- Retry, watchdog, restart do player, cache offline e rollback OTA continuam
+  automaticos e invisiveis para o usuario.
+- `F10` ja abre o wizard local, para o player com seguranca e o restaura ao
+  sair.
+- Config so vira ativa depois de candidata valida e escrita atomica com backup.
+- Wi-Fi usa o perfil dedicado do produto e restaura o anterior quando a nova
+  conexao falha.
+- Os splashes de reboot e desligamento ja existem; o desligamento real ainda
+  precisa ser validado nesta baseline.
 
-## Decisao de produto
+## Experiencia escolhida
 
-### Entrada principal
+Existe uma unica entrada: segurar `F10`.
 
-- Sem configuracao: `F10` abre diretamente o setup atual.
-- Ja configurado: `F10` abre uma home curta com `Ajustes`,
-  `Ajuda e recuperacao` e `Voltar a exibicao`; `Energia` aparece separado como
-  opcao secundaria.
-- A ajuda nao vira um sexto passo do onboarding.
-- Toda tela de ajuda oferece saida clara para a exibicao sem salvar mudancas.
+`F10` continua abrindo diretamente o wizard atual. Nao havera home nova,
+`F12`, sexto passo, painel de diagnostico ou outro modelo mental. Um controle
+discreto e sempre visivel no cabecalho abre `Acoes do totem`; ele participa da
+mesma navegacao por setas e Enter do wizard.
 
-Antes de o fluxo `F10` pausar o player, ele deve capturar um retrato rapido,
-sanitizado e best-effort. Falha nessa captura nunca pode impedir a abertura nem
-o retorno ao player. A classificacao distingue o estado anterior do estado da
-sessao de ajuda.
+A tela tem somente tres acoes e `Voltar`:
 
-### Experiencia
-
-A tela mostra somente:
-
-1. o que foi confirmado em linguagem comum;
-2. uma acao recomendada para aquele estado;
-3. uma categoria de suporte curta, como `PLY-02` ou `NET-01`.
-
-Quando os sinais forem antigos, conflitantes ou insuficientes, o resultado e
-`Nao foi possivel confirmar`, seguido de uma acao que nao apaga dados. A
-categoria nao e protocolo nem identificador unico de incidente.
-
-### Escada de recuperacao
-
-| Nivel | Responsavel | Acao |
-| --- | --- | --- |
-| 0 | Sistema | Retry, cache offline, watchdog, restart e rollback ja existentes. |
-| 1 | Usuario | Ver estado, seguir uma orientacao e voltar para a exibicao. |
-| 2 | Usuario | Reiniciar exibicao, trocar Wi-Fi, abrir ajustes ou reiniciar o aparelho sob protecao. |
-| 3 | Suporte | Cache, rollback/update manual, troca de cliente e diagnostico aprofundado. |
-| 4 | Suporte avancado | Recovery de sistema, regravacao ou troca fisica. |
-
-### Energia
-
-`Energia` e uma area secundaria unica, fora dos passos do onboarding e da
-recuperacao recomendada. Ela oferece `Reiniciar totem` e
-`Desligar com seguranca`. `Reiniciar exibicao` continua sendo outra acao e
-reinicia somente o player.
-
-Um atalho longo `F12` pode abrir a mesma tela, mas nunca reinicia ou desliga
-diretamente. Na V1, ele funciona somente com o totem configurado e fora de uma
-sessao ativa. Nenhuma acao destrutiva recebe foco inicial, key-repeat e
-ignorado, `Voltar` e o padrao seguro e a execucao exige uma segunda tela com
-confirmacao forte. Nao usar `Ctrl+Alt+Del` nem outro caminho que ignore os
-guards do produto.
-
-A sessao local apenas solicita a acao e encerra seu proprio estado. Um runner
-limitado adquire o guard operacional de forma atomica, sem janela entre checar
-e agir, e o mantem ate o reboot/poweroff ser aceito. Se outra atualizacao,
-gravacao ou configuracao estiver em andamento, a copy publica e somente:
-`Ha uma atualizacao ou configuracao em andamento. Aguarde terminar.`
-
-Ao desligar, a tela informa: `Aguarde a tela desligar. Para ligar o totem de
-novo, retire e reconecte a energia.` O teclado e o atalho nao ligam um totem ja
-desligado.
-
-## Escopo funcional V1
-
-Categorias fechadas:
-
-- tela/display;
-- exibicao/player;
-- rede/backend;
-- configuracao/ativacao;
-- update/sistema;
-- indeterminado.
-
-| Categoria | Sinal publico confirmado | Acao unica | Codigo |
+| Acao | Resultado | O que preserva | Confirmacao |
 | --- | --- | --- | --- |
-| Tela | Tela local ausente ou sink suspeito | Verificar tela, entrada, energia e cabo; ciclar somente a tela | `DSP-01` |
-| Player | Tela local funciona, mas o player anterior estava parado ou stale | Reiniciar exibicao | `PLY-01` |
-| Rede | Conexao local nao foi confirmada | Trocar Wi-Fi | `NET-01` |
-| Backend | Rede local existe, mas o servico Dadooh esta indisponivel | Aguardar e tentar novamente | `NET-02` |
-| Config | Configuracao esta ausente ou invalida | Abrir ajustes | `CFG-01` |
-| Sistema | Update ou gravacao esta em andamento | Aguardar | `SYS-01` |
-| Indeterminado | Sinais antigos, conflitantes ou insuficientes | Voltar a exibicao e informar o codigo ao suporte | `UNK-01` |
+| `Configurar novamente` | Recomeca o wizard na primeira etapa. | Software, OTA, cache, identidade e a config ativa ate o salvamento final. | Sem confirmacao destrutiva; salvar continua sendo a confirmacao final. |
+| `Reiniciar totem` | Reinicia a placa inteira e volta automaticamente. | Config, rede, cache, identidade, software e OTA. | Segunda tela, com foco inicial em cancelar. |
+| `Desligar com seguranca` | Encerra o sistema e desliga a placa. | Todos os dados persistentes. | Segunda tela forte; avisa que e preciso retirar e reconectar a energia para ligar. |
 
-Acoes permitidas:
+`Esc` ou `Voltar` sempre retorna ao wizard ou a exibicao sem executar acao.
+Nenhuma opcao mutante recebe foco inicial e repeticao de tecla nao pode disparar
+duas vezes.
 
-- aguardar ou tentar novamente somente quando isso tiver efeito real;
-- voltar para a exibicao;
-- reiniciar a exibicao uma vez, com intervalo entre tentativas;
-- trocar Wi-Fi pelo fluxo transacional existente;
-- abrir os ajustes existentes, mantendo a configuracao atual ate uma nova
-  candidata ser validada e gravada;
-- reiniciar o totem inteiro como ultimo recurso local, com confirmacao;
-- desligar com seguranca para transporte ou retirada de energia, com
-  confirmacao e instrucao clara de como ligar novamente.
+Na confirmacao de reboot, uma unica orientacao evita promessa falsa para falha
+de tela: `Sem imagem? Verifique antes a energia e o cabo da tela.` Ha caso real
+em que a TV travou com placa e player saudaveis; reiniciar o totem nao e cura
+universal para isso.
 
-`Reiniciar exibicao` restaura somente o player ao sair da sessao local. Nao
-limpa cache, rede, config ou OTA e nao executa um segundo restart desnecessario.
+## Semantica de configuracao
 
-Para suspeita de tela/TV travada com a placa saudavel, a ordem e: verificar
-energia, entrada e cabo da tela; desligar e ligar somente a tela; depois voltar
-a exibicao. Reiniciar a placa nao e a primeira recomendacao desse caso.
+`Configurar novamente` e um reset seguro do fluxo, nao factory reset:
 
-Todas as acoes mutantes compartilham um unico guard: uma acao por vez,
-bloqueio diante de transacao de update, writer, settings ou rede, intervalo
-contra repeticao e falha fechada. A UI nunca chama writer ou comandos livres
-diretamente.
+- limpa apenas as escolhas ainda nao salvas da sessao e volta a primeira etapa;
+- a config ativa permanece valida ate uma nova candidata passar e ser gravada;
+- cancelar preserva a config ativa;
+- uma nova rede Wi-Fi pode ser aplicada durante o wizard e permanece somente
+  se conectar com sucesso; em caso de falha, o perfil anterior e restaurado;
+- Ethernet, cache, imagem, identidade, releases e estado OTA nao sao apagados;
+- sem internet, a UI nao pode afirmar que ambiente ou backend foram validados;
+- nao revoga credencial no backend nem prepara o aparelho para outro cliente.
 
-## Diagnostico seguro
+A copy curta da acao deve ser fiel: `A configuracao so muda ao concluir. Uma
+nova rede so fica se conectar.`
 
-O resultado usa schema allowlist com enums e textos fixos. Pode registrar apenas
-o ultimo resumo em `latest.json`, por substituicao atomica, permissao restrita e
-tamanho maximo pequeno. Nao existe historico crescente.
+## Por que nao expor outras acoes
 
-Nunca registrar SSID, senha, IP, MAC, DNS, hostname, URL, token, IDs reais,
-config, backup, nome/path de midia, journal ou saida bruta de comando.
+- `Reiniciar exibicao` e redundante: o sistema ja tenta recuperar player/MPV e
+  a propria sessao F10 para e restaura o player.
+- `Resetar rede` e pior que o fluxo atual de troca transacional de Wi-Fi.
+- `Limpar cache` pode deixar um totem offline sem nenhuma midia.
+- Rollback/update manual, shell e logs sao operacoes de suporte, nao de usuario.
+- Factory reset real ainda nao possui transacao unica, revogacao backend e
+  comportamento seguro sob queda de energia.
 
-## Fora da V1
+Factory reset permanece no roadmap. Antes de existir, precisa declarar o que
+apaga, revogar/desvincular credenciais no backend, preservar imagem/OTA e
+identidade, sobreviver a queda de energia e voltar ao setup sem estado parcial.
 
-- limpar cache;
-- botoes de update ou rollback;
-- shell, logs brutos ou dashboard;
-- reset amplo de NetworkManager;
-- hard reset, reflash ou factory reset;
-- identificador remoto, upload ou telemetria;
-- navegador para portal cativo.
+## Execucao protegida
 
-`Preparar para novo cliente` fica em roadmap separado e nao aparece na UI V1.
-Antes de existir, precisa revogar a credencial no backend, declarar exatamente
-o que apaga, preservar identidade/imagem/OTA, usar locks e ser transacional sob
-queda de energia. Restaurar o sistema operacional e outro fluxo.
+O wizard nunca chama comando livre nem executa reboot/poweroff diretamente.
+Ele grava uma solicitacao privada presa a sessao atual, com schema fechado,
+`session_id` e enum `reboot|poweroff`. O shell pai da sessao F10 valida e
+executa.
 
-## Verticais de entrega
+Durante a acao, a sessao deve:
 
-1. **Entender e retornar:** home `F10`, captura antes da pausa, classificacao,
-   categoria de suporte e retorno seguro, ainda sem nova acao destrutiva.
-2. **Resolver falhas comuns:** integrar restart contextual, Wi-Fi e ajustes
-   existentes sob o guard unico.
-3. **Energia e ultimo recurso local:** reboot, desligamento e entrada `F12`
-   confirmados, mais guia curto para tela, energia, cabo, Ethernet e `F10`.
-4. **Fechar em produto:** fault injection, QA visual na placa, pacote
-   `totem-core`, rollback e acumulacao na proxima imagem.
+1. manter os locks de settings e update ja adquiridos;
+2. rejeitar solicitacao ausente, repetida, adulterada ou de outra sessao;
+3. limpar candidatos e credenciais temporarias;
+4. nao restaurar o player durante uma transicao de energia;
+5. renderizar o splash correto, sincronizar dados e chamar somente
+   `systemctl --no-wall reboot` ou `systemctl --no-wall poweroff`;
+6. manter os guards ate a transicao ser aceita;
+7. se a chamada falhar, cancelar a transicao, restaurar o player e mostrar erro
+   recuperavel.
 
-As verticais devem usar primeiro as superficies ja permitidas de `totem-core`.
-Se uma mudanca exigir novo binario privilegiado, unit systemd, updater ou
-allowlist de imagem, ela entra explicitamente na proxima imagem; nao sera
-disfarcada em OTA comum.
+Isso evita a janela em que a limpeza normal reabriria player/TTY enquanto o
+sistema comeca a desligar.
+
+## Entrega
+
+O recorte cabe em `totem-core` OTA se permanecer nos arquivos ja permitidos:
+
+- `totem_setup_visual_wizard.py`;
+- `totem_open_settings_session.sh`;
+- `totem_visual_splash.py`, somente se a copy precisar de ajuste.
+
+Novo unit systemd, runner privilegiado, sudoers/polkit, binario fora da
+allowlist ou alteracao do updater exigem nova imagem e ficam fora deste recorte.
+
+Verticais:
+
+1. **Interface e contrato:** controle discreto, foco unico, tres acoes, pedido
+   tipado e self-tests adversariais.
+2. **Acoes reais:** reconfiguracao segura, reboot e poweroff action-aware com os
+   locks existentes.
+3. **Fechamento de produto:** QA visual, testes fisicos, pacote `totem-core`,
+   apply, rollback e reaplicacao na placa.
+
+Uma vertical que bloquear nao impede testes e acabamento das demais, mas
+nenhuma e promovida com regressao conhecida.
 
 ## Validacao curta
 
-Testar sem campanhas de horas:
+- abrir F10, entrar/sair de `Acoes do totem` e voltar a midia repetidamente;
+- foco, setas, Enter, Esc, confirmacoes, key-repeat e texto em landscape e
+  portrait;
+- pedido vazio, antigo, duplicado, adulterado, de outra sessao ou com acao
+  desconhecida deve falhar fechado;
+- update ocupado deve impedir abertura/acao sem quebrar timer ou locks;
+- `Configurar novamente`: cancelar, salvar config valida e falhar Wi-Fi,
+  provando preservacao/rollback conforme a semantica acima;
+- reboot real: boot saudavel, config/rede preservadas, player e timers ativos;
+- poweroff real: desligamento limpo, religamento fisico e boot saudavel;
+- interrupcao da UI e falha simulada de `systemctl` devem restaurar o player;
+- gates, self-tests e fluxo completo do wizard da `prod15` sem regressao;
+- pacote `totem-core` com dry-run, apply, validacao, rollback e reaplicacao.
 
-- sem internet, backend indisponivel e senha Wi-Fi errada;
-- MPV/status preso e `player_error` persistente;
-- display ausente e suspeita de sink travado;
-- config ausente/invalida e sessao de settings antiga;
-- update, writer e rede com lock ativo;
-- F10/F12 repetidos, acao repetida e crash da UI;
-- guard atomico, foco seguro, key-repeat, confirmacao e cancelamento de energia;
-- reboot e desligamento recusados durante transacoes, com retorno apos novo
-  boot ou ciclo fisico de energia;
-- interrupcao durante escrita do resumo;
-- retorno a midia e preservacao de config, rede, cache, identidade e OTA;
-- regressao de primeiro setup, timers, rollback e quarentena da `prod15`;
-- varredura de segredo, limite de tamanho e ausencia de crescimento continuo,
-  inclusive em backups criados por ajustes repetidos.
+Nao ha campanha de horas neste marco.
 
 ## Definicao de pronto
 
-A V1 fecha quando um usuario consegue abrir `F10`, entender o estado, executar
-a acao segura indicada e voltar para a midia; quando nao consegue resolver,
-informa uma categoria publica ao suporte. Nenhuma acao pode apagar dados por
-ambiguidade, concorrer com uma transacao, alterar a identidade da placa ou
-regredir playback, boot, wizard ou OTA.
+O marco fecha quando um usuario consegue, apenas por F10, configurar novamente,
+reiniciar ou desligar o totem sem apagar dados por ambiguidade; quando cancelamento
+e falhas retornam a um estado funcional; e quando o mesmo pacote passa QA visual,
+placa real e roundtrip OTA sem regressao da `prod15`.

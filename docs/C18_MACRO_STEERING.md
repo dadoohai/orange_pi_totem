@@ -343,23 +343,27 @@ deve bloquear redes abertas comuns, copy correta e simplificacao do fluxo.
 
 ### M10 - Recuperacao Local Pelo Usuario
 
-Status: plano aprovado para execucao em 2026-07-17.
+Status: direcao refinada e aprovada para execucao em 2026-07-17; os novos
+controles ainda nao estao implementados.
 
 Valor: reduzir visitas tecnicas permitindo que uma pessoa nao tecnica entenda e
 resolva localmente as falhas comuns, inclusive quando o totem estiver offline.
 
 Direcao:
 
-- `F10` continua sendo a entrada local principal;
-- estado simples, uma acao recomendada e categoria publica de suporte;
-- primeiro reutilizar o mecanismo de restart, Wi-Fi e ajustes seguros ja existentes;
-- energia fica em uma area secundaria: reiniciar o totem ou desligar com
-  confirmacao forte e guard atomico;
-  eventual `F12` apenas abre essa area e nunca executa diretamente;
-- nenhuma acao ambigua apaga config, rede, cache, identidade ou OTA;
-- eventual factory reset e recovery de sistema ficam suporte-only; rollback
-  manual nao entra na UI;
-- toda evidencia e sanitizada, limitada e sem crescimento continuo.
+- `F10` continua sendo a unica entrada e abre diretamente o wizard atual;
+- um controle discreto no wizard abre somente `Configurar novamente`,
+  `Reiniciar totem` e `Desligar com seguranca`;
+- nao criar home, `F12`, sexto passo, diagnostico granular ou restart manual do
+  player; o sistema e a propria sessao F10 ja tratam o restart da exibicao;
+- reconfiguracao preserva a config ativa ate o salvamento final e usa a troca
+  transacional de Wi-Fi existente, sem prometer que Wi-Fi bem-sucedido so muda
+  no fim do wizard;
+- reboot e poweroff passam pelo shell pai protegido, mantendo os locks de
+  settings/update e sem comando livre vindo da UI;
+- config, cache, identidade, imagem e OTA nunca sao apagados por essas acoes;
+- factory reset real, limpeza de cache/rede, rollback manual, logs e shell
+  permanecem fora da UI e no roadmap apropriado.
 
 Plano e criterios: `docs/product/202_C26_LOCAL_SELF_SERVICE_RECOVERY_PLAN.md`.
 Este marco e a proxima frente visivel de produto. O limite de polling GitHub
