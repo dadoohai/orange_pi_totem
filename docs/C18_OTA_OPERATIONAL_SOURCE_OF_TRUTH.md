@@ -69,6 +69,12 @@ granular e novos atalhos nao entram neste recorte. A protecao de rollback OTA
 permanece interna e nao vira controle local. M4 continua em
 paralelo; grupos, dashboard e telemetria seguem no roadmap.
 
+M11 fica registrado como o nivel final de recuperacao: uma nova imagem com
+recovery independente ou raiz A/B permitira `Reinstalar sistema` localmente.
+A bancada atual pode ser regravada para desenvolver essa base. A primeira
+adocao exige regravacao; depois dela, reinstalacoes completas poderao ser
+guiadas no proprio aparelho. M11 nao bloqueia M10.
+
 ## Repositorio de entrega
 
 O repo de entrega C18 e `dadoohai/orange_pi_totem`.

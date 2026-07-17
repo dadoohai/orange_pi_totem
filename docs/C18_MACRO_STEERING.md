@@ -383,6 +383,29 @@ Este marco e a proxima frente visivel de produto. O limite de polling GitHub
 continua registrado, mas nao o bloqueia enquanto o lote esperado tiver apenas
 duas ou tres placas por rede.
 
+### M11 - Recuperacao Integral Do Sistema
+
+Status: marco registrado para imagem futura; a bancada atual aceita
+regravacoes durante o desenvolvimento.
+
+Valor: permitir que o proprio usuario reinstale todo o sistema quando a
+restauracao de configuracao nao for suficiente, reduzindo ainda mais visitas
+tecnicas.
+
+Direcao:
+
+- nova imagem com recovery independente ou raiz A/B;
+- acao local `Reinstalar sistema`, separada de `Restaurar para configuracao
+  inicial` e protegida por confirmacao forte;
+- imagem assinada/verificada, recuperacao de falha e queda de energia sem
+  deixar a placa sem sistema inicializavel;
+- politica explicita para preservar ou apagar configuracao/dados;
+- campanha na placa com regravacao, imagem valida/invalida, interrupcao e boot
+  final saudavel.
+
+M11 nao bloqueia M10. A primeira instalacao dessa arquitetura exige uma
+regravacao; depois, reinstalacoes completas podem ser locais e guiadas.
+
 Fechamento M9.1-2 em 2026-07-16: C21.20 passou os gates `84/84`, foi bloqueado
 pela policy stable, aplicado, rollbackado para C21.19 e reaplicado. A captura
 real mostrou somente Ethernet ativa, Wi-Fi atual e escolha de outra rede; modo

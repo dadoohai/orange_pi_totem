@@ -240,3 +240,21 @@ mesmo pacote passa QA visual, placa real e roundtrip OTA sem regressao da
 A reinstalacao integral do sistema permanece um procedimento separado de
 regravacao. Recovery partition ou raiz A/B so entra em imagem futura se a
 escala e os incidentes reais justificarem esse custo.
+
+## Marco posterior - reinstalacao integral
+
+Registrar como proximo nivel de recuperacao, nao como ideia descartada:
+
+- criar uma nova imagem de referencia com ambiente de recovery independente
+  ou raiz A/B;
+- permitir que o usuario inicie `Reinstalar sistema` com confirmacao forte,
+  sem depender do sistema principal estar saudavel;
+- usar somente imagem assinada e verificada, com retorno seguro apos queda de
+  energia ou falha de instalacao;
+- declarar separadamente se dados/configuracao serao preservados ou apagados;
+- validar na bancada por regravacoes, imagem boa, imagem defeituosa, corte de
+  energia e retorno a um sistema inicializavel.
+
+Este marco exige ao menos uma nova regravacao para instalar a arquitetura de
+recovery. Depois disso, as reinstalacoes futuras poderao ser locais e guiadas,
+sem Armbian Imager. Ele nao bloqueia a entrega anterior de M10.
