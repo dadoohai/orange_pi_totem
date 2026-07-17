@@ -22,16 +22,20 @@ acao e preservar dados. Nao sera um painel tecnico nem um reset geral.
 - Wi-Fi ja usa troca transacional com retorno ao perfil anterior.
 - Config ja usa candidata, validacao, backup e escrita atomica.
 - `F10` abre o configurador local sem depender da rede.
+- `92_C10_10_2_SHUTDOWN_UX.md` ja validou visualmente em duas placas os
+  splashes separados de reboot e desligamento, mas nao executou poweroff real
+  nem criou o controle para o usuario.
 - A matriz historica `40_MATRIZ_RESET_RECUPERACAO_PRODUTO_V1.md` definiu os
   tipos de recuperacao, mas nao implementou os resets ali descritos.
 
 ## Decisao de produto
 
-### Entrada unica
+### Entrada principal
 
 - Sem configuracao: `F10` abre diretamente o setup atual.
 - Ja configurado: `F10` abre uma home curta com `Ajustes`,
-  `Ajuda e recuperacao` e `Voltar a exibicao`.
+  `Ajuda e recuperacao` e `Voltar a exibicao`; `Energia` aparece separado como
+  opcao secundaria.
 - A ajuda nao vira um sexto passo do onboarding.
 - Toda tela de ajuda oferece saida clara para a exibicao sem salvar mudancas.
 
@@ -62,6 +66,30 @@ categoria nao e protocolo nem identificador unico de incidente.
 | 3 | Suporte | Cache, rollback/update manual, troca de cliente e diagnostico aprofundado. |
 | 4 | Suporte avancado | Recovery de sistema, regravacao ou troca fisica. |
 
+### Energia
+
+`Energia` e uma area secundaria unica, fora dos passos do onboarding e da
+recuperacao recomendada. Ela oferece `Reiniciar totem` e
+`Desligar com seguranca`. `Reiniciar exibicao` continua sendo outra acao e
+reinicia somente o player.
+
+Um atalho longo `F12` pode abrir a mesma tela, mas nunca reinicia ou desliga
+diretamente. Na V1, ele funciona somente com o totem configurado e fora de uma
+sessao ativa. Nenhuma acao destrutiva recebe foco inicial, key-repeat e
+ignorado, `Voltar` e o padrao seguro e a execucao exige uma segunda tela com
+confirmacao forte. Nao usar `Ctrl+Alt+Del` nem outro caminho que ignore os
+guards do produto.
+
+A sessao local apenas solicita a acao e encerra seu proprio estado. Um runner
+limitado adquire o guard operacional de forma atomica, sem janela entre checar
+e agir, e o mantem ate o reboot/poweroff ser aceito. Se outra atualizacao,
+gravacao ou configuracao estiver em andamento, a copy publica e somente:
+`Ha uma atualizacao ou configuracao em andamento. Aguarde terminar.`
+
+Ao desligar, a tela informa: `Aguarde a tela desligar. Para ligar o totem de
+novo, retire e reconecte a energia.` O teclado e o atalho nao ligam um totem ja
+desligado.
+
 ## Escopo funcional V1
 
 Categorias fechadas:
@@ -91,7 +119,9 @@ Acoes permitidas:
 - trocar Wi-Fi pelo fluxo transacional existente;
 - abrir os ajustes existentes, mantendo a configuracao atual ate uma nova
   candidata ser validada e gravada;
-- reiniciar o aparelho como ultimo recurso local, com confirmacao.
+- reiniciar o totem inteiro como ultimo recurso local, com confirmacao;
+- desligar com seguranca para transporte ou retirada de energia, com
+  confirmacao e instrucao clara de como ligar novamente.
 
 `Reiniciar exibicao` restaura somente o player ao sair da sessao local. Nao
 limpa cache, rede, config ou OTA e nao executa um segundo restart desnecessario.
@@ -120,7 +150,6 @@ config, backup, nome/path de midia, journal ou saida bruta de comando.
 - botoes de update ou rollback;
 - shell, logs brutos ou dashboard;
 - reset amplo de NetworkManager;
-- desligar o aparelho pela UI;
 - hard reset, reflash ou factory reset;
 - identificador remoto, upload ou telemetria;
 - navegador para portal cativo.
@@ -136,8 +165,8 @@ queda de energia. Restaurar o sistema operacional e outro fluxo.
    categoria de suporte e retorno seguro, ainda sem nova acao destrutiva.
 2. **Resolver falhas comuns:** integrar restart contextual, Wi-Fi e ajustes
    existentes sob o guard unico.
-3. **Ultimo recurso local:** reboot confirmado e guia curto para tela, energia,
-   cabo, Ethernet e `F10`.
+3. **Energia e ultimo recurso local:** reboot, desligamento e entrada `F12`
+   confirmados, mais guia curto para tela, energia, cabo, Ethernet e `F10`.
 4. **Fechar em produto:** fault injection, QA visual na placa, pacote
    `totem-core`, rollback e acumulacao na proxima imagem.
 
@@ -155,7 +184,10 @@ Testar sem campanhas de horas:
 - display ausente e suspeita de sink travado;
 - config ausente/invalida e sessao de settings antiga;
 - update, writer e rede com lock ativo;
-- F10 repetido, acao repetida e crash da UI;
+- F10/F12 repetidos, acao repetida e crash da UI;
+- guard atomico, foco seguro, key-repeat, confirmacao e cancelamento de energia;
+- reboot e desligamento recusados durante transacoes, com retorno apos novo
+  boot ou ciclo fisico de energia;
 - interrupcao durante escrita do resumo;
 - retorno a midia e preservacao de config, rede, cache, identidade e OTA;
 - regressao de primeiro setup, timers, rollback e quarentena da `prod15`;

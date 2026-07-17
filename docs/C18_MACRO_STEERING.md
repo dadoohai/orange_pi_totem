@@ -350,9 +350,12 @@ resolva localmente as falhas comuns, inclusive quando o totem estiver offline.
 
 Direcao:
 
-- `F10` continua sendo a entrada local unica;
+- `F10` continua sendo a entrada local principal;
 - estado simples, uma acao recomendada e categoria publica de suporte;
 - primeiro reutilizar o mecanismo de restart, Wi-Fi e ajustes seguros ja existentes;
+- energia fica em uma area secundaria: reiniciar o totem ou desligar com
+  confirmacao forte e guard atomico;
+  eventual `F12` apenas abre essa area e nunca executa diretamente;
 - nenhuma acao ambigua apaga config, rede, cache, identidade ou OTA;
 - eventual factory reset e recovery de sistema ficam suporte-only; rollback
   manual nao entra na UI;
