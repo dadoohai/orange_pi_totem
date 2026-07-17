@@ -206,9 +206,10 @@ TEST_TIMEOUTS = {
     # Rendering 76 isolated SVG states through headless Chrome takes about
     # 4m20s on the reference WSL host; keep the criterion, allow it to finish.
     "c25_visible_state_gallery": 420,
-    # The 54 fail-closed production auto-pull evidence vectors take about
-    # 2m35s alone and can exceed the generic 3m limit inside the full suite.
-    "c18_player_runtime_production_autopull_evidence_gate": 300,
+    # The 54 fail-closed production auto-pull evidence vectors now take about
+    # 4m50s alone and can exceed 5m inside the full suite. Keep the criterion
+    # unchanged while leaving deterministic scheduling headroom.
+    "c18_player_runtime_production_autopull_evidence_gate": 420,
 }
 BASH_SYNTAX_TARGETS = (
     "scripts/qa/c20_board_settings_stop_probe.sh",
