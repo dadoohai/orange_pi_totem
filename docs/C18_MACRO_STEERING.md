@@ -352,18 +352,31 @@ resolva localmente as falhas comuns, inclusive quando o totem estiver offline.
 Direcao:
 
 - `F10` continua sendo a unica entrada e abre diretamente o wizard atual;
-- um controle discreto no wizard abre somente `Configurar novamente`,
-  `Reiniciar totem` e `Desligar com seguranca`;
+- um controle discreto no wizard abre somente `Reiniciar totem`, `Desligar com
+  seguranca` e `Restaurar para configuracao inicial`;
+- nao criar `Configurar novamente`: o wizard atual ja cumpre esse papel sem
+  apagar estado;
 - nao criar home, `F12`, sexto passo, diagnostico granular ou restart manual do
   player; o sistema e a propria sessao F10 ja tratam o restart da exibicao;
-- reconfiguracao preserva a config ativa ate o salvamento final e usa a troca
-  transacional de Wi-Fi existente, sem prometer que Wi-Fi bem-sucedido so muda
-  no fim do wizard;
+- a restauracao remove config, vinculo, cache e estado operacional, mas
+  preserva Wi-Fi, orientacao, identidade, imagem e toda a governanca OTA;
+- o backend revoga somente a ativacao exclusiva atual em uma operacao
+  idempotente; chave legada compartilhada perde apenas sua copia local, e uma
+  credencial antiga nunca pode afetar uma ativacao posterior;
+- intent persistido, bloqueio primeiro da config e retomada pelo firstboot gate
+  impedem que queda de energia restaure dados antigos;
+- entrega em duas releases coloca primeiro o motor invisivel no slot anterior;
+  a acao so aparece quando `current` e `previous` entendem o reset, e auto-pull
+  fica adiado pelo guard de settings ja enforcado enquanto houver operacao
+  pendente;
+- a `prod15` precisa provar em boot graph e placa que o firstboot recria esse
+  guard antes dos agentes com atraso de 10/20 minutos; se nao provar, a ordem
+  systemd entra na proxima imagem antes de expor a acao;
 - reboot e poweroff passam pelo shell pai protegido, mantendo os locks de
   settings/update e sem comando livre vindo da UI;
-- config, cache, identidade, imagem e OTA nunca sao apagados por essas acoes;
-- factory reset real, limpeza de cache/rede, rollback manual, logs e shell
-  permanecem fora da UI e no roadmap apropriado.
+- reinstalacao integral de boot/rootfs continua sendo regravacao externa;
+  recovery partition ou raiz A/B permanecem em roadmap de imagem;
+- rollback manual, shell e painel de logs permanecem fora da UI.
 
 Plano e criterios: `docs/product/202_C26_LOCAL_SELF_SERVICE_RECOVERY_PLAN.md`.
 Este marco e a proxima frente visivel de produto. O limite de polling GitHub

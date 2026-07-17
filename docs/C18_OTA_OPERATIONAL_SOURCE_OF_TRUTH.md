@@ -59,10 +59,14 @@ O M5 anterior nao deve ser reaberto. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
 para roadmap. A prioridade atual e M10: recuperacao local simples para o
 usuario. O recorte aprovado, ainda nao implementado, mantera `F10` abrindo o
-wizard atual e adicionara acesso discreto apenas a configurar novamente,
-reiniciar o totem e desligar com seguranca. Diagnostico granular, factory reset
-e novos atalhos nao entram neste recorte. A protecao de rollback OTA permanece
-interna e nao vira controle local. M4 continua em
+wizard atual e adicionara acesso discreto a reiniciar, desligar com seguranca e
+`Restaurar para configuracao inicial`. A restauracao revoga a ativacao
+exclusiva atual quando existir, remove apenas a copia local de chave legada,
+limpa config/conteudo/estado operacional e preserva Wi-Fi, orientacao, imagem
+e toda a governanca OTA. Ela nao e reinstalacao do SO: corrupcao de
+boot/rootfs continua exigindo regravacao externa da imagem. Diagnostico
+granular e novos atalhos nao entram neste recorte. A protecao de rollback OTA
+permanece interna e nao vira controle local. M4 continua em
 paralelo; grupos, dashboard e telemetria seguem no roadmap.
 
 ## Repositorio de entrega

@@ -8,149 +8,235 @@ Data: 2026-07-17
 ## Missao
 
 Reduzir visitas tecnicas dando a uma pessoa nao tecnica poucos comandos locais
-capazes de recuperar o totem ou devolve-lo a uma configuracao valida. O fluxo
-deve funcionar sem suporte remoto, ter baixo atrito cognitivo e preservar a
-baseline `prod15`.
+capazes de recuperar o totem ou devolve-lo ao inicio da configuracao. O fluxo
+deve funcionar sem suporte remoto, ter baixo atrito cognitivo, sobreviver a
+interrupcao e preservar a baseline `prod15`.
 
 Prioridade: primeiro oferecer ancoras amplas e previsiveis. Diagnostico
 granular e tratamento de casos especificos evoluem depois, a partir de falhas
 reais.
 
-## Base preservada
+## Decisao de produto
 
-- `prod15 + C25B + C21.24` continua sendo a referencia aceita.
-- Retry, watchdog, restart do player, cache offline e rollback OTA continuam
-  automaticos e invisiveis para o usuario.
-- `F10` ja abre o wizard local, para o player com seguranca e o restaura ao
-  sair.
-- Config so vira ativa depois de candidata valida e escrita atomica com backup.
-- Wi-Fi usa o perfil dedicado do produto e restaura o anterior quando a nova
-  conexao falha.
-- Os splashes de reboot e desligamento ja existem; o desligamento real ainda
-  precisa ser validado nesta baseline.
+Ha tres niveis distintos de recuperacao:
+
+1. **Recuperacao automatica:** retry, watchdog, restart, cache offline e
+   rollback OTA continuam invisiveis para o usuario.
+2. **Recuperacao local do produto:** `F10` oferece reiniciar, desligar e
+   `Restaurar para configuracao inicial`. Esta ultima desvincula a ativacao
+   atual, remove dados operacionais do cliente e volta ao onboarding.
+3. **Recuperacao integral do sistema:** corrupcao de boot, kernel, rootfs ou
+   armazenamento continua exigindo regravacao externa da imagem conhecida.
+
+A imagem atual nao possui particao de recovery, raiz A/B, instalador local nem
+uma segunda imagem completa. Portanto, a acao local e uma restauracao do
+produto, nao uma reinstalacao do sistema operacional nem sanitizacao completa
+para revenda.
+
+Ela e viavel em `totem-core` sobre a `prod15`, junto de um endpoint backend de
+autorrevogacao. Nao exige nova imagem nem novo unit systemd porque o wizard, a
+sessao F10 e o firstboot gate existentes ja pertencem ao pacote permitido.
+Toda a implementacao local deve permanecer nesses arquivos ja allowlisted;
+adicionar novo binario/helper, unit, sudoers/polkit ou alterar o updater volta a
+exigir nova imagem.
 
 ## Experiencia escolhida
 
 Existe uma unica entrada: segurar `F10`.
 
-`F10` continua abrindo diretamente o wizard atual. Nao havera home nova,
-`F12`, sexto passo, painel de diagnostico ou outro modelo mental. Um controle
-discreto e sempre visivel no cabecalho abre `Acoes do totem`; ele participa da
-mesma navegacao por setas e Enter do wizard.
+`F10` continua abrindo diretamente o wizard atual. Um controle discreto no
+cabecalho abre `Acoes do totem`, dentro da mesma navegacao por setas e Enter.
+Nao havera home nova, `F12`, sexto passo, painel tecnico ou outro modelo mental.
 
-A tela tem somente tres acoes e `Voltar`:
+As acoes sao:
 
-| Acao | Resultado | O que preserva | Confirmacao |
-| --- | --- | --- | --- |
-| `Configurar novamente` | Recomeca o wizard na primeira etapa. | Software, OTA, cache, identidade e a config ativa ate o salvamento final. | Sem confirmacao destrutiva; salvar continua sendo a confirmacao final. |
-| `Reiniciar totem` | Reinicia a placa inteira e volta automaticamente. | Config, rede, cache, identidade, software e OTA. | Segunda tela, com foco inicial em cancelar. |
-| `Desligar com seguranca` | Encerra o sistema e desliga a placa. | Todos os dados persistentes. | Segunda tela forte; avisa que e preciso retirar e reconectar a energia para ligar. |
+| Acao | Resultado | Confirmacao |
+| --- | --- | --- |
+| `Reiniciar totem` | Reinicia a placa inteira e volta automaticamente. | Segunda tela, com foco inicial em cancelar. |
+| `Desligar com seguranca` | Encerra o sistema e desliga a placa. | Segunda tela; avisa que e preciso retirar e reconectar a energia para ligar. |
+| `Restaurar para configuracao inicial` | Desvincula a ativacao atual, limpa dados locais do produto e volta ao inicio do setup. | Segunda tela destrutiva, com foco inicial em cancelar. |
 
-`Esc` ou `Voltar` sempre retorna ao wizard ou a exibicao sem executar acao.
-Nenhuma opcao mutante recebe foco inicial e repeticao de tecla nao pode disparar
-duas vezes.
+Nao existe a acao `Configurar novamente`: o proprio wizard aberto por `F10` ja
+faz isso sem apagar a configuracao ativa antes da conclusao.
 
-Na confirmacao de reboot, uma unica orientacao evita promessa falsa para falha
-de tela: `Sem imagem? Verifique antes a energia e o cabo da tela.` Ha caso real
-em que a TV travou com placa e player saudaveis; reiniciar o totem nao e cura
-universal para isso.
+Copy da restauracao:
 
-## Semantica de configuracao
+- descricao: `Desvincula este totem e volta ao inicio da configuracao.`
+- titulo: `Restaurar para configuracao inicial?`
+- aviso: `O vinculo, a configuracao, o conteudo baixado e o estado local serao
+  apagados. Wi-Fi, orientacao da tela, software e atualizacoes serao mantidos.`
+- botoes: `Cancelar` e `Restaurar`, com `Cancelar` selecionado inicialmente.
 
-`Configurar novamente` e um reset seguro do fluxo, nao factory reset:
+`Esc` ou `Voltar` retorna ao wizard ou a exibicao sem executar acao. Nenhuma
+acao mutante recebe foco inicial e repeticao de tecla nao pode dispara-la duas
+vezes.
 
-- limpa apenas as escolhas ainda nao salvas da sessao e volta a primeira etapa;
-- a config ativa permanece valida ate uma nova candidata passar e ser gravada;
-- cancelar preserva a config ativa;
-- uma nova rede Wi-Fi pode ser aplicada durante o wizard e permanece somente
-  se conectar com sucesso; em caso de falha, o perfil anterior e restaurado;
-- Ethernet, cache, imagem, identidade, releases e estado OTA nao sao apagados;
-- sem internet, a UI nao pode afirmar que ambiente ou backend foram validados;
-- nao revoga credencial no backend nem prepara o aparelho para outro cliente.
+## O que a restauracao resolve
 
-A copy curta da acao deve ser fiel: `A configuracao so muda ao concluir. Uma
-nova rede so fica se conectar.`
+- configuracao de ambiente errada, antiga ou incompleta;
+- aparelho que precisa ser vinculado novamente;
+- cache de midia ou estado local do player inconsistente;
+- entrega do aparelho para outra configuracao operacional no mesmo local;
+- retorno previsivel ao onboarding sem depender de SSH ou tecnico.
 
-## Por que nao expor outras acoes
+Ela nao corrige boot, kernel, rootfs, cartao/armazenamento, hardware, cabo, TV
+ou falha no proprio wizard. Esses casos continuam no fluxo de regravacao da
+imagem ou troca de hardware.
 
-- `Reiniciar exibicao` e redundante: o sistema ja tenta recuperar player/MPV e
-  a propria sessao F10 para e restaura o player.
-- `Resetar rede` e pior que o fluxo atual de troca transacional de Wi-Fi.
-- `Limpar cache` pode deixar um totem offline sem nenhuma midia.
-- Rollback/update manual, shell e logs sao operacoes de suporte, nao de usuario.
-- Factory reset real ainda nao possui transacao unica, revogacao backend e
-  comportamento seguro sob queda de energia.
+## Fronteira de dados
 
-Factory reset permanece no roadmap. Antes de existir, precisa declarar o que
-apaga, revogar/desvincular credenciais no backend, preservar imagem/OTA e
-identidade, sobreviver a queda de energia e voltar ao setup sem estado parcial.
+Apagar:
 
-## Execucao protegida
+- configuracao ativa e backups em `/data/config`;
+- credencial, ambiente e station atuais depois de registrada a revogacao;
+- cache baixado em `/data/media/kiosky-player`;
+- estado, spool e logs operacionais do player;
+- `last-settings` e candidatos temporarios do wizard.
 
-O wizard nunca chama comando livre nem executa reboot/poweroff diretamente.
-Ele grava uma solicitacao privada presa a sessao atual, com schema fechado,
-`session_id` e enum `reboot|poweroff`. O shell pai da sessao F10 valida e
-executa.
+Preservar:
 
-Durante a acao, a sessao deve:
+- Wi-Fi atual, para que a pessoa consiga reativar sem Ethernet ou tecnico;
+- orientacao de tela, por ser propriedade fisica da instalacao;
+- imagem, sistema, identidade da placa e acesso de suporte;
+- canary local de validacao;
+- `current`, `previous`, releases, estado, quarentena e markers de OTA;
+- policy, timers, segredos de update e protecoes de rollback.
 
-1. manter os locks de settings e update ja adquiridos;
-2. rejeitar solicitacao ausente, repetida, adulterada ou de outra sessao;
-3. limpar candidatos e credenciais temporarias;
-4. nao restaurar o player durante uma transicao de energia;
-5. renderizar o splash correto, sincronizar dados e chamar somente
-   `systemctl --no-wall reboot` ou `systemctl --no-wall poweroff`;
-6. manter os guards ate a transicao ser aceita;
-7. se a chamada falhar, cancelar a transicao, restaurar o player e mostrar erro
-   recuperavel.
+Nunca apagar `/data` inteiro. Esta restauracao tambem nao promete remover todo
+vestigio historico do sistema para revenda: preservar Wi-Fi e suporte e uma
+decisao operacional explicita.
 
-Isso evita a janela em que a limpeza normal reabriria player/TTY enquanto o
-sistema comeca a desligar.
+## Desvinculo backend
 
-## Entrega
+Apagar somente arquivos locais deixaria a credencial atual valida no servidor.
+A restauracao precisa de `POST /totem-auth/self-revocations` com estas regras:
 
-O recorte cabe em `totem-core` OTA se permanecer nos arquivos ja permitidos:
+- o aparelho cria um `operation_id` aleatorio uma unica vez e o persiste antes
+  de alterar o estado local;
+- a autoridade vem da `x-api-key` apresentada; IDs enviados pelo cliente sao
+  apenas confirmacoes e nunca definem o alvo;
+- para token com scope `totem-device`, o servidor deriva token, ativacao e
+  identidade do aparelho e revoga somente o token apresentado e credenciais da
+  mesma ativacao;
+- uma chave legada/compartilhada nunca e revogada pelo aparelho; depois de
+  autentica-la, o backend responde `not_device_activation` e a restauracao
+  remove somente sua copia local, pois nao havia vinculo exclusivo do aparelho;
+- a operacao e a revogacao sao gravadas na mesma transacao;
+- repetir o mesmo token e `operation_id` devolve exatamente o resultado ja
+  salvo, sem nova mutacao;
+- token revogado com outro `operation_id` falha; payload diferente com o mesmo
+  ID falha;
+- uma ativacao antiga nunca pode revogar uma ativacao criada depois.
 
-- `totem_setup_visual_wizard.py`;
-- `totem_open_settings_session.sh`;
-- `totem_visual_splash.py`, somente se a copy precisar de ajuste.
+Nao usar revogacao ampla somente por fingerprint. Isso daria a uma credencial
+antiga poder para interromper o novo dono. A restauracao remove tambem os
+backups locais, mas nao afirma revogar credenciais historicas de outras
+ativacoes que ja nao pertencem ao estado atual do aparelho.
 
-Novo unit systemd, runner privilegiado, sudoers/polkit, binario fora da
-allowlist ou alteracao do updater exigem nova imagem e ficam fora deste recorte.
+## Transacao local e queda de energia
 
-Verticais:
+O ponto sem volta e um intent privado e sincronizado em
+`/data/state/totem-appliance/product-reset/`, fora dos caminhos apagados.
 
-1. **Interface e contrato:** controle discreto, foco unico, tres acoes, pedido
-   tipado e self-tests adversariais.
-2. **Acoes reais:** reconfiguracao segura, reboot e poweroff action-aware com os
-   locks existentes.
-3. **Fechamento de produto:** QA visual, testes fisicos, pacote `totem-core`,
-   apply, rollback e reaplicacao na placa.
+Sequencia:
 
-Uma vertical que bloquear nao impede testes e acabamento das demais, mas
-nenhuma e promovida com regressao conhecida.
+1. adquirir os locks existentes de settings e update e parar o player;
+2. validar caminhos fixos, ownership e ausencia de symlinks inesperados;
+3. persistir credencial pendente, `operation_id` e intent com permissoes
+   privadas, escrita atomica e `fsync`;
+4. bloquear primeiro a configuracao antiga, movendo `/data/config` para um
+   destino inerte e recriando o diretorio vazio com ownership correto;
+5. mover apenas os dominios allowlisted para limpeza e recriar seus diretorios;
+6. tentar a autorrevogacao e, quando confirmada, apagar a credencial pendente;
+7. abrir o wizard no inicio somente depois de concluir o desvinculo.
 
-## Validacao curta
+Depois que o intent existe, a configuracao antiga nunca volta a tocar. Se a
+energia cair, o `totem-firstboot-gate.service` existente conclui apenas os
+moves/recreates locais curtos antes do player. Exclusao volumosa ocorre fora do
+caminho critico de boot, em um unico destino limitado para nao acumular lixo.
 
-- abrir F10, entrar/sair de `Acoes do totem` e voltar a midia repetidamente;
-- foco, setas, Enter, Esc, confirmacoes, key-repeat e texto em landscape e
-  portrait;
-- pedido vazio, antigo, duplicado, adulterado, de outra sessao ou com acao
-  desconhecida deve falhar fechado;
-- update ocupado deve impedir abertura/acao sem quebrar timer ou locks;
-- `Configurar novamente`: cancelar, salvar config valida e falhar Wi-Fi,
-  provando preservacao/rollback conforme a semantica acima;
-- reboot real: boot saudavel, config/rede preservadas, player e timers ativos;
-- poweroff real: desligamento limpo, religamento fisico e boot saudavel;
-- interrupcao da UI e falha simulada de `systemctl` devem restaurar o player;
-- gates, self-tests e fluxo completo do wizard da `prod15` sem regressao;
-- pacote `totem-core` com dry-run, apply, validacao, rollback e reaplicacao.
+Enquanto intent ou revogacao estiver pendente, o motor mantem o guard confiavel
+da sessao de settings. Em cada boot, o firstboot gate o recria imediatamente.
+O updater da `prod15` ja recusa apply e rollback de `totem-core` quando esse
+guard ou a sessao F10 esta ativo; portanto, depois do guard, auto-pull e
+operacao manual apenas adiam sem exigir mudanca do updater ou da policy.
 
-Nao ha campanha de horas neste marco.
+Na `prod15`, os agentes automaticos usam `OnBootSec` de 10 e 20 minutos, mas o
+unit de firstboot nao declara `Before=` contra esses agentes. A release precisa
+provar no boot graph e em placa que o guard sempre aparece antes da primeira
+tentativa de update. Se essa condicao nao fechar, a acao nao e exposta ate uma
+imagem futura adicionar a ordem systemd explicita.
+
+Rede nao e requisito de boot. Se estiver offline, o totem preserva o Wi-Fi,
+mostra `Restauracao pendente. Mantenha o totem conectado.` e continua tentando
+o mesmo `operation_id`. O usuario pode revisar a rede, mas uma nova ativacao
+fica bloqueada ate o servidor confirmar o desvinculo ou declarar explicitamente
+que a chave era legada e nao representava uma ativacao do aparelho. Isso evita
+dois donos ou dois estados ativos por causa de uma resposta perdida.
+
+## Entrega incremental
+
+1. **Backend isolado:** schema e endpoint idempotente, testes de replay,
+   concorrencia, token revogado e ativacao posterior; candidata sem trafego,
+   auditoria e smoke antes de promover.
+2. **C26A - motor local invisivel:** intent, matriz de apagar/preservar,
+   retomada no firstboot, bloqueio de nova ativacao e fault injection em cada
+   fase, sem expor ainda a acao destrutiva.
+3. **C26B - experiencia:** acao, confirmacao, estados online/offline e retorno
+   ao onboarding; reboot e poweroff usam o mesmo shell pai protegido. A acao
+   so aparece quando `current` e `previous` declaram suporte a
+   `product-reset-v1`, deixando um rollback imediato ainda capaz de retomar a
+   operacao.
+4. **Placa e OTA:** dry-run, apply de C26A e C26B, reset online, reset
+   interrompido/offline, reboot, rollback para C26A e reaplicacao.
+
+Apply ou rollback de `totem-core` fica indisponivel enquanto houver
+intent/revogacao pendente por meio do guard de settings que o updater atual ja
+enforca. O guard so e removido depois da conclusao. Isso impede que timer ou
+operador troque para codigo sem o contrato no meio da operacao sem criar uma
+segunda politica de update.
+
+O fallback antigo da imagem continua fora desse contrato. Se `current` e
+`previous` forem ambos perdidos ou corrompidos, a config ja bloqueada nao volta
+a tocar, mas o caso passa a ser recuperacao integral por regravacao. A funcao
+nao deve prometer consertar corrupcao simultanea dos dois slots e do sistema.
+
+Uma vertical pode avancar enquanto outra e auditada, mas nenhuma e promovida
+com regressao conhecida. O deploy backend deve primeiro provar que a revisao
+em producao corresponde ao source versionado, seguindo a disciplina adotada
+depois do incidente C21.
+
+## Validacao decisiva
+
+- cancelar cada confirmacao nao altera estado;
+- reset online revoga o token atual, limpa somente os dados declarados,
+  preserva Wi-Fi/orientacao/OTA e volta ao onboarding;
+- resposta perdida e retry usam o mesmo `operation_id` e uma unica mutacao;
+- token antigo nao consegue iniciar nova operacao nem afetar nova ativacao;
+- chave legada compartilhada tem resposta `not_device_activation`, nao e
+  revogada e deixa de existir somente na placa restaurada;
+- reset offline e cada interrupcao simulada deixam a config antiga bloqueada e
+  retomam com seguranca;
+- C26B so expoe a acao com C26A em `previous`; auto-pull, apply e rollback
+  permanecem bloqueados durante intent/revogacao pendente;
+- boot graph e timestamps reais provam guard criado antes dos agentes de update
+  da `prod15`; falha nessa prova bloqueia entrega sem nova imagem;
+- cortes fisicos seletivos validam intent, config bloqueada e resposta de
+  revogacao, sem campanha de horas;
+- cache grande nao alonga o boot nem acumula destinos indefinidamente;
+- wizard normal, player, timers, auto-pull, rollback e baseline `prod15` nao
+  regridem;
+- pacote passa self-tests, QA visual, apply, rollback e reaplicacao na placa.
 
 ## Definicao de pronto
 
-O marco fecha quando um usuario consegue, apenas por F10, configurar novamente,
-reiniciar ou desligar o totem sem apagar dados por ambiguidade; quando cancelamento
-e falhas retornam a um estado funcional; e quando o mesmo pacote passa QA visual,
-placa real e roundtrip OTA sem regressao da `prod15`.
+O marco fecha quando uma pessoa consegue, apenas por `F10`, reiniciar, desligar
+ou restaurar o produto ao inicio da configuracao; quando a ativacao anterior
+nao permanece utilizavel pelo aparelho; quando falha de rede, resposta perdida
+ou corte de energia nao recupera dados antigos nem bloqueia o boot; e quando o
+mesmo pacote passa QA visual, placa real e roundtrip OTA sem regressao da
+`prod15`.
+
+A reinstalacao integral do sistema permanece um procedimento separado de
+regravacao. Recovery partition ou raiz A/B so entra em imagem futura se a
+escala e os incidentes reais justificarem esse custo.
