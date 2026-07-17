@@ -1,0 +1,3 @@
+2026-07-17T14:23:44Z INFO update_lock_acquired operation=rollback:player-runtime lock=/run/totem-updatectl.lock
+component_frozen_for_ota: player-runtime: player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware
+2026-07-17T14:23:44Z WARN rollback_blocked_component_frozen component=player-runtime reason=player-runtime OTA is frozen until rollback + playback deep-health are validated on hardware

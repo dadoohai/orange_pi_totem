@@ -1,0 +1,10 @@
+collected_at_utc=2026-07-17T14:31:20Z
+x-ratelimit-limit: 60
+x-ratelimit-remaining: 22
+x-ratelimit-used: 38
+x-ratelimit-resource: core
+x-ratelimit-reset: 1784300030
+core_limit=60
+core_remaining=22
+core_used=38
+core_reset=1784300030

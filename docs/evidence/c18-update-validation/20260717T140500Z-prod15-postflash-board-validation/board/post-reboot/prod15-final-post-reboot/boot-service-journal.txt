@@ -1,0 +1,197 @@
+2026-07-17T14:02:50+0000 orangepizero3 systemd[1]: Starting kiosky-player.service - Kiosky Player...
+2026-07-17T14:02:51+0000 orangepizero3 env[1041]: 2026-07-17T14:02:51Z INFO update_lock_acquired operation=reconcile:player-runtime lock=/run/totem-updatectl.lock
+2026-07-17T14:02:52+0000 orangepizero3 env[1041]: {
+2026-07-17T14:02:52+0000 orangepizero3 env[1041]:   "component": "player-runtime",
+2026-07-17T14:02:52+0000 orangepizero3 env[1041]:   "current_link": "releases/c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+2026-07-17T14:02:52+0000 orangepizero3 env[1041]:   "status": "current_verified",
+2026-07-17T14:02:52+0000 orangepizero3 env[1041]:   "verified": "releases/c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4"
+2026-07-17T14:02:52+0000 orangepizero3 env[1041]: }
+2026-07-17T14:02:52+0000 orangepizero3 systemd[1]: Started kiosky-player.service - Kiosky Player.
+2026-07-17T14:02:52+0000 orangepizero3 env[1101]: 2026-07-17T14:02:52+0000 totem-kiosky-launcher[1101]: kiosk_source=data:c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4 kiosk_dir=/data/player-runtime/current
+2026-07-17T14:02:52+0000 orangepizero3 env[1101]: 2026-07-17T14:02:52+0000 kiosky_service_launcher[1101]: launcher_started uid=999 user=totem
+2026-07-17T14:02:54+0000 orangepizero3 env[1101]: 2026-07-17T14:02:54+0000 kiosky_service_launcher[1101]: display_connected starting_app
+2026-07-17T14:02:54+0000 orangepizero3 env[1101]: 2026-07-17T14:02:54+0000 kiosky_service_launcher[1101]: player_status_mpv_watchdog_started pid=1231 child_pid=1183
+2026-07-17T14:03:22+0000 orangepizero3 env[1183]: 2026-07-17 14:03:22,614 INFO Loaded offline playlist: 9 items
+2026-07-17T14:03:22+0000 orangepizero3 env[1183]: 2026-07-17 14:03:22,618 INFO MPV process started pid=1395 generation=1 log_file=none
+2026-07-17T14:03:22+0000 orangepizero3 env[1183]: 2026-07-17 14:03:22,618 INFO MPV IPC startup wait begin generation=1 pid=1395 timeout_sec=10.00 ipc_path=/tmp/kiosky/mpv.sock log_file=none
+2026-07-17T14:03:23+0000 orangepizero3 env[1183]: 2026-07-17 14:03:23,062 INFO MPV IPC startup wait complete transport=fresh-socket-probe generation=1 pid=1395 duration_sec=0.44 timeout_sec=10.00 ipc_path=/tmp/kiosky/mpv.sock log_file=none
+2026-07-17T14:03:25+0000 orangepizero3 env[1183]: 2026-07-17 14:03:25,534 INFO MPV IPC fresh query begin command=loadfile request_id=1 generation=1 pid=1395 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,874 INFO MPV IPC fresh query ok command=loadfile request_id=1 generation=1 pid=1395 duration_sec=1.340 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,874 INFO MPV IPC fresh query begin command=get_property request_id=2 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,886 INFO MPV IPC fresh query ok command=get_property request_id=2 generation=1 pid=1395 duration_sec=0.011 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,887 INFO MPV IPC fresh query begin command=get_property request_id=3 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,888 INFO MPV IPC fresh query ok command=get_property request_id=3 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,888 INFO MPV IPC fresh query begin command=get_property request_id=4 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,889 INFO MPV IPC fresh query ok command=get_property request_id=4 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,889 INFO MPV IPC fresh query begin command=get_property request_id=5 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,890 WARNING MPV IPC fresh query returned error command=get_property request_id=5 generation=1 pid=1395 duration_sec=0.001 log_file=none error=property unavailable
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,890 INFO MPV IPC fresh query begin command=get_property request_id=6 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,891 WARNING MPV IPC fresh query returned error command=get_property request_id=6 generation=1 pid=1395 duration_sec=0.001 log_file=none error=property unavailable
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,891 INFO MPV IPC fresh query begin command=get_property request_id=7 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,892 INFO MPV IPC fresh query ok command=get_property request_id=7 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,943 INFO MPV IPC fresh query begin command=get_property request_id=8 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,944 INFO MPV IPC fresh query ok command=get_property request_id=8 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,944 INFO MPV IPC fresh query begin command=get_property request_id=9 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,945 INFO MPV IPC fresh query ok command=get_property request_id=9 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,945 INFO MPV IPC fresh query begin command=get_property request_id=10 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,946 WARNING MPV IPC fresh query returned error command=get_property request_id=10 generation=1 pid=1395 duration_sec=0.001 log_file=none error=property unavailable
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,946 INFO MPV IPC fresh query begin command=get_property request_id=11 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,947 WARNING MPV IPC fresh query returned error command=get_property request_id=11 generation=1 pid=1395 duration_sec=0.001 log_file=none error=property unavailable
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,947 INFO MPV IPC fresh query begin command=get_property request_id=12 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,948 INFO MPV IPC fresh query ok command=get_property request_id=12 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:26+0000 orangepizero3 env[1183]: 2026-07-17 14:03:26,999 INFO MPV IPC fresh query begin command=get_property request_id=13 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,000 INFO MPV IPC fresh query ok command=get_property request_id=13 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,000 INFO MPV IPC fresh query begin command=get_property request_id=14 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,001 INFO MPV IPC fresh query ok command=get_property request_id=14 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,001 INFO MPV IPC fresh query begin command=get_property request_id=15 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,002 WARNING MPV IPC fresh query returned error command=get_property request_id=15 generation=1 pid=1395 duration_sec=0.001 log_file=none error=property unavailable
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,002 INFO MPV IPC fresh query begin command=get_property request_id=16 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,003 WARNING MPV IPC fresh query returned error command=get_property request_id=16 generation=1 pid=1395 duration_sec=0.001 log_file=none error=property unavailable
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,003 INFO MPV IPC fresh query begin command=get_property request_id=17 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,004 INFO MPV IPC fresh query ok command=get_property request_id=17 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,055 INFO MPV IPC fresh query begin command=get_property request_id=18 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,111 INFO MPV IPC fresh query ok command=get_property request_id=18 generation=1 pid=1395 duration_sec=0.056 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,112 INFO MPV IPC fresh query begin command=get_property request_id=19 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,175 INFO MPV IPC fresh query ok command=get_property request_id=19 generation=1 pid=1395 duration_sec=0.063 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,175 INFO MPV IPC fresh query begin command=get_property request_id=20 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,526 WARNING MPV IPC response timeout request_id=20 transport=fresh generation=1 pid=1395 timeout_sec=0.35 lines_read=0 events_without_request_id=0 responses_other_request_id=0 responses_expected_request_id=0 invalid_json_lines=0 buffer_before_bytes=0 buffer_after_bytes=0 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,527 WARNING MPV IPC fresh query timeout command=get_property request_id=20 generation=1 pid=1395 duration_sec=0.352 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,527 INFO MPV IPC fresh query begin command=get_property request_id=21 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,583 INFO MPV IPC fresh query ok command=get_property request_id=21 generation=1 pid=1395 duration_sec=0.055 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,583 INFO MPV IPC fresh query begin command=get_property request_id=22 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,585 INFO MPV IPC fresh query ok command=get_property request_id=22 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,636 INFO MPV IPC fresh query begin command=get_property request_id=23 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,637 INFO MPV IPC fresh query ok command=get_property request_id=23 generation=1 pid=1395 duration_sec=0.002 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,638 INFO MPV IPC fresh query begin command=get_property request_id=24 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,639 INFO MPV IPC fresh query ok command=get_property request_id=24 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,639 INFO MPV IPC fresh query begin command=get_property request_id=25 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,640 INFO MPV IPC fresh query ok command=get_property request_id=25 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,640 INFO MPV IPC fresh query begin command=get_property request_id=26 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,641 INFO MPV IPC fresh query ok command=get_property request_id=26 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,641 INFO MPV IPC fresh query begin command=get_property request_id=27 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,642 INFO MPV IPC fresh query ok command=get_property request_id=27 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,643 INFO MPV IPC fresh query begin command=get_property request_id=28 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:27+0000 orangepizero3 env[1183]: 2026-07-17 14:03:27,643 INFO MPV IPC fresh query ok command=get_property request_id=28 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,622 INFO MPV IPC fresh query begin command=get_property request_id=29 generation=1 pid=1395 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,625 INFO MPV IPC fresh query ok command=get_property request_id=29 generation=1 pid=1395 duration_sec=0.003 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,628 INFO Config UI disponível em http://127.0.0.1:8765
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,628 INFO Playlist alterada. Recalculando posicao UTC: index=7 offset=1228ms
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,629 INFO MPV IPC fresh query begin command=loadfile request_id=30 generation=1 pid=1395 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,630 INFO MPV IPC fresh query ok command=loadfile request_id=30 generation=1 pid=1395 duration_sec=0.002 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,631 INFO MPV IPC fresh query begin command=get_property request_id=31 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,655 INFO MPV IPC fresh query ok command=get_property request_id=31 generation=1 pid=1395 duration_sec=0.024 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,707 INFO MPV IPC fresh query begin command=get_property request_id=32 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,737 INFO MPV IPC fresh query ok command=get_property request_id=32 generation=1 pid=1395 duration_sec=0.029 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,738 INFO MPV IPC fresh query begin command=seek request_id=33 generation=1 pid=1395 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,876 INFO MPV IPC fresh query ok command=seek request_id=33 generation=1 pid=1395 duration_sec=0.138 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,878 INFO MPV IPC fresh query begin command=get_property request_id=34 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,925 INFO MPV IPC fresh query ok command=get_property request_id=34 generation=1 pid=1395 duration_sec=0.047 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:29+0000 orangepizero3 env[1183]: 2026-07-17 14:03:29,926 INFO MPV IPC fresh query begin command=get_property request_id=35 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,046 INFO MPV IPC fresh query ok command=get_property request_id=35 generation=1 pid=1395 duration_sec=0.119 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,047 INFO MPV IPC fresh query begin command=get_property request_id=36 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,108 INFO MPV IPC fresh query ok command=get_property request_id=36 generation=1 pid=1395 duration_sec=0.061 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,111 INFO MPV IPC fresh query begin command=get_property request_id=37 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,154 INFO MPV IPC fresh query ok command=get_property request_id=37 generation=1 pid=1395 duration_sec=0.042 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,155 INFO MPV IPC fresh query begin command=get_property request_id=38 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,193 INFO MPV IPC fresh query ok command=get_property request_id=38 generation=1 pid=1395 duration_sec=0.038 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,194 INFO MPV IPC fresh query begin command=get_property request_id=39 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,231 INFO MPV IPC fresh query ok command=get_property request_id=39 generation=1 pid=1395 duration_sec=0.037 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,282 INFO MPV IPC fresh query begin command=get_property request_id=40 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,304 INFO MPV IPC fresh query ok command=get_property request_id=40 generation=1 pid=1395 duration_sec=0.022 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,305 INFO MPV IPC fresh query begin command=get_property request_id=41 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,341 INFO MPV IPC fresh query ok command=get_property request_id=41 generation=1 pid=1395 duration_sec=0.036 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,342 INFO MPV IPC fresh query begin command=get_property request_id=42 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,393 INFO MPV IPC fresh query ok command=get_property request_id=42 generation=1 pid=1395 duration_sec=0.051 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,394 INFO MPV IPC fresh query begin command=get_property request_id=43 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,440 INFO MPV IPC fresh query ok command=get_property request_id=43 generation=1 pid=1395 duration_sec=0.046 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,442 INFO MPV IPC fresh query begin command=get_property request_id=44 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,498 INFO MPV IPC fresh query ok command=get_property request_id=44 generation=1 pid=1395 duration_sec=0.055 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,550 INFO MPV IPC fresh query begin command=get_property request_id=45 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,556 INFO MPV IPC fresh query ok command=get_property request_id=45 generation=1 pid=1395 duration_sec=0.006 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,558 INFO MPV IPC fresh query begin command=get_property request_id=46 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,613 INFO MPV IPC fresh query ok command=get_property request_id=46 generation=1 pid=1395 duration_sec=0.055 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,614 INFO MPV IPC fresh query begin command=get_property request_id=47 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,662 INFO MPV IPC fresh query ok command=get_property request_id=47 generation=1 pid=1395 duration_sec=0.047 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,665 INFO MPV IPC fresh query begin command=get_property request_id=48 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,720 INFO MPV IPC fresh query ok command=get_property request_id=48 generation=1 pid=1395 duration_sec=0.055 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,722 INFO MPV IPC fresh query begin command=get_property request_id=49 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,769 INFO MPV IPC fresh query ok command=get_property request_id=49 generation=1 pid=1395 duration_sec=0.047 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,771 INFO MPV IPC fresh query begin command=get_property request_id=50 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,817 INFO MPV IPC fresh query ok command=get_property request_id=50 generation=1 pid=1395 duration_sec=0.045 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:30+0000 orangepizero3 env[1183]: 2026-07-17 14:03:30,823 INFO Playing media alias=media-b8c9a5f04c path=<media-path:3ba49b8978> index=7 duration_ms=28100 offset_ms=1228 mpv_generation=1 mpv_pid=1395
+2026-07-17T14:03:39+0000 orangepizero3 env[1183]: 2026-07-17 14:03:39,640 INFO MPV IPC fresh query begin command=get_property request_id=51 generation=1 pid=1395 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:39+0000 orangepizero3 env[1183]: 2026-07-17 14:03:39,647 INFO MPV IPC fresh query ok command=get_property request_id=51 generation=1 pid=1395 duration_sec=0.007 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:49+0000 orangepizero3 env[1183]: 2026-07-17 14:03:49,662 INFO MPV IPC fresh query begin command=get_property request_id=52 generation=1 pid=1395 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:49+0000 orangepizero3 env[1183]: 2026-07-17 14:03:49,677 INFO MPV IPC fresh query ok command=get_property request_id=52 generation=1 pid=1395 duration_sec=0.015 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,870 INFO MPV IPC fresh query begin command=loadfile request_id=53 generation=1 pid=1395 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,871 INFO MPV IPC fresh query ok command=loadfile request_id=53 generation=1 pid=1395 duration_sec=0.002 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,872 INFO MPV IPC fresh query begin command=get_property request_id=54 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,877 INFO MPV IPC fresh query ok command=get_property request_id=54 generation=1 pid=1395 duration_sec=0.005 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,929 INFO MPV IPC fresh query begin command=get_property request_id=55 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,969 INFO MPV IPC fresh query ok command=get_property request_id=55 generation=1 pid=1395 duration_sec=0.040 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,970 INFO MPV IPC fresh query begin command=get_property request_id=56 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,978 INFO MPV IPC fresh query ok command=get_property request_id=56 generation=1 pid=1395 duration_sec=0.007 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,979 INFO MPV IPC fresh query begin command=get_property request_id=57 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,988 INFO MPV IPC fresh query ok command=get_property request_id=57 generation=1 pid=1395 duration_sec=0.009 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,988 INFO MPV IPC fresh query begin command=get_property request_id=58 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,989 INFO MPV IPC fresh query ok command=get_property request_id=58 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,990 INFO MPV IPC fresh query begin command=get_property request_id=59 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,990 INFO MPV IPC fresh query ok command=get_property request_id=59 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,991 INFO MPV IPC fresh query begin command=get_property request_id=60 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,992 INFO MPV IPC fresh query ok command=get_property request_id=60 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,992 INFO MPV IPC fresh query begin command=get_property request_id=61 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:57+0000 orangepizero3 env[1183]: 2026-07-17 14:03:57,993 INFO MPV IPC fresh query ok command=get_property request_id=61 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,043 INFO MPV IPC fresh query begin command=get_property request_id=62 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,045 INFO MPV IPC fresh query ok command=get_property request_id=62 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,045 INFO MPV IPC fresh query begin command=get_property request_id=63 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,052 INFO MPV IPC fresh query ok command=get_property request_id=63 generation=1 pid=1395 duration_sec=0.007 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,054 INFO MPV IPC fresh query begin command=get_property request_id=64 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,056 INFO MPV IPC fresh query ok command=get_property request_id=64 generation=1 pid=1395 duration_sec=0.002 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,056 INFO MPV IPC fresh query begin command=get_property request_id=65 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,058 INFO MPV IPC fresh query ok command=get_property request_id=65 generation=1 pid=1395 duration_sec=0.002 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,059 INFO MPV IPC fresh query begin command=get_property request_id=66 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,059 INFO MPV IPC fresh query ok command=get_property request_id=66 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,060 INFO MPV IPC fresh query begin command=get_property request_id=67 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,061 INFO MPV IPC fresh query ok command=get_property request_id=67 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.50 log_file=none
+2026-07-17T14:03:58+0000 orangepizero3 env[1183]: 2026-07-17 14:03:58,064 INFO Playing media alias=media-7eefea6ba2 path=<media-path:9e48f6362b> index=8 duration_ms=5000 offset_ms=0 mpv_generation=1 mpv_pid=1395
+2026-07-17T14:03:59+0000 orangepizero3 env[1183]: 2026-07-17 14:03:59,685 INFO MPV IPC fresh query begin command=get_property request_id=68 generation=1 pid=1395 timeout_sec=2.00 log_file=none
+2026-07-17T14:03:59+0000 orangepizero3 env[1183]: 2026-07-17 14:03:59,687 INFO MPV IPC fresh query ok command=get_property request_id=68 generation=1 pid=1395 duration_sec=0.002 timeout_sec=2.00 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,071 INFO MPV IPC fresh query begin command=loadfile request_id=69 generation=1 pid=1395 timeout_sec=2.00 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,075 INFO MPV IPC fresh query ok command=loadfile request_id=69 generation=1 pid=1395 duration_sec=0.003 timeout_sec=2.00 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,076 INFO MPV IPC fresh query begin command=get_property request_id=70 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,079 INFO MPV IPC fresh query ok command=get_property request_id=70 generation=1 pid=1395 duration_sec=0.003 timeout_sec=0.50 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,081 INFO MPV IPC fresh query begin command=get_property request_id=71 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,083 INFO MPV IPC fresh query ok command=get_property request_id=71 generation=1 pid=1395 duration_sec=0.002 timeout_sec=0.50 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,085 INFO MPV IPC fresh query begin command=get_property request_id=72 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,087 INFO MPV IPC fresh query ok command=get_property request_id=72 generation=1 pid=1395 duration_sec=0.002 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,088 INFO MPV IPC fresh query begin command=get_property request_id=73 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,090 INFO MPV IPC fresh query ok command=get_property request_id=73 generation=1 pid=1395 duration_sec=0.002 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,091 INFO MPV IPC fresh query begin command=get_property request_id=74 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,092 WARNING MPV IPC fresh query returned error command=get_property request_id=74 generation=1 pid=1395 duration_sec=0.002 log_file=none error=property unavailable
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,093 INFO MPV IPC fresh query begin command=get_property request_id=75 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,094 WARNING MPV IPC fresh query returned error command=get_property request_id=75 generation=1 pid=1395 duration_sec=0.001 log_file=none error=property unavailable
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,094 INFO MPV IPC fresh query begin command=get_property request_id=76 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,095 INFO MPV IPC fresh query ok command=get_property request_id=76 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,146 INFO MPV IPC fresh query begin command=get_property request_id=77 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,176 INFO MPV IPC fresh query ok command=get_property request_id=77 generation=1 pid=1395 duration_sec=0.031 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,177 INFO MPV IPC fresh query begin command=get_property request_id=78 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,237 INFO MPV IPC fresh query ok command=get_property request_id=78 generation=1 pid=1395 duration_sec=0.059 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,239 INFO MPV IPC fresh query begin command=get_property request_id=79 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,256 INFO MPV IPC fresh query ok command=get_property request_id=79 generation=1 pid=1395 duration_sec=0.016 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,257 INFO MPV IPC fresh query begin command=get_property request_id=80 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,264 INFO MPV IPC fresh query ok command=get_property request_id=80 generation=1 pid=1395 duration_sec=0.008 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,265 INFO MPV IPC fresh query begin command=get_property request_id=81 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,267 INFO MPV IPC fresh query ok command=get_property request_id=81 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,318 INFO MPV IPC fresh query begin command=get_property request_id=82 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,322 INFO MPV IPC fresh query ok command=get_property request_id=82 generation=1 pid=1395 duration_sec=0.004 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,323 INFO MPV IPC fresh query begin command=get_property request_id=83 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,337 INFO MPV IPC fresh query ok command=get_property request_id=83 generation=1 pid=1395 duration_sec=0.013 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,337 INFO MPV IPC fresh query begin command=get_property request_id=84 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,338 INFO MPV IPC fresh query ok command=get_property request_id=84 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,339 INFO MPV IPC fresh query begin command=get_property request_id=85 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,340 INFO MPV IPC fresh query ok command=get_property request_id=85 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,341 INFO MPV IPC fresh query begin command=get_property request_id=86 generation=1 pid=1395 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,342 INFO MPV IPC fresh query ok command=get_property request_id=86 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.35 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,343 INFO MPV IPC fresh query begin command=get_property request_id=87 generation=1 pid=1395 timeout_sec=0.50 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,344 INFO MPV IPC fresh query ok command=get_property request_id=87 generation=1 pid=1395 duration_sec=0.001 timeout_sec=0.50 log_file=none
+2026-07-17T14:04:03+0000 orangepizero3 env[1183]: 2026-07-17 14:04:03,347 INFO Playing media alias=media-63e22e276f path=<media-path:c406539999> index=0 duration_ms=15100 offset_ms=0 mpv_generation=1 mpv_pid=1395

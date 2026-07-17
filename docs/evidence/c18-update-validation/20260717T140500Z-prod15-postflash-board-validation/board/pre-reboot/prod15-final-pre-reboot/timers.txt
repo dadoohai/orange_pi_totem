@@ -1,0 +1,13 @@
+NextElapseUSecRealtime=
+LastTriggerUSec=Fri 2026-07-17 13:40:51 UTC
+Id=totem-update-agent.timer
+ActiveState=active
+SubState=waiting
+UnitFileState=enabled
+
+NextElapseUSecRealtime=
+LastTriggerUSec=Fri 2026-07-17 13:48:32 UTC
+Id=totem-player-runtime-update-agent.timer
+ActiveState=active
+SubState=waiting
+UnitFileState=enabled

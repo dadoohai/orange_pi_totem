@@ -1,0 +1,1 @@
+path=/data/config/config.json mode=640 owner=root group=totem size=1487

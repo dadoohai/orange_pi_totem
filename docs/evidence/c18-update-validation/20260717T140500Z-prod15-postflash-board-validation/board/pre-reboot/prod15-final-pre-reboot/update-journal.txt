@@ -1,0 +1,57 @@
+2026-07-17T13:40:51+0000 orangepizero3 systemd[1]: Starting totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull)...
+2026-07-17T13:40:51+0000 orangepizero3 totem-updatectl[6091]: 2026-07-17T13:40:51Z WARN update_lock_busy operation=apply-github-latest:totem-core lock=/run/totem-updatectl.lock
+2026-07-17T13:40:51+0000 orangepizero3 totem-updatectl[6091]: update_lock_busy:apply-github-latest:totem-core
+2026-07-17T13:40:51+0000 orangepizero3 systemd[1]: totem-update-agent.service: Deactivated successfully.
+2026-07-17T13:40:51+0000 orangepizero3 systemd[1]: Finished totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull).
+2026-07-17T13:48:32+0000 orangepizero3 systemd[1]: Starting totem-player-runtime-update-agent.service - Dadooh Totem Player Runtime Update Agent (production exact-target auto-pull)...
+2026-07-17T13:48:33+0000 orangepizero3 totem-updatectl[8501]: 2026-07-17T13:48:33Z INFO update_lock_acquired operation=apply-player-runtime-authorized lock=/run/totem-updatectl.lock
+2026-07-17T13:48:33+0000 orangepizero3 totem-updatectl[8501]: GITHUB_RELEASE_NOT_ACCESSIBLE_FROM_DEVICE
+2026-07-17T13:48:33+0000 orangepizero3 totem-updatectl[8501]: 2026-07-17T13:48:33Z ERROR player_runtime_authorized_github_release_error code=403 repo=dadoohai/orange_pi_totem tag=player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
+2026-07-17T13:48:33+0000 orangepizero3 totem-updatectl[8501]: 2026-07-17T13:48:33Z INFO stage_cleanup_ok path=/data/updates/incoming/player-runtime/authorized-select-1784296113
+2026-07-17T13:48:33+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Main process exited, code=exited, status=20/n/a
+2026-07-17T13:48:33+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Failed with result 'exit-code'.
+2026-07-17T13:48:33+0000 orangepizero3 systemd[1]: Failed to start totem-player-runtime-update-agent.service - Dadooh Totem Player Runtime Update Agent (production exact-target auto-pull).
+2026-07-17T13:48:33+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Consumed 1.182s CPU time.
+2026-07-17T13:50:52+0000 orangepizero3 systemd[1]: Starting totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull)...
+2026-07-17T13:50:53+0000 orangepizero3 totem-updatectl[8988]: 2026-07-17T13:50:53Z INFO update_lock_acquired operation=apply-github-latest:totem-core lock=/run/totem-updatectl.lock
+2026-07-17T13:50:54+0000 orangepizero3 totem-updatectl[8988]: 2026-07-17T13:50:54Z ERROR apply_github_latest_http_error code=403 reason=rate limit exceeded
+2026-07-17T13:50:54+0000 orangepizero3 totem-updatectl[8988]: 2026-07-17T13:50:54Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/github-select-1784296253
+2026-07-17T13:50:54+0000 orangepizero3 systemd[1]: totem-update-agent.service: Main process exited, code=exited, status=21/n/a
+2026-07-17T13:50:54+0000 orangepizero3 systemd[1]: totem-update-agent.service: Failed with result 'exit-code'.
+2026-07-17T13:50:54+0000 orangepizero3 systemd[1]: Failed to start totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull).
+2026-07-17T13:50:54+0000 orangepizero3 systemd[1]: totem-update-agent.service: Consumed 1.295s CPU time.
+2026-07-17T13:55:32+0000 orangepizero3 systemd[1]: Starting totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull)...
+2026-07-17T13:55:33+0000 orangepizero3 totem-updatectl[9896]: 2026-07-17T13:55:33Z INFO update_lock_acquired operation=apply-github-latest:totem-core lock=/run/totem-updatectl.lock
+2026-07-17T13:55:34+0000 orangepizero3 totem-updatectl[9896]: 2026-07-17T13:55:34Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/totem-core-c21.24-product-stable-20260717T025907Z-076e18b/dadooh-totem-core-c21.24-product-stable-20260717T025907Z-076e18b.manifest.json dest=/data/updates/incoming/totem-core/github-select-1784296533/totem-core-c21.24-product-stable-20260717T025907Z-076e18b/dadooh-totem-core-c21.24-product-stable-20260717T025907Z-076e18b.manifest.json
+2026-07-17T13:55:35+0000 orangepizero3 totem-updatectl[9896]: 2026-07-17T13:55:35Z INFO apply_start source=github:dadoohai/orange_pi_totem:totem-core-c21.24-product-stable-20260717T025907Z-076e18b manifest=/data/updates/incoming/totem-core/github-select-1784296533/totem-core-c21.24-product-stable-20260717T025907Z-076e18b/dadooh-totem-core-c21.24-product-stable-20260717T025907Z-076e18b.manifest.json
+2026-07-17T13:55:35+0000 orangepizero3 totem-updatectl[9896]: 2026-07-17T13:55:35Z INFO apply_noop_already_current component=totem-core version=c21.24-product-stable-20260717T025907Z-076e18b payload_sha256=2ceb8801d2f9c6b79df2295a38a289334069971701ba724d68a4cc086fbc553c current=releases/c21.24-product-stable-20260717T025907Z-076e18b
+2026-07-17T13:55:35+0000 orangepizero3 totem-updatectl[9896]: 2026-07-17T13:55:35Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/github-select-1784296533
+2026-07-17T13:55:35+0000 orangepizero3 systemd[1]: totem-update-agent.service: Deactivated successfully.
+2026-07-17T13:55:35+0000 orangepizero3 systemd[1]: Finished totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull).
+2026-07-17T13:55:35+0000 orangepizero3 systemd[1]: totem-update-agent.service: Consumed 1.815s CPU time.
+2026-07-17T13:56:30+0000 orangepizero3 systemd[1]: Starting totem-player-runtime-update-agent.service - Dadooh Totem Player Runtime Update Agent (production exact-target auto-pull)...
+2026-07-17T13:56:31+0000 orangepizero3 totem-updatectl[10111]: 2026-07-17T13:56:31Z INFO update_lock_acquired operation=apply-player-runtime-authorized lock=/run/totem-updatectl.lock
+2026-07-17T13:56:31+0000 orangepizero3 totem-updatectl[10111]: 2026-07-17T13:56:31Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4/dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json dest=/data/updates/incoming/player-runtime/authorized-select-1784296591/player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4/dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json
+2026-07-17T13:57:18+0000 orangepizero3 totem-updatectl[10111]: 2026-07-17T13:57:18Z INFO player_runtime_post_promotion_service_restart service=kiosky-player.service
+2026-07-17T13:57:30+0000 orangepizero3 totem-updatectl[10111]: 2026-07-17T13:57:30Z INFO stage_cleanup_ok path=/data/updates/incoming/player-runtime/c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
+2026-07-17T13:57:30+0000 orangepizero3 totem-updatectl[10111]: 2026-07-17T13:57:30Z INFO stage_cleanup_ok path=/data/updates/incoming/player-runtime/authorized-select-1784296591
+2026-07-17T13:57:31+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Deactivated successfully.
+2026-07-17T13:57:31+0000 orangepizero3 systemd[1]: Finished totem-player-runtime-update-agent.service - Dadooh Totem Player Runtime Update Agent (production exact-target auto-pull).
+2026-07-17T13:57:31+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Consumed 15.470s CPU time.
+2026-07-17T13:58:22+0000 orangepizero3 systemd[1]: Starting totem-player-runtime-update-agent.service - Dadooh Totem Player Runtime Update Agent (production exact-target auto-pull)...
+2026-07-17T13:58:23+0000 orangepizero3 totem-updatectl[10840]: 2026-07-17T13:58:23Z INFO update_lock_acquired operation=apply-player-runtime-authorized lock=/run/totem-updatectl.lock
+2026-07-17T13:58:24+0000 orangepizero3 totem-updatectl[10840]: 2026-07-17T13:58:24Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4/dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json dest=/data/updates/incoming/player-runtime/authorized-select-1784296703/player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4/dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json
+2026-07-17T13:58:25+0000 orangepizero3 totem-updatectl[10840]: 2026-07-17T13:58:25Z INFO player_runtime_apply_noop_already_current version=c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4 payload_sha256=b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d current=releases/c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
+2026-07-17T13:58:25+0000 orangepizero3 totem-updatectl[10840]: 2026-07-17T13:58:25Z INFO stage_cleanup_ok path=/data/updates/incoming/player-runtime/authorized-select-1784296703
+2026-07-17T13:58:25+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Deactivated successfully.
+2026-07-17T13:58:25+0000 orangepizero3 systemd[1]: Finished totem-player-runtime-update-agent.service - Dadooh Totem Player Runtime Update Agent (production exact-target auto-pull).
+2026-07-17T13:58:25+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Consumed 2.308s CPU time.
+2026-07-17T13:59:22+0000 orangepizero3 systemd[1]: Starting totem-player-runtime-update-agent.service - Dadooh Totem Player Runtime Update Agent (production exact-target auto-pull)...
+2026-07-17T13:59:23+0000 orangepizero3 totem-updatectl[11433]: 2026-07-17T13:59:23Z INFO update_lock_acquired operation=apply-player-runtime-authorized lock=/run/totem-updatectl.lock
+2026-07-17T13:59:24+0000 orangepizero3 totem-updatectl[11433]: 2026-07-17T13:59:24Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4/dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json dest=/data/updates/incoming/player-runtime/authorized-select-1784296763/player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4/dadooh-player-runtime-c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4.manifest.json
+2026-07-17T14:00:09+0000 orangepizero3 totem-updatectl[11433]: 2026-07-17T14:00:09Z INFO player_runtime_post_promotion_service_restart service=kiosky-player.service
+2026-07-17T14:00:22+0000 orangepizero3 totem-updatectl[11433]: 2026-07-17T14:00:22Z INFO stage_cleanup_ok path=/data/updates/incoming/player-runtime/c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
+2026-07-17T14:00:22+0000 orangepizero3 totem-updatectl[11433]: 2026-07-17T14:00:22Z INFO stage_cleanup_ok path=/data/updates/incoming/player-runtime/authorized-select-1784296763
+2026-07-17T14:00:22+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Deactivated successfully.
+2026-07-17T14:00:22+0000 orangepizero3 systemd[1]: Finished totem-player-runtime-update-agent.service - Dadooh Totem Player Runtime Update Agent (production exact-target auto-pull).
+2026-07-17T14:00:22+0000 orangepizero3 systemd[1]: totem-player-runtime-update-agent.service: Consumed 14.916s CPU time.

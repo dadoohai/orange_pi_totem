@@ -1,0 +1,11 @@
+Result=success
+ExecMainStatus=0
+Id=totem-update-agent.service
+ActiveState=inactive
+SubState=dead
+
+Result=success
+ExecMainStatus=0
+Id=totem-player-runtime-update-agent.service
+ActiveState=inactive
+SubState=dead

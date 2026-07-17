@@ -1,0 +1,5 @@
+NEXT                        LEFT       LAST                        PASSED    UNIT                                    ACTIVATES
+Fri 2026-07-17 14:22:41 UTC 17min left Fri 2026-07-17 13:40:51 UTC 24min ago totem-update-agent.timer                totem-update-agent.service
+Fri 2026-07-17 14:29:51 UTC 24min left Fri 2026-07-17 13:48:32 UTC 17min ago totem-player-runtime-update-agent.timer totem-player-runtime-update-agent.service
+
+2 timers listed.

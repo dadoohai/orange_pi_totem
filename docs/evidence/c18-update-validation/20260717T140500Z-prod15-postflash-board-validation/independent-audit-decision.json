@@ -1,0 +1,31 @@
+{
+  "schema": "dadooh.c18.prod15_independent_audit_decision.v1",
+  "verdict": "go_distribution_baseline",
+  "blockers": [],
+  "perspectives": {
+    "trust_path_and_evidence": {
+      "verdict": "go_after_corrections",
+      "checks": [
+        "artifact_bytes_recomputed",
+        "public_freeze_rc44_raw_evidence",
+        "ephemeral_pairing_images_removed",
+        "overclaims_removed",
+        "sha256sums_complete"
+      ]
+    },
+    "visual_and_product_journey": {
+      "verdict": "go",
+      "blockers": [],
+      "future_improvements_only": true
+    },
+    "distribution_and_rate_limit": {
+      "verdict": "go_baseline_no_go_concentrated_nat_claim",
+      "image_integrity_blocked": false,
+      "distribution_baseline_blocked": false,
+      "concentrated_nat_rollout_claim_blocked": true
+    }
+  },
+  "approved_as_distribution_reference": true,
+  "approved_for_concentrated_nat_rollout_with_public_api_polling": false,
+  "non_claims_preserved": true
+}

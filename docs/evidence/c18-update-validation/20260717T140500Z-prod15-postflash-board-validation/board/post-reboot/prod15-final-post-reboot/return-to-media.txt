@@ -1,0 +1,7 @@
+Result=success
+NRestarts=0
+ActiveState=active
+SubState=running
+playback_state=playing
+mpv_running=True
+current_item_present=True

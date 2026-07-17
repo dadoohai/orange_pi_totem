@@ -1,0 +1,7 @@
+{
+  "authorized_version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+  "component": "player-runtime",
+  "rollback": "ok",
+  "service_health_passed": true,
+  "service_restart_performed": true
+}

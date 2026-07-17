@@ -1,6 +1,6 @@
 # C18 OTA - fonte da verdade operacional
 
-Estado em 2026-07-16. Este documento e o radar curto para decidir os proximos
+Estado em 2026-07-17. Este documento e o radar curto para decidir os proximos
 passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
@@ -22,6 +22,9 @@ Campanha adversarial rapida de midia/OTA:
 Decisao para fonte do player e futuros alvos sem regravacao:
 `docs/product/198_C24_PLAYER_SOURCE_AND_SCALE_DECISION.md`.
 
+Consolidacao da imagem de distribuicao atual:
+`docs/product/201_PRODUCT_BASELINE_CONSOLIDATION.md`.
+
 Runbook do marco fisico encerrado de `totem-core`:
 `docs/c18-totem-core-production-timer-runbook.md`.
 
@@ -33,17 +36,19 @@ rollback se necessario.
 
 Hoje a C18 tem dois caminhos reais:
 
-- `totem-core`: auto-pull stable C21.12 provado na `prod14` por timer real,
-  no-op, rollback, restauracao e reboot;
+- `totem-core`: auto-pull stable C21.24; o roundtrip completo foi provado na
+  `prod14`, e a `prod15` embutiu/adotou a versao exata e confirmou no-op por
+  timer real depois do reboot;
 - `player-runtime`: auto-pull de producao fechado somente para o alvo exato
   C25B `c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`, com timer
   real, no-op, rollback, reaplicacao e 600 segundos continuos limpos. Qualquer
   alvo futuro continua bloqueado ate nova autorizacao presa por hashes.
 
-Estado de distribuicao vigente: `prod14` + C25B + C21.12 e a referencia aceita.
-A candidata completou na placa o E2E fisico dos dois componentes, reboot final,
-reproducao estrita, gate global e tres auditorias independentes sem blocker.
-`prod8` + C23 passa a ser a referencia anterior. `prod9`, `prod10`, `prod11` e
+Estado de distribuicao vigente: `prod15` + C25B + C21.24 e a referencia aceita.
+A imagem completou na placa wizard, playback, apply exato, no-op, freeze,
+rollback, restauracao, reboot e os dois timers reais pos-reboot. O gate global
+e tres perspectivas independentes fecharam sem blocker para a baseline.
+`prod14` passa a ser a referencia anterior. `prod9`, `prod10`, `prod11` e
 `prod13` continuam bloqueadas pelos achados registrados no historico abaixo;
 `prod12` permanece bancada intermediaria, nao imagem final.
 
@@ -65,7 +70,7 @@ O repo `kiosky-player`, branch `appliance-v0.1`, sera a fonte editavel do
 comportamento depois da convergencia C24. Ele nao publica direto para placas.
 Toda entrega para cliente continua passando por um snapshot de commit exato na
 frente `player-runtime` do fluxo C18. Ate a convergencia fechar, o snapshot
-C25B e a verdade funcional da candidata `prod14`.
+C25B e a verdade funcional da referencia `prod15`.
 
 Nota de nome: em runtime o servico ainda pode se chamar `kiosky-player.service`.
 Isso nao torna `kiosky-player` uma rota de release C18. O launcher C18 deve
@@ -91,7 +96,7 @@ imagem/fallback quando nao houver.
    cache, systemd, kernel ou updater novo.
 3. `player-runtime` nao pode carregar MPV/ffmpeg/kernel/midia/config/cache; o
    pacote atual e deliberadamente estreito.
-4. Auto-pull de `totem-core` C21.12 e de `player-runtime` C25B estao provados; isso nao
+4. Auto-pull de `totem-core` C21.24 e de `player-runtime` C25B estao provados; isso nao
    autoriza `latest` amplo nem futuros pacotes de player por inferencia.
 5. Regravar imagem em laboratorio e permitido como reset/prova, mas nao conta
    como OTA de producao.
@@ -428,8 +433,8 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 ## Estado da referencia e pendencias
 
-- `prod14` + C25B + C21.12 e a referencia de producao comprovada. `prod8` + C23
-  permanece somente como referencia anterior;
+- `prod15` + C25B + C21.24 e a referencia de producao comprovada. `prod14`
+  permanece como referencia anterior;
 - `prod9` esta **bloqueada e nao deve ser gravada**. Seu SHA256 e
   `4a413bc84d76de045a4e0884a1b1f60db962823e2bdca042e31e17feaee0c050`.
 - `prod10` tambem esta **bloqueada e nao deve ser gravada**. Ela resolveu os
@@ -456,6 +461,10 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
   no-op, rollback e restauracao sem downgrade;
 - gate global e tres auditorias independentes terminaram sem blocker; a
   `prod14` substitui a `prod8` como imagem de referencia;
+- a `prod15` incorporou C21.24 e o avaliador image-bound corrigido, foi gravada
+  do zero e concluiu wizard, playback, OTA C25B, no-op, freeze `rc=44`, rollback
+  ao fallback da imagem, restauracao, reboot e no-op pelos dois timers reais;
+  a auditoria final promoveu a `prod15` como referencia atual;
 - manter como frente separada o RCA da ativacao que uma vez ficou em espera ate
   `F5`; o onboarding concluiu, mas a experiencia ainda nao e considerada
   encerrada por esse caso;
@@ -467,6 +476,12 @@ Risco aceito para esta primeira escala: SSH root por uma senha compartilhada de
 alta entropia permanece para suporte; credencial por device e M6. A excecao nao
 permite senha curta, plaintext, Wi-Fi/identidade de lab ou host keys reutilizadas
 na imagem.
+
+Risco de distribuicao conhecido: core e player consultam a API publica do
+GitHub sem token e compartilham 60 requests/h por IP. A falha foi provada como
+segura e o timer tenta novamente, mas nao se afirma rollout concentrado atras do
+mesmo NAT ate existir indice stable sem polling ou credencial de leitura
+provisionada por dispositivo/coorte.
 
 Hardenings nao bloqueantes apontados pela auditoria do marco anterior de
 `totem-core` auto-pull:
@@ -487,8 +502,8 @@ rollback.
 
 Leitura pratica:
 
-- novas placas devem sair com a `prod14`, C25B como
-  fallback/target exato do player e C21.12 como stable atual do core;
+- novas placas devem sair com a `prod15`, C25B como
+  fallback/target exato do player e C21.24 como stable atual do core;
 - `totem-core` e o auto-pull padrao para wizard e produto; apply remoto, no-op,
   rollback, restauracao e reboot estao provados na placa;
 - `player-runtime` esta fechado para C25B por caminho pinado/hash-bound, health
@@ -502,12 +517,12 @@ Leitura pratica:
 
 Resultado dessa decisao: a linha de producao pragmatica foi materializada:
 
-1. imagem `prod14`, sem marcador `not_for_production`;
+1. imagem `prod15`, sem marcador `not_for_production`;
 2. policy de producao e timer habilitado para auto-pull de `totem-core`;
 3. timer real aplicando update remoto, no-op, rollback e restauracao;
 4. especificacao curta para devs e fabrica;
 5. ponte publica exact-target para C25B, com rollback e health real;
-6. auditoria final concluida; `prod14` e a referencia aceita.
+6. auditoria final concluida; `prod15` e a referencia aceita.
 
 ## Historico V3/M5 - C22/prod7
 
@@ -854,9 +869,10 @@ podemos escolher entre:
     policy/timer stable restaurados. Portal fisico/emulado e navegador M9.8
     continuam pendentes, sem contaminar este claim. Evidencia:
     `docs/evidence/c20-totem-core-ota/20260716T214911Z-c21-23-captive-portal-board-e2e/`.
-17. A consolidacao da proxima baseline segue
-    `docs/product/201_PRODUCT_BASELINE_CONSOLIDATION.md`. A ordem evita embutir
-    C21.23 homologation com a stable remota C21.12 mais antiga: primeiro cria e
-    prova uma stable monotona do mesmo conteudo na prod14; depois constroi,
-    grava e valida a prod15. Ate o fechamento fisico, a referencia continua
-    `prod14` + C25B + C21.12.
+17. A consolidacao descrita em
+    `docs/product/201_PRODUCT_BASELINE_CONSOLIDATION.md` foi concluida. C21.24
+    stable foi provada, a prod15 foi construida e gravada, e wizard, playback,
+    OTA, rollback, restauracao, reboot e timers reais passaram. A referencia
+    atual passa a ser `prod15` + C25B + C21.24. O rate limit publico do GitHub
+    fica como limite explicito para rollout concentrado, nao como falha oculta
+    da imagem.

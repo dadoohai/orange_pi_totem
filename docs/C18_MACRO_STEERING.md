@@ -1,6 +1,6 @@
 # C18 Macro Steering
 
-Estado inicial: 2026-07-05. Atualizado em 2026-07-16.
+Estado inicial: 2026-07-05. Atualizado em 2026-07-17.
 
 Este documento e o cerne direcionador da fase atual. Ele existe para impedir que
 rodadas longas, auditorias e tarefas tecnicas desviem o trabalho do objetivo de
@@ -89,7 +89,7 @@ baseline inicial da imagem.
 Este marco fecha quando existe imagem C18 de producao:
 
 - sem marcador `not_for_production`;
-- com snapshot/base `player-runtime 9bebaf1` aprovado;
+- com player-runtime C25B exato aprovado;
 - com auto-pull `totem-core` configurado;
 - validada em placa gravada do zero;
 - com runbook de gravacao/validacao de bancada. Checklist completo de
@@ -112,7 +112,8 @@ Este marco fecha quando temos:
 
 ### M5 - Auto-Pull Publico De `player-runtime`
 
-Status: fechado para o alvo exato C23 na prod8 em 2026-07-11.
+Status: fechado para o alvo exato C25B na prod15 em 2026-07-17. C23/prod8
+permanece prova historica anterior.
 
 Valor: permitir atualizar comportamento do player remotamente sem voltar ao
 caminho legado.
@@ -377,6 +378,20 @@ preservados. O portal fisico/emulado e o navegador permanecem non-claims.
 Evidencia:
 `docs/evidence/c20-totem-core-ota/20260716T214911Z-c21-23-captive-portal-board-e2e/`.
 
+## Consolidacao Prod15
+
+Fechamento em 2026-07-17: `prod15` + C25B + C21.24 passa a ser a baseline de
+distribuicao. A imagem exata foi recomputada, gravada do zero e concluiu wizard,
+playback com HW decode, apply/no-op/freeze/rollback/restore do player-runtime,
+reboot e no-op dos dois timers reais. Tres perspectivas independentes fecharam
+sem blocker depois das correcoes de evidencia.
+
+Limite de escala: polling sem token na API publica do GitHub falha fechado e
+tenta novamente, mas compartilha cota por IP. Portanto a baseline esta fechada;
+rollout concentrado sob o mesmo NAT nao deve ser prometido ate existir indice
+stable sem polling ou credencial de leitura por dispositivo/coorte. Evidencia:
+`docs/evidence/c18-update-validation/20260717T140500Z-prod15-postflash-board-validation/`.
+
 ## Checklist Contra Hiperfoco
 
 Antes de abrir ou continuar uma tarefa, responder:
@@ -485,3 +500,8 @@ Enquanto nada mudar, a ordem de execucao e:
     cativo e navegador restrito avancam depois, sem reabrir a base
     transacional C21.19. Cada recorte fechado entra no acumulo `totem-core` e
     na proxima imagem de referencia.
+16. A acumulacao C21.23 foi promovida como C21.24 stable e embutida na prod15.
+    A imagem passou validacao fisica, auditoria final e substitui a prod14 como
+    referencia. A proxima frente de escala e retirar a descoberta de releases
+    da cota publica compartilhada por IP; isso nao reabre wizard, playback,
+    rollback ou a baseline ja comprovados.

@@ -1,0 +1,4 @@
+core_current=releases/c21.24-product-stable-20260717T025907Z-076e18b
+core_previous=none
+runtime_current=releases/c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4
+runtime_previous=none

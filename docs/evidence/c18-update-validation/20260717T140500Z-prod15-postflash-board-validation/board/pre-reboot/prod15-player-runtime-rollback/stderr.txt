@@ -1,0 +1,1 @@
+2026-07-17T13:58:47Z INFO update_lock_acquired operation=rollback-player-runtime-authorized lock=/run/totem-updatectl.lock

@@ -1,0 +1,1 @@
+Linux orangepizero3 6.12.58-current-sunxi64 #1 SMP Thu Nov 13 20:34:41 UTC 2025 aarch64 GNU/Linux

@@ -1,10 +1,9 @@
 # Consolidacao Da Baseline De Produto
 
-Estado atual aceito: imagem `prod14` + player-runtime C25B exato. A stable
-publica atual do totem-core e C21.24; a placa `prod14` adotou essa release pelo
-timer real, passou por no-op, rollback, restauracao e reboot. A `prod15` foi
-construida e auditada, mas ainda nao e baseline de distribuicao enquanto nao
-for gravada e validada na placa.
+Estado atual aceito: imagem `prod15` + player-runtime C25B exato + totem-core
+C21.24. A imagem foi construida, gravada e passou na validacao fisica:
+wizard, playback, OTA, no-op, freeze, rollback, restauracao, timers reais e
+reboot. A auditoria independente final terminou sem blocker para a baseline.
 
 ## Alvo
 
@@ -21,8 +20,8 @@ Gerar a sucessora `prod15` com:
 2. [concluido] Provar o pacote exato localmente na prod14: apply, rollback e reaplicacao.
 3. [concluido] Publicar a stable e provar timer real, no-op, rollback, restauracao e reboot.
 4. [concluido] Construir e auditar a prod15 ja com essa stable embutida.
-5. [em andamento] Gravar a imagem em cartao limpo e validar jornada, player, OTA e reboot.
-6. [pendente] Somente entao declarar a prod15 como nova baseline de distribuicao.
+5. [concluido] Gravar a imagem em cartao limpo e validar jornada, player, OTA e reboot.
+6. [concluido] Auditar a evidencia final e declarar a prod15 como nova baseline de distribuicao.
 
 ## Limites
 
@@ -30,5 +29,9 @@ Gerar a sucessora `prod15` com:
   e liberado por inferencia.
 - Portal cativo fisico/emulado e navegador restrito continuam pendentes.
 - Associacao em AP aberto fisico continua pendente.
+- A descoberta de releases pela API publica do GitHub falha de forma segura,
+  mas divide uma cota por IP. Um indice stable sem polling da API ou credencial
+  de leitura provisionada fica no roadmap antes de uma concentracao grande de
+  placas sob o mesmo NAT.
 - Nenhuma imagem ou release vira referencia apenas por passar em validacao
   offline.

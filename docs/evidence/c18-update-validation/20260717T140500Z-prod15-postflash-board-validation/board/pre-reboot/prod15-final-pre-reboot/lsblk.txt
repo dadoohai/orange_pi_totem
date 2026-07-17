@@ -1,0 +1,8 @@
+NAME          SIZE FSTYPE MOUNTPOINTS
+mtdblock0      16M        
+mmcblk0      29.7G        
+└─mmcblk0p1  29.4G ext4   /var/log.hdd
+                          /
+zram0       986.9M        [SWAP]
+zram1          50M        /var/log
+zram2           0B        

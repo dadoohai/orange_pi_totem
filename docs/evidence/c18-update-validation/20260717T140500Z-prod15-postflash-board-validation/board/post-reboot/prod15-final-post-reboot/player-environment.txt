@@ -1,0 +1,1 @@
+KIOSKY_APP_DIR=/data/player-runtime/current

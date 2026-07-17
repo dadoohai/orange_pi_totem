@@ -1,0 +1,6 @@
+capture_after_service_complete=yes
+core_current_same=yes
+core_state_same=yes
+runtime_current_same=yes
+runtime_state_same=yes
+player_same=yes

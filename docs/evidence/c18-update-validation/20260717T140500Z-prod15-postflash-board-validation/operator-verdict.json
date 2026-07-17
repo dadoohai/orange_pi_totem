@@ -1,0 +1,46 @@
+{
+  "schema": "dadooh.c18.prod15_postflash_operator_verdict.v1",
+  "artifact": {
+    "image_tag": "c18-hwdecode-prod-15",
+    "image_version": "c18.image-prod.15",
+    "sha256": "cff33f16e3a0f62327b0b75fb2378c08da9e51e14f9a9550ded72730e2218d09"
+  },
+  "board_validation_passed": true,
+  "checks": {
+    "first_boot_and_rootfs": true,
+    "wizard_real_flow": true,
+    "configuration_persisted_after_reboot": true,
+    "totem_core_c21_24_noop": true,
+    "player_runtime_c25b_exact_apply": true,
+    "player_runtime_noop": true,
+    "public_freeze_rc44": true,
+    "authorized_rollback_to_image_fallback": true,
+    "authorized_restore_to_c25b": true,
+    "post_restore_deep_health": true,
+    "final_reboot": true,
+    "post_reboot_deep_health": true,
+    "system_running_without_failed_units": true,
+    "timers_enabled_and_active": true,
+    "post_reboot_core_timer_noop": true,
+    "post_reboot_player_runtime_timer_noop": true
+  },
+  "known_risks": [
+    {
+      "id": "github_public_api_rate_limit_shared_by_ip",
+      "classification": "distribution_latency_not_device_integrity",
+      "fail_safe_observed": true,
+      "follow_up": "api_independent_stable_index_or_scoped_read_token_provisioning"
+    }
+  ],
+  "promotion": {
+    "approved_as_distribution_reference": true,
+    "approved_for_concentrated_nat_rollout_with_public_api_polling": false,
+    "pending": []
+  },
+  "non_claims": [
+    "no_player_runtime_target_beyond_c25b",
+    "no_physical_open_ap_validation",
+    "no_physical_or_emulated_captive_portal_validation",
+    "no_additional_display_matrix_validation"
+  ]
+}

@@ -1,0 +1,21 @@
+2026-07-17T14:02:46+0000 orangepizero3 kernel: dw-apb-uart 5000000.serial: Error applying setting, reverse things back
+2026-07-17T14:02:46+0000 orangepizero3 kernel: sun6i-spi 5010000.spi: Error applying setting, reverse things back
+2026-07-17T14:02:46+0000 orangepizero3 kernel: sunxi-mmc 4020000.mmc: Error applying setting, reverse things back
+2026-07-17T14:02:46+0000 orangepizero3 kernel: sunxi-mmc 4021000.mmc: Error applying setting, reverse things back
+2026-07-17T14:02:46+0000 orangepizero3 kernel: dw-apb-uart 5000000.serial: Error applying setting, reverse things back
+2026-07-17T14:02:46+0000 orangepizero3 kernel: sun6i-spi 5010000.spi: Error applying setting, reverse things back
+2026-07-17T14:02:46+0000 orangepizero3 kernel: WCN_ERR: dts node for bt_wake not found
+2026-07-17T14:02:47+0000 orangepizero3 systemd-tmpfiles[509]: Setting file flags is only supported on regular files and directories, cannot set on '/var/log/journal'.
+2026-07-17T14:02:48+0000 orangepizero3 kernel: wifi ini path = /lib/firmware/wifi_2355b001_1ant.ini
+2026-07-17T14:02:48+0000 orangepizero3 kernel: sprdwl:sprdwl_get_fw_info length mismatch: len_count=83, r_len=89
+2026-07-17T14:02:48+0000 orangepizero3 kernel: sprdwl:sprdwl_get_fw_info, drv_version=1, fw_version=2, compat_ver=0
+2026-07-17T14:02:48+0000 orangepizero3 kernel: sprdwl:chip_model:0x2355, chip_ver:0x0
+2026-07-17T14:02:48+0000 orangepizero3 kernel: sprdwl:fw_ver:0, fw_std:0x7f, fw_capa:0x120f7f
+2026-07-17T14:02:48+0000 orangepizero3 kernel: sprdwl:mac_addr:1c:79:2d:6d:ea:2b
+2026-07-17T14:02:48+0000 orangepizero3 kernel: sprdwl:credit_capa:TX_WITH_CREDIT
+2026-07-17T14:02:48+0000 orangepizero3 kernel: sprdwl:ott support:0
+2026-07-17T14:02:49+0000 orangepizero3 bluetoothd[852]: src/plugin.c:plugin_init() Failed to init vcp plugin
+2026-07-17T14:02:49+0000 orangepizero3 bluetoothd[852]: src/plugin.c:plugin_init() Failed to init mcp plugin
+2026-07-17T14:02:49+0000 orangepizero3 bluetoothd[852]: src/plugin.c:plugin_init() Failed to init bap plugin
+2026-07-17T14:02:49+0000 orangepizero3 bluetoothd[852]: profiles/sap/server.c:sap_server_register() Sap driver initialization failed.
+2026-07-17T14:02:49+0000 orangepizero3 bluetoothd[852]: sap-server: Operation not permitted (1)
