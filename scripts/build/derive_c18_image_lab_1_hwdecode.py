@@ -78,16 +78,18 @@ WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
-PRODUCTION_TAG = "c18-hwdecode-prod-14"
-PRODUCTION_VERSION = "c18.image-prod.14"
+PRODUCTION_TAG = "c18-hwdecode-prod-15"
+PRODUCTION_VERSION = "c18.image-prod.15"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
-PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-13"
-PRODUCTION_PREDECESSOR_SHA256 = "4918796e08a1a0147c797ac64fa0629a6d2d340fa21902c78a629f62db89ac3e"
+PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-14"
+PRODUCTION_PREDECESSOR_SHA256 = "3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682"
 PRODUCTION_IMAGE_BOUND_TRANSACTION_COMMIT = "bfb0d04489ac4251908ba27396bd8ed37bead3f8"
+PRODUCTION_IMAGE_BOUND_PLAYBACK_SUMMARY_COMMIT = "c075a5572148ed25aed000a22202f918c4157fda"
 PRODUCTION_SUCCESSOR_SCOPE = (
-    "image_identity_prod14",
-    "player_runtime_candidate_startup_wait_8s",
-    "player_runtime_canary_covers_health_window",
+    "image_identity_prod15",
+    "totem_core_c21_24_stable_embedded",
+    "playback_health_summary_c075a55",
+    "player_runtime_c25b_exact_target_preserved",
 )
 PANFROST_SH = "/opt/totem/bin/totem-panfrost-rebind.sh"
 PANFROST_UNIT = "/etc/systemd/system/totem-panfrost-rebind.service"
@@ -965,7 +967,37 @@ def validate_candidate_identity(tag: str, version: str, marker: str,
     if image_profile == "production" and (
         tag != PRODUCTION_TAG or version != PRODUCTION_VERSION or marker != PRODUCTION_MARKER
     ):
-        raise SystemExit("BLOCKED: production candidate identity must match the pinned prod14 release")
+        raise SystemExit("BLOCKED: production candidate identity must match the pinned prod15 release")
+
+
+def validate_image_bound_file(commit: str, relative_path: str) -> dict[str, str]:
+    ancestor = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", commit, "HEAD"],
+        cwd=REPO_ROOT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    if ancestor.returncode != 0:
+        raise SystemExit(f"BLOCKED: image-bound commit is not an ancestor of HEAD: {commit}")
+    committed = subprocess.run(
+        ["git", "show", f"{commit}:{relative_path}"],
+        cwd=REPO_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    source = REPO_ROOT / relative_path
+    if committed.returncode != 0 or not source.is_file():
+        raise SystemExit(f"BLOCKED: image-bound source is unavailable: {commit}:{relative_path}")
+    current = source.read_bytes()
+    if committed.stdout != current:
+        raise SystemExit(f"BLOCKED: image-bound source changed after {commit}: {relative_path}")
+    return {
+        "commit": commit,
+        "path": relative_path,
+        "sha256": hashlib.sha256(current).hexdigest(),
+    }
 
 
 def main():
@@ -1010,6 +1042,14 @@ def main():
         validate_production_player_runtime_authorization()
         if args.image_profile == "production"
         else {"passed": "n/a", "result_claim": "not_required_for_homologation_image"}
+    )
+    production_playback_summary_provenance = (
+        validate_image_bound_file(
+            PRODUCTION_IMAGE_BOUND_PLAYBACK_SUMMARY_COMMIT,
+            "scripts/board/c18_playback_health_summary.py",
+        )
+        if args.image_profile == "production"
+        else {"commit": "n/a", "path": "n/a", "sha256": "n/a"}
     )
     zerofree_tool = resolve_zerofree(args.zerofree) if args.image_profile == "production" else None
     production_ext4_tools = (
@@ -1329,6 +1369,7 @@ def main():
         "player_runtime_fault_injection_gate=true",
         "player_runtime_reconcile_corrupt_state_fail_closed=true",
         "player_runtime_ota_still_frozen=true",
+        f"playback_health_summary_commit={PRODUCTION_IMAGE_BOUND_PLAYBACK_SUMMARY_COMMIT}",
         "totem_core_excludes_kiosky_service_launcher=true",
         f"player_runtime_kiosk_source={PLAYER_RUNTIME_KIOSK.relative_to(REPO_ROOT)}",
         f"player_runtime_kiosk_sha256={kiosk_snapshot_sha}",
@@ -1841,6 +1882,12 @@ def main():
             if args.image_profile == "production"
             else "n/a"
         ),
+        "production_playback_summary_marker_matches": (
+            f"playback_health_summary_commit={PRODUCTION_IMAGE_BOUND_PLAYBACK_SUMMARY_COMMIT}"
+            in marker_now
+            if args.image_profile == "production"
+            else "n/a"
+        ),
         "production_ssh_host_keys_not_embedded": (
             all(not present(path) for path in PRODUCTION_EMBEDDED_SSH_HOST_KEYS)
             if args.image_profile == "production"
@@ -1975,6 +2022,11 @@ def main():
             if args.image_profile == "production"
             else "n/a"
         ),
+        "production_image_bound_playback_summary": (
+            production_playback_summary_provenance
+            if args.image_profile == "production"
+            else "n/a"
+        ),
         "base_image_line": "c17.4.2", "c17_7_used_as_base": False,
         "base_image": BASE_IMAGE.name,
         "kernel_touched": False, "kernel_rebuild_executed": False,
@@ -2059,8 +2111,8 @@ def main():
     else:
         manifest["production_image"] = True
         manifest["supersedes_production_image"] = (
-            "c18-hwdecode-prod-13 (board-validated base; superseded before distribution "
-            "because the exact-target candidate health window started before status warm-up)"
+            "c18-hwdecode-prod-14 (board-validated predecessor; superseded by the "
+            "C21.24 stable product baseline and image-bound playback health summary)"
         )
         manifest["production_access_nonclaim"] = (
             "CSPRNG-generated shared support password SSH access remains enabled by explicit "

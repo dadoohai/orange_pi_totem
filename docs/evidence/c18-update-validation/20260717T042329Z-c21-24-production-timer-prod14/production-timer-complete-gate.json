@@ -1,0 +1,17 @@
+{
+  "blockers": [],
+  "expected_image_tag": "c18-hwdecode-prod-14",
+  "expected_release_tag": "totem-core-c21.24-product-stable-20260717T025907Z-076e18b",
+  "expected_rollback_version": "c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8",
+  "expected_version": "c21.24-product-stable-20260717T025907Z-076e18b",
+  "non_claims": [
+    "does_not_thaw_player_runtime",
+    "does_not_update_media_system",
+    "does_not_publish_release"
+  ],
+  "passed": true,
+  "result_claim": "totem_core_production_timer_ready",
+  "rollback_summary": "docs/evidence/c18-update-validation/20260717T042329Z-c21-24-production-timer-prod14/board/c21-24-post-rollback-summary.json",
+  "schema": "dadooh.c18.totem_core.production_timer_evidence_gate.v1",
+  "summary": "docs/evidence/c18-update-validation/20260717T042329Z-c21-24-production-timer-prod14/board/c21-24-restored-summary.json"
+}

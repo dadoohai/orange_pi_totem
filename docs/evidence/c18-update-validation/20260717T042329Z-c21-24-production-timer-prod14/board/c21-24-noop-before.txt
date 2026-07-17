@@ -1,0 +1,8 @@
+state_sha256=1bc6f43703b77ad64e18a2fa34482115ea2acf2c4434086298c0b0d9a85dcbcc
+current=releases/c21.24-product-stable-20260717T025907Z-076e18b
+previous=releases/c21.23-captive-portal-detection-20260716T214621Z-3e5dbf8
+player_pid=1074
+player_cmdline_sha256=0033ba72073cf4ef212ceb0f228127fe38f77e72f8627170b9b3fc28e1792091
+NRestarts=0
+ActiveState=active
+SubState=running

@@ -1,0 +1,40 @@
+{
+  "schema": "dadooh.c18.totem_core.production_timer_campaign.v1",
+  "passed": true,
+  "image_tag": "c18-hwdecode-prod-14",
+  "release": {
+    "tag": "totem-core-c21.24-product-stable-20260717T025907Z-076e18b",
+    "version": "c21.24-product-stable-20260717T025907Z-076e18b",
+    "payload_sha256": "2ceb8801d2f9c6b79df2295a38a289334069971701ba724d68a4cc086fbc553c",
+    "source_commit": "076e18b4de08ddb98d45d0f47fc9a960f133bc80"
+  },
+  "checks": {
+    "public_timer_adoption": true,
+    "post_timer_gate": true,
+    "noop_state_unchanged": true,
+    "governed_rollback": true,
+    "rollback_gate": true,
+    "remote_restore": true,
+    "restored_gate": true,
+    "reboot_persistence": true,
+    "timer_enabled_after_reboot": true,
+    "timer_active_after_reboot": true,
+    "player_service_active": true,
+    "player_restarts_max": 0,
+    "player_runtime_freeze_rc": 44,
+    "failed_systemd_units_zero": true
+  },
+  "post_reboot_playback": {
+    "passed": false,
+    "classification": "not_run_with_display_sink",
+    "hdmi_connector": "disconnected",
+    "launcher_state": "display_missing",
+    "expected_behavior": "mpv_not_started_without_display"
+  },
+  "non_claims": [
+    "not_prod15_image_validation",
+    "not_playback_validation_without_hdmi",
+    "not_player_runtime_thaw",
+    "not_future_player_runtime_target_authorization"
+  ]
+}

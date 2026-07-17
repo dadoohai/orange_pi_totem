@@ -16,11 +16,12 @@ from typing import Any, Callable
 import derive_c15_2_1_homolog_image as base
 
 
-TOTEM_CORE_VERSION = "c20.14-settings-stop-hardening-20260714T034217Z-22bd473"
-TOTEM_CORE_RELEASE_TAG = "totem-core-c20.14-settings-stop-hardening-20260714T034217Z-22bd473"
-TOTEM_CORE_PAYLOAD_SHA256 = "0653f62863420dcbcdaf051a744484f6a3986850b3da23903311fe2b30056761"
-TOTEM_CORE_CREATED_AT_UTC = "2026-07-14T03:42:24Z"
-TOTEM_CORE_SOURCE_COMMIT = "22bd473d2e3e1d026647d6e174f7d9da880c4e8f"
+TOTEM_CORE_VERSION = "c21.24-product-stable-20260717T025907Z-076e18b"
+TOTEM_CORE_RELEASE_TAG = "totem-core-c21.24-product-stable-20260717T025907Z-076e18b"
+TOTEM_CORE_CHANNEL = "stable"
+TOTEM_CORE_PAYLOAD_SHA256 = "2ceb8801d2f9c6b79df2295a38a289334069971701ba724d68a4cc086fbc553c"
+TOTEM_CORE_CREATED_AT_UTC = "2026-07-17T02:59:08Z"
+TOTEM_CORE_SOURCE_COMMIT = "076e18b4de08ddb98d45d0f47fc9a960f133bc80"
 UPDATE_POLICY_TARGET = "/data/updates/policy.json"
 UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-update-agent.service"
 UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-update-agent.timer"
@@ -139,7 +140,9 @@ def validate_totem_core_release_provenance(repo_root: Path, core_files: list[str
     expected = {
         "component": "totem-core",
         "version": TOTEM_CORE_VERSION,
+        "channel": TOTEM_CORE_CHANNEL,
         "source_commit": TOTEM_CORE_SOURCE_COMMIT,
+        "source_dirty": False,
         "payload_sha256": TOTEM_CORE_PAYLOAD_SHA256,
         "created_at_utc": TOTEM_CORE_CREATED_AT_UTC,
     }
@@ -160,7 +163,9 @@ def validate_totem_core_release_provenance(repo_root: Path, core_files: list[str
                 raise RuntimeError(f"totem_core_embed_payload_source_mismatch:{core_file}")
     return {
         "version": TOTEM_CORE_VERSION,
+        "channel": TOTEM_CORE_CHANNEL,
         "source_commit": TOTEM_CORE_SOURCE_COMMIT,
+        "source_dirty": False,
         "payload_sha256": payload_sha,
         "manifest": str(manifest_path.relative_to(repo_root)),
         "payload": str(payload_path.relative_to(repo_root)),
@@ -502,6 +507,7 @@ def write_totem_core_embed(
                 "component": "totem-core",
                 "current": {
                     "version": TOTEM_CORE_VERSION,
+                    "channel": TOTEM_CORE_CHANNEL,
                     "path": current_target,
                     "source": "image_embed",
                     "source_repo": "dadoohai/orange_pi_totem",
@@ -665,6 +671,7 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
         "totem_core_current_symlink_target_exact": current_target == f"releases/{TOTEM_CORE_VERSION}",
         "totem_core_state_present": _is_file(rootfs, "/data/core/totem/state.json"),
         "totem_core_state_records_current_version": TOTEM_CORE_VERSION in state,
+        "totem_core_state_records_current_channel": f'"channel": "{TOTEM_CORE_CHANNEL}"' in state,
         "totem_core_state_records_created_at": TOTEM_CORE_CREATED_AT_UTC in state,
         "totem_core_state_records_source_commit": TOTEM_CORE_SOURCE_COMMIT in state,
         "totem_core_state_records_payload_sha256": TOTEM_CORE_PAYLOAD_SHA256 in state,

@@ -437,12 +437,24 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             except ValueError:
                 pass
 
-        expected_core_version = "c20.14-settings-stop-hardening-20260714T034217Z-22bd473"
+        expected_core_version = "c21.24-product-stable-20260717T025907Z-076e18b"
         expected_core_tag = f"totem-core-{expected_core_version}"
-        expected_core_sha = "0653f62863420dcbcdaf051a744484f6a3986850b3da23903311fe2b30056761"
+        expected_core_sha = "2ceb8801d2f9c6b79df2295a38a289334069971701ba724d68a4cc086fbc553c"
         self.assertEqual(mod.TOTEM_CORE_VERSION, expected_core_version)
         self.assertEqual(mod.TOTEM_CORE_RELEASE_TAG, expected_core_tag)
+        self.assertEqual(mod.TOTEM_CORE_CHANNEL, "stable")
         self.assertEqual(mod.TOTEM_CORE_PAYLOAD_SHA256, expected_core_sha)
+        self.assertEqual(mod.TOTEM_CORE_CREATED_AT_UTC, "2026-07-17T02:59:08Z")
+        self.assertEqual(
+            mod.TOTEM_CORE_SOURCE_COMMIT,
+            "076e18b4de08ddb98d45d0f47fc9a960f133bc80",
+        )
+        release_provenance = mod.validate_totem_core_release_provenance(
+            REPO_ROOT,
+            mod.CORE_FILES,
+        )
+        self.assertEqual(release_provenance["channel"], "stable")
+        self.assertIs(release_provenance["source_dirty"], False)
         appliance = json.loads(
             (REPO_ROOT / "scripts" / "board" / "totem_appliance_manifest.json").read_text(
                 encoding="utf-8"
@@ -453,10 +465,12 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertEqual(current_core["package_version"], expected_core_version)
         self.assertEqual(current_core["github_release_tag"], expected_core_tag)
         self.assertEqual(current_core["payload_sha256"], expected_core_sha)
+        self.assertTrue(current_core["remote_apply_tested"])
         self.assertTrue(current_core["local_apply_tested"])
         self.assertTrue(current_core["rollback_tested"])
         self.assertEqual(image_embed["current_version"], expected_core_version)
         self.assertEqual(image_embed["source_release_tag"], expected_core_tag)
+        self.assertEqual(image_embed["source_channel"], "stable")
         self.assertEqual(image_embed["payload_sha256"], expected_core_sha)
         self.assertEqual(image_embed["layout"]["current_target"], f"releases/{expected_core_version}")
 
@@ -554,28 +568,47 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn("production totem-core profile requires --image-profile production", derive)
         self.assertIn("production images never allow dirty source trees", derive)
         self.assertIn("production source tree changed during image construction", derive)
-        self.assertIn("production candidate identity must match the pinned prod14 release", derive)
+        self.assertIn("production candidate identity must match the pinned prod15 release", derive)
         self.assertIn("binary image inputs changed during construction", derive)
         self.assertIn("production_image=true", derive)
         self.assertIn("artifact_private=false", derive)
         self.assertIn('"not_for_distribution" not in marker_now', derive)
         self.assertIn('"not_for_production" not in marker_now', derive)
         self.assertIn("profile=totem_core_profile", derive)
-        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-14"', derive)
-        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.14"', derive)
-        self.assertIn('PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-13"', derive)
+        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-15"', derive)
+        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.15"', derive)
+        self.assertIn('PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-14"', derive)
         self.assertIn(
-            'PRODUCTION_PREDECESSOR_SHA256 = "4918796e08a1a0147c797ac64fa0629a6d2d340fa21902c78a629f62db89ac3e"',
+            'PRODUCTION_PREDECESSOR_SHA256 = "3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682"',
             derive,
         )
         self.assertIn(
             'PRODUCTION_IMAGE_BOUND_TRANSACTION_COMMIT = "bfb0d04489ac4251908ba27396bd8ed37bead3f8"',
             derive,
         )
-        self.assertIn('"player_runtime_candidate_startup_wait_8s"', derive)
-        self.assertIn('"player_runtime_canary_covers_health_window"', derive)
+        self.assertIn(
+            'PRODUCTION_IMAGE_BOUND_PLAYBACK_SUMMARY_COMMIT = "c075a5572148ed25aed000a22202f918c4157fda"',
+            derive,
+        )
+        self.assertIn('"totem_core_c21_24_stable_embedded"', derive)
+        self.assertIn('"playback_health_summary_c075a55"', derive)
+        self.assertIn('"player_runtime_c25b_exact_target_preserved"', derive)
         self.assertIn('"production_successor_scope"', derive)
-        self.assertIn("c18-hwdecode-prod-13 (board-validated base", derive)
+        self.assertIn("c18-hwdecode-prod-14 (board-validated predecessor", derive)
+        playback_summary_at_bound_commit = subprocess.run(
+            [
+                "git",
+                "show",
+                "c075a5572148ed25aed000a22202f918c4157fda:scripts/board/c18_playback_health_summary.py",
+            ],
+            cwd=REPO_ROOT,
+            stdout=subprocess.PIPE,
+            check=True,
+        ).stdout
+        self.assertEqual(
+            playback_summary_at_bound_commit,
+            (REPO_ROOT / "scripts/board/c18_playback_health_summary.py").read_bytes(),
+        )
         self.assertIn("validate_player_runtime_baseline_package", derive)
         self.assertIn("validate_binary_build_inputs", derive)
         self.assertIn('BASE_IMAGE_SHA256 = "184ecdff1da3fc5f2f819b9be1a67da9e3cfaa87b8bdede7badddf2c1a22c5af"', derive)
@@ -798,30 +831,30 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 module.load_production_support_password(link)
 
             module.validate_candidate_identity(
-                "c18-hwdecode-prod-14",
-                "c18.image-prod.14",
-                "/etc/dadooh/c18-hwdecode-prod-14-image",
+                "c18-hwdecode-prod-15",
+                "c18.image-prod.15",
+                "/etc/dadooh/c18-hwdecode-prod-15-image",
                 image_profile="production",
             )
             with self.assertRaises(SystemExit):
                 module.validate_candidate_identity(
-                    "c18-hwdecode-prod-14",
+                    "c18-hwdecode-prod-15",
                     "c18.image-prod.13",
-                    "/etc/dadooh/c18-hwdecode-prod-14-image",
-                    image_profile="production",
-                )
-            with self.assertRaises(SystemExit):
-                module.validate_candidate_identity(
-                    "c18-hwdecode-prod-13",
-                    "c18.image-prod.13",
-                    "/etc/dadooh/c18-hwdecode-prod-13-image",
+                    "/etc/dadooh/c18-hwdecode-prod-15-image",
                     image_profile="production",
                 )
             with self.assertRaises(SystemExit):
                 module.validate_candidate_identity(
                     "c18-hwdecode-prod-14",
                     "c18.image-prod.14",
-                    "/etc/dadooh/c18-hwdecode-prod-14-image\nrm /etc/shadow",
+                    "/etc/dadooh/c18-hwdecode-prod-14-image",
+                    image_profile="production",
+                )
+            with self.assertRaises(SystemExit):
+                module.validate_candidate_identity(
+                    "c18-hwdecode-prod-15",
+                    "c18.image-prod.15",
+                    "/etc/dadooh/c18-hwdecode-prod-15-image\nrm /etc/shadow",
                     image_profile="production",
                 )
 

@@ -1,0 +1,11 @@
+time=2026-07-17T04:26:47Z
+boot_id=e330e79b-0ea6-432b-a951-04fef939087c
+NRestarts=0
+ActiveState=active
+SubState=running
+enabled
+active
+NEXT                        LEFT    LAST                        PASSED       UNIT                     ACTIVATES
+Fri 2026-07-17 10:27:29 UTC 6h left Fri 2026-07-17 04:23:29 UTC 3min 18s ago totem-update-agent.timer totem-update-agent.service
+
+1 timers listed.
