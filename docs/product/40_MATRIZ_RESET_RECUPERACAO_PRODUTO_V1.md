@@ -1,6 +1,7 @@
 # Matriz de reset e recuperacao - Produto V1
 
-Status: matriz de produto. Nao implementa reset real.
+Status: matriz historica de produto. Nao implementa reset real. O plano atual
+refinado esta em `202_C26_LOCAL_SELF_SERVICE_RECOVERY_PLAN.md`.
 
 Data: 2026-05-03
 

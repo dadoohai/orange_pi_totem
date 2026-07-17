@@ -341,6 +341,28 @@ Este marco nao reabre a mecanica transacional fechada em C21.19 salvo regressao
 comprovada. Portal cativo e uma vertical posterior dentro do mesmo marco e nao
 deve bloquear redes abertas comuns, copy correta e simplificacao do fluxo.
 
+### M10 - Recuperacao Local Pelo Usuario
+
+Status: plano aprovado para execucao em 2026-07-17.
+
+Valor: reduzir visitas tecnicas permitindo que uma pessoa nao tecnica entenda e
+resolva localmente as falhas comuns, inclusive quando o totem estiver offline.
+
+Direcao:
+
+- `F10` continua sendo a entrada local unica;
+- estado simples, uma acao recomendada e categoria publica de suporte;
+- primeiro reutilizar o mecanismo de restart, Wi-Fi e ajustes seguros ja existentes;
+- nenhuma acao ambigua apaga config, rede, cache, identidade ou OTA;
+- eventual factory reset e recovery de sistema ficam suporte-only; rollback
+  manual nao entra na UI;
+- toda evidencia e sanitizada, limitada e sem crescimento continuo.
+
+Plano e criterios: `docs/product/202_C26_LOCAL_SELF_SERVICE_RECOVERY_PLAN.md`.
+Este marco e a proxima frente visivel de produto. O limite de polling GitHub
+continua registrado, mas nao o bloqueia enquanto o lote esperado tiver apenas
+duas ou tres placas por rede.
+
 Fechamento M9.1-2 em 2026-07-16: C21.20 passou os gates `84/84`, foi bloqueado
 pela policy stable, aplicado, rollbackado para C21.19 e reaplicado. A captura
 real mostrou somente Ethernet ativa, Wi-Fi atual e escolha de outra rede; modo
@@ -402,7 +424,7 @@ Antes de abrir ou continuar uma tarefa, responder:
 4. Ela esta tentando resolver roadmap antes do minimo produtivo?
 5. Se esta tarefa travar, qual vertical pode avancar em paralelo?
 
-Se nenhuma resposta apontar para M2, M3, M4, M5, M8 ou M9, a tarefa deve ser
+Se nenhuma resposta apontar para M2, M3, M4, M5, M8, M9 ou M10, a tarefa deve ser
 pausada ou rebaixada.
 
 ## Proxima Decisao Padrao
@@ -505,3 +527,7 @@ Enquanto nada mudar, a ordem de execucao e:
     referencia. A proxima frente de escala e retirar a descoberta de releases
     da cota publica compartilhada por IP; isso nao reabre wizard, playback,
     rollback ou a baseline ja comprovados.
+17. Para o primeiro lote esperado de duas ou tres placas por rede, o limite
+    publico compartilhado permanece conhecido, mas nao e a maior entrega agora.
+    A proxima frente e M10: recuperacao local simples e segura pelo usuario,
+    conforme o plano 202.

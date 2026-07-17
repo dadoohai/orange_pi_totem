@@ -25,6 +25,9 @@ Decisao para fonte do player e futuros alvos sem regravacao:
 Consolidacao da imagem de distribuicao atual:
 `docs/product/201_PRODUCT_BASELINE_CONSOLIDATION.md`.
 
+Plano atual de recuperacao local pelo usuario:
+`docs/product/202_C26_LOCAL_SELF_SERVICE_RECOVERY_PLAN.md`.
+
 Runbook do marco fisico encerrado de `totem-core`:
 `docs/c18-totem-core-production-timer-runbook.md`.
 
@@ -54,9 +57,10 @@ e tres perspectivas independentes fecharam sem blocker para a baseline.
 
 O M5 anterior nao deve ser reaberto. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
-para roadmap. A prioridade volta ao produto visivel e a jornada de ativacao,
-incluindo o caso recuperavel que uma vez exigiu `F5`. M4 continua em paralelo;
-grupos, dashboard e telemetria seguem no roadmap.
+para roadmap. A prioridade atual e M10: recuperacao local simples para o
+usuario, reutilizando a base de wizard, estados e Wi-Fi ja validada. A protecao
+de rollback OTA permanece interna e nao vira controle local. M4 continua em
+paralelo; grupos, dashboard e telemetria seguem no roadmap.
 
 ## Repositorio de entrega
 
