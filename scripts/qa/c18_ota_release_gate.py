@@ -210,6 +210,9 @@ TEST_TIMEOUTS = {
     # 4m50s alone and can exceed 5m inside the full suite. Keep the criterion
     # unchanged while leaving deterministic scheduling headroom.
     "c18_player_runtime_production_autopull_evidence_gate": 420,
+    # The static suite includes the 24-vector H2 self-test and currently takes
+    # about 200s on the reference WSL host. Preserve the checks with headroom.
+    "c18_ota_policy_static": 360,
 }
 BASH_SYNTAX_TARGETS = (
     "scripts/qa/c20_board_settings_stop_probe.sh",

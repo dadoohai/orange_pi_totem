@@ -3618,9 +3618,9 @@ exec "$C18_REAL_PYTHON3" "$@"
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            # This 24-vector gate takes about 52s alone on the reference WSL
-            # host, so the former 60s ceiling was not reliable under suite load.
-            timeout=120,
+            # This 24-vector gate takes about 130s alone on the current WSL
+            # host. Keep every vector while allowing deterministic suite load.
+            timeout=240,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         result = subprocess.run(
@@ -3923,6 +3923,7 @@ exec "$C18_REAL_PYTHON3" "$@"
     def test_release_gate_allows_full_visual_gallery_to_finish(self) -> None:
         gate = RELEASE_GATE_PATH.read_text(encoding="utf-8")
         self.assertIn('"c25_visible_state_gallery": 420', gate)
+        self.assertIn('"c18_ota_policy_static": 360', gate)
         self.assertIn("timeout=TEST_TIMEOUTS.get(name, 180)", gate)
 
     def test_release_gate_blocks_player_runtime_diff(self) -> None:
