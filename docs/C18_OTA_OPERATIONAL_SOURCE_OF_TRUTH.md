@@ -854,3 +854,9 @@ podemos escolher entre:
     policy/timer stable restaurados. Portal fisico/emulado e navegador M9.8
     continuam pendentes, sem contaminar este claim. Evidencia:
     `docs/evidence/c20-totem-core-ota/20260716T214911Z-c21-23-captive-portal-board-e2e/`.
+17. A consolidacao da proxima baseline segue
+    `docs/product/201_PRODUCT_BASELINE_CONSOLIDATION.md`. A ordem evita embutir
+    C21.23 homologation com a stable remota C21.12 mais antiga: primeiro cria e
+    prova uma stable monotona do mesmo conteudo na prod14; depois constroi,
+    grava e valida a prod15. Ate o fechamento fisico, a referencia continua
+    `prod14` + C25B + C21.12.
