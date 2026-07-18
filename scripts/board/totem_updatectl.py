@@ -195,6 +195,21 @@ if os.environ.get("TOTEM_SIMULATION") == "1" and DATA_ROOT != Path("/data"):
 PRODUCT_RESET_GC_IMAGE_FEATURE = "c26-product-reset-gc-static-v1"
 PRODUCT_RESET_GC_UNIT = Path("/etc/systemd/system/totem-product-reset-gc.service")
 PRODUCT_RESET_GC_UNIT_SHA256 = "fa614f32624901e5bb5153b0994bd6b96d6b9f5fc64ee25599e9049de1748760"
+PRODUCT_RESET_GC_UNIT_EXPECTED_UID = 0
+PRODUCT_RESET_GC_UNIT_EXPECTED_GID = 0
+if os.environ.get("TOTEM_SIMULATION") == "1" and DATA_ROOT != Path("/data"):
+    test_gc_unit = os.environ.get("TOTEM_TEST_PRODUCT_RESET_GC_UNIT")
+    if test_gc_unit:
+        simulation_root = DATA_ROOT.parent.resolve()
+        candidate_gc_unit = Path(test_gc_unit).resolve()
+        try:
+            candidate_gc_unit.relative_to(simulation_root)
+        except ValueError:
+            PRODUCT_RESET_GC_UNIT = simulation_root / ".invalid-product-reset-gc-unit"
+        else:
+            PRODUCT_RESET_GC_UNIT = candidate_gc_unit
+            PRODUCT_RESET_GC_UNIT_EXPECTED_UID = os.getuid()
+            PRODUCT_RESET_GC_UNIT_EXPECTED_GID = os.getgid()
 
 GITHUB_API = "https://api.github.com"
 GITHUB_RELEASE_PAGE_LIMIT = 10
@@ -2156,8 +2171,8 @@ def _totem_actions_image_contract_check(
     *,
     gc_unit_path: Path = PRODUCT_RESET_GC_UNIT,
     expected_unit_sha256: str = PRODUCT_RESET_GC_UNIT_SHA256,
-    expected_uid: int = 0,
-    expected_gid: int = 0,
+    expected_uid: int = PRODUCT_RESET_GC_UNIT_EXPECTED_UID,
+    expected_gid: int = PRODUCT_RESET_GC_UNIT_EXPECTED_GID,
     systemctl_runner: Optional[Callable[..., subprocess.CompletedProcess]] = None,
 ) -> Tuple[bool, str]:
     trusted, reason = _trusted_unit_sha256(

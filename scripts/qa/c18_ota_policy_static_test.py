@@ -437,23 +437,23 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             except ValueError:
                 pass
 
-        expected_core_version = "c21.24-product-stable-20260717T025907Z-076e18b"
+        expected_core_version = "c26.3-local-recovery-20260718-d0363b7-actions"
         expected_core_tag = f"totem-core-{expected_core_version}"
-        expected_core_sha = "2ceb8801d2f9c6b79df2295a38a289334069971701ba724d68a4cc086fbc553c"
+        expected_core_sha = "edd33ddc7f43bfe14472eb82c4e63f3fced53db14e8a2c90acc43dda4778a95a"
         self.assertEqual(mod.TOTEM_CORE_VERSION, expected_core_version)
         self.assertEqual(mod.TOTEM_CORE_RELEASE_TAG, expected_core_tag)
-        self.assertEqual(mod.TOTEM_CORE_CHANNEL, "stable")
+        self.assertEqual(mod.TOTEM_CORE_CHANNEL, "homologation")
         self.assertEqual(mod.TOTEM_CORE_PAYLOAD_SHA256, expected_core_sha)
-        self.assertEqual(mod.TOTEM_CORE_CREATED_AT_UTC, "2026-07-17T02:59:08Z")
+        self.assertEqual(mod.TOTEM_CORE_CREATED_AT_UTC, "2026-07-18T05:47:33Z")
         self.assertEqual(
             mod.TOTEM_CORE_SOURCE_COMMIT,
-            "076e18b4de08ddb98d45d0f47fc9a960f133bc80",
+            "d0363b73e12b970962e7620d81a62d147bbec4de",
         )
         release_provenance = mod.validate_totem_core_release_provenance(
             REPO_ROOT,
             mod.CORE_FILES,
         )
-        self.assertEqual(release_provenance["channel"], "stable")
+        self.assertEqual(release_provenance["channel"], "homologation")
         self.assertIs(release_provenance["source_dirty"], False)
         appliance = json.loads(
             (REPO_ROOT / "scripts" / "board" / "totem_appliance_manifest.json").read_text(
@@ -462,17 +462,21 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         )
         current_core = appliance["totem_core_environment_input_update"]
         image_embed = appliance["totem_core_image_embed"]
-        self.assertEqual(current_core["package_version"], expected_core_version)
-        self.assertEqual(current_core["github_release_tag"], expected_core_tag)
-        self.assertEqual(current_core["payload_sha256"], expected_core_sha)
+        deployed_core_version = "c21.24-product-stable-20260717T025907Z-076e18b"
+        deployed_core_tag = f"totem-core-{deployed_core_version}"
+        deployed_core_sha = "2ceb8801d2f9c6b79df2295a38a289334069971701ba724d68a4cc086fbc553c"
+        self.assertEqual(current_core["package_version"], deployed_core_version)
+        self.assertEqual(current_core["github_release_tag"], deployed_core_tag)
+        self.assertEqual(current_core["payload_sha256"], deployed_core_sha)
         self.assertTrue(current_core["remote_apply_tested"])
         self.assertTrue(current_core["local_apply_tested"])
         self.assertTrue(current_core["rollback_tested"])
-        self.assertEqual(image_embed["current_version"], expected_core_version)
-        self.assertEqual(image_embed["source_release_tag"], expected_core_tag)
+        self.assertEqual(image_embed["current_version"], deployed_core_version)
+        self.assertEqual(image_embed["source_release_tag"], deployed_core_tag)
         self.assertEqual(image_embed["source_channel"], "stable")
-        self.assertEqual(image_embed["payload_sha256"], expected_core_sha)
-        self.assertEqual(image_embed["layout"]["current_target"], f"releases/{expected_core_version}")
+        self.assertEqual(image_embed["payload_sha256"], deployed_core_sha)
+        self.assertEqual(image_embed["layout"]["current_target"], f"releases/{deployed_core_version}")
+        self.assertNotEqual(image_embed["current_version"], mod.TOTEM_CORE_VERSION)
 
         homologation = mod.resolve_totem_core_embed_profile("homologation")
         production = mod.resolve_totem_core_embed_profile("production")

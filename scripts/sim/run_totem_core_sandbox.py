@@ -24,6 +24,8 @@ DEFAULT_SANDBOX = REPO_ROOT / ".sim" / "totem"
 RUNS_DIR = REPO_ROOT / "docs" / "evidence" / "candidate-a" / "runs"
 RUN_NAME = "c17-8-simulation-lab-mvp"
 INITIAL_VERSION = "c17.8-sim-initial"
+PRODUCT_RESET_GC_IMAGE_FEATURE = "c26-product-reset-gc-static-v1"
+PRODUCT_RESET_GC_UNIT_SOURCE = REPO_ROOT / "scripts" / "board" / "totem-product-reset-gc.service"
 
 CORE_FILES = (
     "totem_setup_visual_wizard.py",
@@ -141,6 +143,15 @@ def sandbox_env(sandbox: Path) -> dict[str, str]:
         "set -eu\n"
         "case \"${1:-}:${2:-}\" in\n"
         "  show:totem-open-settings.service) printf 'LoadState=loaded\\nActiveState=inactive\\n'; exit 0 ;;\n"
+        "  show:totem-product-reset-gc.service)\n"
+        "    printf 'LoadState=loaded\\nUnitFileState=static\\nFragmentPath=%s\\nNeedDaemonReload=no\\nType=oneshot\\nAfter=kiosky-player.service\\n' \"${TOTEM_TEST_PRODUCT_RESET_GC_UNIT:-}\"\n"
+        "    exit 0 ;;\n"
+        "  show:kiosky-player.service)\n"
+        "    case \" $* \" in\n"
+        "      *--property=LoadState*|*--property=Wants*) printf 'LoadState=loaded\\nWants=totem-product-reset-gc.service\\n' ;;\n"
+        "      *) printf '0\\n' ;;\n"
+        "    esac\n"
+        "    exit 0 ;;\n"
         "  is-active:*) printf 'active\\n'; exit 0 ;;\n"
         "  show:*) printf '0\\n'; exit 0 ;;\n"
         "  restart:*|start:*|stop:*) exit 0 ;;\n"
@@ -402,6 +413,25 @@ def manifest_sha_matches(manifest: Path, payload: Path) -> bool:
     return str(data.get("payload_sha256", "")).lower() == sha256_file(payload).lower()
 
 
+def configure_simulated_image_contract(manifest: Path, sandbox: Path, env: dict[str, str]) -> bool:
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        features = (data.get("requires") or {}).get("updater_features") or []
+    except Exception:
+        return False
+    if PRODUCT_RESET_GC_IMAGE_FEATURE not in features:
+        return True
+    if not PRODUCT_RESET_GC_UNIT_SOURCE.is_file():
+        return False
+    unit = sandbox / "etc" / "systemd" / "system" / "totem-product-reset-gc.service"
+    unit.parent.mkdir(parents=True, exist_ok=True)
+    unit.parent.chmod(0o755)
+    shutil.copyfile(PRODUCT_RESET_GC_UNIT_SOURCE, unit)
+    unit.chmod(0o644)
+    env["TOTEM_TEST_PRODUCT_RESET_GC_UNIT"] = str(unit)
+    return True
+
+
 def current_target(sandbox: Path) -> str:
     link = sandbox / "data" / "core" / "totem" / "current"
     return os.readlink(link) if link.is_symlink() else ""
@@ -500,6 +530,11 @@ def main() -> int:
             blockers.append("package_build_failed")
 
     sha_ok = bool(manifest and payload and manifest_sha_matches(manifest, payload))
+    image_contract_simulated = bool(
+        manifest and configure_simulated_image_contract(manifest, sandbox, env)
+    )
+    if manifest and not image_contract_simulated:
+        blockers.append("image_contract_simulation_failed")
     selected_channel = manifest_channel(manifest) if manifest else "stable"
     if manifest:
         write_update_policy(sandbox, selected_channel)
@@ -591,6 +626,7 @@ def main() -> int:
         "package_built_by_release_script": package_built,
         "package_source": package_source,
         "sha256_validated": sha_ok,
+        "image_contract_simulated_when_required": image_contract_simulated,
         "apply_local_passed": apply_local_passed,
         "current_symlink_updated": current_symlink_updated,
         "previous_symlink_updated": previous_symlink_updated,
