@@ -216,6 +216,10 @@ TEST_TIMEOUTS = {
     # about 200s on the reference WSL host. Preserve the checks with headroom.
     "c18_ota_policy_static": 360,
     "c26_local_recovery_contract": 120,
+    # The 39 quarantine-reset vectors take about 160s alone and can cross the
+    # default 180s while independent audits run concurrently. Keep every vector
+    # and provide deterministic scheduling headroom.
+    "c18_player_runtime_lab_quarantine_reset": 300,
 }
 BASH_SYNTAX_TARGETS = (
     "scripts/qa/c20_board_settings_stop_probe.sh",
