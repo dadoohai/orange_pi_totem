@@ -4865,43 +4865,78 @@ exec "$C18_REAL_PYTHON3" "$@"
             self.assertIn("pairing_private_values_not_session_owned", rejected.stderr)
             self.assertTrue(external_private.is_file())
 
-    def test_settings_session_rc8_requires_attested_candidate(self) -> None:
+    def test_settings_session_rejects_rc8_and_requires_exact_cancel_exit(self) -> None:
         session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")
-        guard_start = session.index('if [ -f "$WIZARD_OUT_DIR/setup-failed.json" ]; then')
-        guard_end = session.index(
-            'if [ "$SETUP_CANCELLED" != "true" ]; then\n  # util-linux',
-            guard_start,
+        guard_start = session.index(
+            'SETUP_CANCELLED="false"\nif [ "$WIZARD_RC" = "130" ]; then'
         )
+        guard_end = session.index('if [ "$SETUP_CANCELLED" = "true" ]; then', guard_start)
         guard = session[guard_start:guard_end]
         with tempfile.TemporaryDirectory(prefix="c20-rc8-guard-", dir="/tmp") as raw_root:
             root = Path(raw_root)
-            rejected = subprocess.run(
-                ["bash"],
-                input=(
-                    "set -euo pipefail\n"
-                    f"WIZARD_OUT_DIR={shlex.quote(str(root))}\n"
-                    "SETUP_CANCELLED=false\n"
-                    "WIZARD_RC=8\n"
-                    "candidate_is_current_session_ready() { return 1; }\n"
-                    f"{guard}\n"
-                ),
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False,
-            )
-            self.assertEqual(rejected.returncode, 44, rejected.stderr)
-            self.assertIn("wizard_rc8_without_attested_candidate", rejected.stderr)
+            for candidate_present in (False, True):
+                for cancellation_present in (False, True):
+                    candidate = root / "config.candidate.json"
+                    cancellation = root / "setup-cancelled.json"
+                    if candidate_present:
+                        candidate.write_text("{}\n", encoding="utf-8")
+                    else:
+                        candidate.unlink(missing_ok=True)
+                    if cancellation_present:
+                        cancellation.write_text("{}\n", encoding="utf-8")
+                    else:
+                        cancellation.unlink(missing_ok=True)
+                    rejected = subprocess.run(
+                        ["bash"],
+                        input=(
+                            "set -euo pipefail\n"
+                            f"WIZARD_OUT_DIR={shlex.quote(str(root))}\n"
+                            "SETUP_CANCELLED=false\n"
+                            "WIZARD_RC=8\n"
+                            f"{guard}\n"
+                        ),
+                        text=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        check=False,
+                    )
+                    self.assertIn(rejected.returncode, {46, 47}, rejected.stderr)
+                    expected_error = (
+                        "wizard_cancel_artifact_without_exit_code"
+                        if cancellation_present
+                        else "wizard_unexpected_exit:8"
+                    )
+                    self.assertIn(expected_error, rejected.stderr)
 
-            (root / "config.candidate.json").write_text("{}\n", encoding="utf-8")
-            accepted = subprocess.run(
+            cancellation = root / "setup-cancelled.json"
+            for cancellation_present in (False, True):
+                if cancellation_present:
+                    cancellation.write_text("{}\n", encoding="utf-8")
+                else:
+                    cancellation.unlink(missing_ok=True)
+                exact_cancel = subprocess.run(
+                    ["bash"],
+                    input=(
+                        "set -euo pipefail\n"
+                        f"WIZARD_OUT_DIR={shlex.quote(str(root))}\n"
+                        "WIZARD_RC=130\n"
+                        "c15_trace() { :; }\n"
+                        f"{guard}\n"
+                    ),
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+                self.assertEqual(exact_cancel.returncode, 0, exact_cancel.stderr)
+
+            cancellation.write_text("{}\n", encoding="utf-8")
+            artifact_only = subprocess.run(
                 ["bash"],
                 input=(
                     "set -euo pipefail\n"
                     f"WIZARD_OUT_DIR={shlex.quote(str(root))}\n"
-                    "SETUP_CANCELLED=false\n"
-                    "WIZARD_RC=8\n"
-                    "candidate_is_current_session_ready() { return 0; }\n"
+                    "WIZARD_RC=0\n"
                     f"{guard}\n"
                 ),
                 text=True,
@@ -4909,7 +4944,8 @@ exec "$C18_REAL_PYTHON3" "$@"
                 stderr=subprocess.PIPE,
                 check=False,
             )
-            self.assertEqual(accepted.returncode, 0, accepted.stderr)
+            self.assertEqual(artifact_only.returncode, 47, artifact_only.stderr)
+            self.assertIn("wizard_cancel_artifact_without_exit_code", artifact_only.stderr)
 
     def test_settings_session_defers_while_update_lock_is_held(self) -> None:
         session = (REPO_ROOT / "scripts/board/totem_open_settings_session.sh").read_text(encoding="utf-8")

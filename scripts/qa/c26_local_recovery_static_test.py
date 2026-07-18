@@ -251,6 +251,37 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
         self.assertIn("c26-product-reset-gc-static-v1", session)
         self.assertIn('TOTEM_ACTIONS_AVAILABLE="0"', session)
 
+    def test_openvt_exec_transport_preserves_semantic_exit_codes_fail_closed(self) -> None:
+        session = SESSION_SCRIPT.read_text(encoding="utf-8")
+        launch = (
+            '/usr/bin/setsid --wait /usr/bin/openvt -c "$REMOTE_TTY" '
+            '-s -f -e -- \\\n'
+            '    /usr/bin/env TERM=linux'
+        )
+        self.assertEqual(session.count(launch), 2)
+        self.assertNotIn("-f -w --", session)
+        self.assertNotIn("normalize_openvt_semantic_exit", session)
+        self.assertNotIn("RAW_WIZARD_RC", session)
+
+        launch_start = session.index('c15_trace "before_openvt"')
+        wait_for_child = session.index('\n    wait "$OPENVT_PID"\n    WIZARD_RC="$?"', launch_start)
+        recovery_branch = session.index('if [ "$WIZARD_RC" = "76" ]')
+        action_branch = session.index('elif [ "$WIZARD_RC" = "75" ]')
+        action_without_exit = session.index(
+            'elif [ -e "$ACTION_REQUEST_FILE" ] || [ -L "$ACTION_REQUEST_FILE" ]; then'
+        )
+        self.assertLess(wait_for_child, recovery_branch)
+        self.assertLess(wait_for_child, action_branch)
+        self.assertLess(action_branch, action_without_exit)
+
+        for expected_rc in (0, 1, 8, 75, 76, 130):
+            observed = subprocess.run(
+                ["/usr/bin/setsid", "--wait", "/usr/bin/bash", "-c", f"exit {expected_rc}"],
+                check=False,
+                timeout=10,
+            ).returncode
+            self.assertEqual(observed, expected_rc)
+
     def test_actions_require_exact_static_gc_image_contract(self) -> None:
         updatectl = load_updatectl("c26_updatectl_image_contract")
         expected_bytes = PRODUCT_RESET_GC_UNIT.read_bytes()
@@ -476,15 +507,30 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
         action_block = session[action_start : session.index("    product_reset)", action_start)]
         prepared_index = action_block.index('write_terminal_action_marker "prepared"')
         reconcile_index = action_block.index('schedule_terminal_action_reconcile "$requested_action_id"')
+        armed_index = action_block.index('write_terminal_action_marker "armed"')
         systemctl_index = action_block.index('/usr/bin/systemctl --no-block')
         accepted_index = action_block.index('write_terminal_action_marker "accepted"')
         pending_index = action_block.index('TERMINAL_ACTION_PENDING="true"')
         self.assertEqual(
-            [prepared_index, reconcile_index, systemctl_index, accepted_index, pending_index],
-            sorted([prepared_index, reconcile_index, systemctl_index, accepted_index, pending_index]),
+            [prepared_index, reconcile_index, armed_index, pending_index, systemctl_index, accepted_index],
+            sorted([prepared_index, reconcile_index, armed_index, pending_index, systemctl_index, accepted_index]),
         )
+        acceptance_failure = action_block[
+            action_block.index('if ! write_terminal_action_marker "accepted"') :
+            action_block.index('c17_4_trace "totem_terminal_action_accepted"')
+        ]
+        self.assertNotIn("cancel_terminal_action_reconcile", acceptance_failure)
+        self.assertNotIn('rm -f -- "$TERMINAL_ACTION_MARKER"', acceptance_failure)
         self.assertIn("totem_terminal_action_reconcile_schedule_failed", action_block)
-        self.assertGreaterEqual(action_block.count("cancel_terminal_action_reconcile"), 2)
+        self.assertGreaterEqual(action_block.count("cancel_terminal_action_reconcile"), 1)
+        failed_request = action_block[action_block.index('echo "totem_terminal_action_disarm_failed"') - 120 :]
+        remove_index = failed_request.index('rm -f -- "$TERMINAL_ACTION_MARKER"')
+        disarm_index = failed_request.index('TERMINAL_ACTION_PENDING="false"')
+        cancel_index = failed_request.index("cancel_terminal_action_reconcile")
+        self.assertEqual(
+            [remove_index, disarm_index, cancel_index],
+            sorted([remove_index, disarm_index, cancel_index]),
+        )
 
         cleanup = CLEANUP_SCRIPT.read_text(encoding="utf-8")
         complete_start = cleanup.index("terminal_action_reconcile_complete() {")
@@ -557,9 +603,23 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
                 "a cut before systemctl acceptance must not preserve locks",
             )
             self.assertNotEqual(
+                run_shell(f'write_terminal_action_marker armed restart "{other_request_id}"'),
+                0,
+                "arming must match the exact prepared request",
+            )
+            self.assertEqual(
+                run_shell(f'write_terminal_action_marker armed restart "{request_id}"'),
+                0,
+            )
+            self.assertEqual(
+                run_shell("terminal_action_pending"),
+                0,
+                "a fresh armed action must preserve locks during shutdown",
+            )
+            self.assertNotEqual(
                 run_shell(f'write_terminal_action_marker accepted restart "{other_request_id}"'),
                 0,
-                "acceptance must match the exact prepared request",
+                "acceptance must match the exact armed request",
             )
             self.assertEqual(
                 run_shell(f'write_terminal_action_marker accepted restart "{request_id}"'),
@@ -568,7 +628,7 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
             self.assertEqual(
                 run_shell("terminal_action_pending"),
                 0,
-                "a fresh accepted action may preserve locks during shutdown",
+                "a fresh accepted action must preserve locks during shutdown",
             )
             self.assertNotEqual(
                 run_shell("EXPIRE_TERMINAL_ACTION=true; terminal_action_pending"),

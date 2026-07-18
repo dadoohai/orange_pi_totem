@@ -281,12 +281,19 @@ valid = isinstance(payload, dict) and set(payload) == expected_fields
 if valid:
     try:
         request_id = uuid.UUID(str(payload.get("request_id")))
-        accepted = dt.datetime.fromisoformat(str(payload.get("accepted_at_utc")).replace("Z", "+00:00"))
+        prepared = dt.datetime.fromisoformat(str(payload.get("prepared_at_utc")).replace("Z", "+00:00"))
+        phase = payload.get("phase")
+        if phase == "accepted":
+            event_at = dt.datetime.fromisoformat(str(payload.get("accepted_at_utc")).replace("Z", "+00:00"))
+        elif phase == "armed" and payload.get("accepted_at_utc") is None:
+            event_at = prepared
+        else:
+            raise ValueError("terminal action is not armed")
         now = dt.datetime.now(dt.timezone.utc)
-        age = (now - accepted).total_seconds()
+        age = (now - event_at).total_seconds()
         valid = (
             payload.get("schema_version") == "dadooh.c26.terminal-action.v1"
-            and payload.get("phase") == "accepted"
+            and phase in {"armed", "accepted"}
             and payload.get("action") in {"restart", "poweroff"}
             and request_id.version == 4
             and str(request_id) == payload.get("request_id")
@@ -294,10 +301,18 @@ if valid:
             and len(payload["settings_session_id"]) == 32
             and all(char in "0123456789abcdef" for char in payload["settings_session_id"])
             and isinstance(payload.get("prepared_at_utc"), str)
-            and isinstance(payload.get("accepted_at_utc"), str)
             and payload["prepared_at_utc"].endswith("Z")
-            and payload["accepted_at_utc"].endswith("Z")
-            and accepted.utcoffset() == dt.timedelta(0)
+            and prepared.utcoffset() == dt.timedelta(0)
+            and event_at.utcoffset() == dt.timedelta(0)
+            and (
+                (phase == "armed" and payload.get("accepted_at_utc") is None)
+                or (
+                    phase == "accepted"
+                    and isinstance(payload.get("accepted_at_utc"), str)
+                    and payload["accepted_at_utc"].endswith("Z")
+                    and event_at >= prepared
+                )
+            )
             and -60 <= age <= max_age_sec
         )
     except (TypeError, ValueError):
@@ -697,6 +712,18 @@ PY
     echo "self-test: prepared terminal action incorrectly treated as accepted" >&2
     exit 1
   fi
+  python3 - "$TERMINAL_ACTION_MARKER" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["phase"] = "armed"
+path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+path.chmod(0o600)
+PY
+  terminal_action_pending
   python3 - "$TERMINAL_ACTION_MARKER" <<'PY'
 import datetime as dt
 import json

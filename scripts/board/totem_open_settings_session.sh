@@ -351,6 +351,12 @@ for path in "$VISUAL" "$SPLASH" "$AGGREGATE"; do
     exit 1
   fi
 done
+for path in /usr/bin/env /usr/bin/openvt /usr/bin/python3 /usr/bin/setsid; do
+  if [ ! -x "$path" ]; then
+    echo "error: missing executable session dependency" >&2
+    exit 1
+  fi
+done
 
 run_short() {
   if command -v timeout >/dev/null 2>&1; then
@@ -1290,7 +1296,7 @@ expected_fields = {
     "prepared_at_utc",
     "accepted_at_utc",
 }
-if phase not in {"prepared", "accepted"} or action not in {"restart", "poweroff"}:
+if phase not in {"prepared", "armed", "accepted"} or action not in {"restart", "poweroff"}:
     raise SystemExit(1)
 parsed_request_id = uuid.UUID(request_id)
 if parsed_request_id.version != 4 or str(parsed_request_id) != request_id:
@@ -1349,7 +1355,7 @@ else:
         not isinstance(prior, dict)
         or set(prior) != expected_fields
         or prior.get("schema_version") != "dadooh.c26.terminal-action.v1"
-        or prior.get("phase") != "prepared"
+        or prior.get("phase") != ("prepared" if phase == "armed" else "armed")
         or prior.get("action") != action
         or prior.get("request_id") != request_id
         or prior.get("settings_session_id") != session_id
@@ -1358,8 +1364,9 @@ else:
     ):
         raise SystemExit(1)
     payload = dict(prior)
-    payload["phase"] = "accepted"
-    payload["accepted_at_utc"] = now
+    payload["phase"] = phase
+    if phase == "accepted":
+        payload["accepted_at_utc"] = now
 
 fd, raw_tmp = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent))
 tmp = pathlib.Path(raw_tmp)
@@ -2800,14 +2807,14 @@ c1523_phase "wizard_started"
 
 set +e
 if [ "$MODE" = "preview" ]; then
-  setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_TOTEM_ACTIONS_AVAILABLE="$TOTEM_ACTIONS_AVAILABLE" TOTEM_PRODUCT_RESET_AVAILABLE="$PRODUCT_RESET_AVAILABLE" TOTEM_PRODUCT_RESET_RECOVERY_MODE="$PRODUCT_RESET_RECOVERY_MODE" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
+  /usr/bin/setsid --wait /usr/bin/openvt -c "$REMOTE_TTY" -s -f -e -- \
+    /usr/bin/env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_TOTEM_ACTIONS_AVAILABLE="$TOTEM_ACTIONS_AVAILABLE" TOTEM_PRODUCT_RESET_AVAILABLE="$PRODUCT_RESET_AVAILABLE" TOTEM_PRODUCT_RESET_RECOVERY_MODE="$PRODUCT_RESET_RECOVERY_MODE" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
       --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH" \
       --preview-screens --show-preview --auto-exit-sec "$PREVIEW_SEC" >/dev/null 2>&1
   WIZARD_RC="$?"
 else
-  setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_TOTEM_ACTIONS_AVAILABLE="$TOTEM_ACTIONS_AVAILABLE" TOTEM_PRODUCT_RESET_AVAILABLE="$PRODUCT_RESET_AVAILABLE" TOTEM_PRODUCT_RESET_RECOVERY_MODE="$PRODUCT_RESET_RECOVERY_MODE" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
+  /usr/bin/setsid --wait /usr/bin/openvt -c "$REMOTE_TTY" -s -f -e -- \
+    /usr/bin/env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_TOTEM_ACTIONS_AVAILABLE="$TOTEM_ACTIONS_AVAILABLE" TOTEM_PRODUCT_RESET_AVAILABLE="$PRODUCT_RESET_AVAILABLE" TOTEM_PRODUCT_RESET_RECOVERY_MODE="$PRODUCT_RESET_RECOVERY_MODE" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
       --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH" >/dev/null 2>&1 &
   OPENVT_PID="$!"
   c15_trace "openvt_started pid=$OPENVT_PID"
@@ -2885,20 +2892,29 @@ elif [ "$WIZARD_RC" = "75" ]; then
         echo "totem_terminal_action_reconcile_schedule_failed" >&2
         exit 47
       fi
+      if ! write_terminal_action_marker "armed" "$requested_action" "$requested_action_id"; then
+        cancel_terminal_action_reconcile
+        rm -f -- "$TERMINAL_ACTION_MARKER" 2>/dev/null || true
+        echo "totem_terminal_action_arm_failed" >&2
+        exit 47
+      fi
+      # Shutdown may stop this service as soon as systemd accepts the request.
+      # Arm the delayed recovery path before entering that interruption window.
+      TERMINAL_ACTION_PENDING="true"
       if /usr/bin/systemctl --no-block "$terminal_command" >/dev/null 2>&1; then
         if ! write_terminal_action_marker "accepted" "$requested_action" "$requested_action_id"; then
-          cancel_terminal_action_reconcile
-          rm -f -- "$TERMINAL_ACTION_MARKER" 2>/dev/null || true
           echo "totem_terminal_action_acceptance_marker_failed" >&2
           exit 47
         fi
-        TERMINAL_ACTION_PENDING="true"
         c17_4_trace "totem_terminal_action_accepted" action="$requested_action"
         exit 0
       fi
+      if ! rm -f -- "$TERMINAL_ACTION_MARKER" 2>/dev/null; then
+        echo "totem_terminal_action_disarm_failed" >&2
+        exit 47
+      fi
       TERMINAL_ACTION_PENDING="false"
       cancel_terminal_action_reconcile
-      rm -f -- "$TERMINAL_ACTION_MARKER" 2>/dev/null || true
       echo "totem_terminal_action_failed" >&2
       exit 47
       ;;
@@ -2947,25 +2963,22 @@ elif [ -e "$ACTION_REQUEST_FILE" ] || [ -L "$ACTION_REQUEST_FILE" ]; then
 fi
 
 SETUP_CANCELLED="false"
-if [ -f "$WIZARD_OUT_DIR/setup-cancelled.json" ] || [ "$WIZARD_RC" = "130" ]; then
+if [ "$WIZARD_RC" = "130" ]; then
   SETUP_CANCELLED="true"
   c15_trace "wizard_cancelled_restore_path"
+elif [ -e "$WIZARD_OUT_DIR/setup-cancelled.json" ] \
+  || [ -L "$WIZARD_OUT_DIR/setup-cancelled.json" ]; then
+  echo "wizard_cancel_artifact_without_exit_code" >&2
+  exit 47
 fi
 
 if [ -f "$WIZARD_OUT_DIR/setup-failed.json" ]; then
   echo "wizard_failed_current_session" >&2
   exit 46
 fi
-if [ "$SETUP_CANCELLED" != "true" ] && [ "$WIZARD_RC" = "8" ]; then
-  if [ ! -f "$WIZARD_OUT_DIR/config.candidate.json" ] || ! candidate_is_current_session_ready; then
-    echo "wizard_rc8_without_attested_candidate" >&2
-    exit 44
-  fi
-fi
 if [ "$SETUP_CANCELLED" != "true" ]; then
-  # util-linux openvt on the target can return 8 after a completed VT handoff.
   case "$WIZARD_RC" in
-    0|8) ;;
+    0) ;;
     *)
       echo "wizard_unexpected_exit:$WIZARD_RC" >&2
       exit 46
