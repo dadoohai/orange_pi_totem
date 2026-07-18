@@ -342,7 +342,7 @@ def write_totem_core_embed(
     embed = manifest.get("totem_core_image_embed") or {}
     core_files = list(embed.get("core_files") or CORE_FILES)
     release_provenance = validate_totem_core_release_provenance(repo_root, core_files)
-    current_target = str((embed.get("layout") or {}).get("current_target") or f"releases/{TOTEM_CORE_VERSION}")
+    current_target = f"releases/{TOTEM_CORE_VERSION}"
     release_root = f"/data/core/totem/releases/{TOTEM_CORE_VERSION}"
     release_bin = f"{release_root}/bin"
     fallback_bin = "/opt/totem/core-fallback/bin"
@@ -481,9 +481,7 @@ def write_totem_core_embed(
                 "component": "totem-core",
                 "version": TOTEM_CORE_VERSION,
                 "embedded_in_image": True,
-                "capabilities": [
-                    "product-reset-v1",
-                ],
+                "capabilities": list(TOTEM_CORE_CAPABILITIES),
                 "self_tests": [
                     "python3 bin/totem_setup_visual_wizard.py --self-test",
                     "python3 bin/totem_wifi_nm_adapter.py --self-test",
