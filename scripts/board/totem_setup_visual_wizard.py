@@ -47,6 +47,12 @@ sys.dont_write_bytecode = True
 import totem_config_contract_validate as contract
 import totem_setup_minimal_server as setup
 import totem_wifi_nm_adapter as wifi_adapter
+from totem_api_url_contract import (
+    ApiKeyContractError,
+    ApiUrlContractError,
+    validate_api_key_format,
+    validate_https_api_url,
+)
 
 try:
     import totem_qr_pairing_client as pairing_client
@@ -6019,9 +6025,13 @@ def pairing_real_enabled() -> bool:
 
 
 def normalize_pairing_backend_base_url(raw: str | None = None) -> str:
-    value = str(raw or os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL", PAIRING_DEFAULT_BACKEND_BASE_URL)).strip()
+    value = str(raw or os.environ.get("TOTEM_VISUAL_WIZARD_PAIRING_API_BASE_URL", PAIRING_DEFAULT_BACKEND_BASE_URL))
+    try:
+        value = validate_https_api_url(value)
+    except ApiUrlContractError as exc:
+        raise VisualWizardError("backend de pareamento invalido") from exc
     parsed = urllib_parse.urlsplit(value)
-    if parsed.scheme != "https" or not parsed.netloc:
+    if parsed.query:
         raise VisualWizardError("backend de pareamento invalido")
     return urllib_parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", ""))
 
@@ -6032,11 +6042,10 @@ def pairing_backend_endpoint(path: str) -> str:
 
 
 def validate_pairing_https_url(value: str, field: str) -> str:
-    raw = str(value or "").strip()
-    parsed = urllib_parse.urlsplit(raw)
-    if parsed.scheme != "https" or not parsed.netloc:
-        raise VisualWizardError(f"{field} invalida")
-    return raw
+    try:
+        return validate_https_api_url(value)
+    except ApiUrlContractError as exc:
+        raise VisualWizardError(f"{field} invalida") from exc
 
 
 def validate_pairing_authorize_url(value: str, *, code: str, activation_id: str) -> str:
@@ -6108,12 +6117,23 @@ def pairing_wait_content_svg(url: str, code: str, *, layout_rotation_deg: int) -
 
 
 def validate_pairing_api_key(value: str) -> str:
-    raw = str(value or "").strip()
-    if len(raw) < 16:
-        raise VisualWizardError("credencial de pareamento curta")
-    lowered = raw.lower()
-    if "placeholder" in lowered or "preencher" in lowered or "mock" in lowered:
+    try:
+        raw = validate_api_key_format(value)
+    except ApiKeyContractError as exc:
+        raise VisualWizardError("credencial de pareamento invalida") from exc
+    if contract.detect_api_key_placeholder(raw):
         raise VisualWizardError("credencial de pareamento invalida")
+    return raw
+
+
+def validate_pairing_api_token_id(value: str) -> str:
+    raw = str(value or "").strip()
+    try:
+        parsed = uuid.UUID(raw)
+    except ValueError as exc:
+        raise VisualWizardError("api_token_id invalido") from exc
+    if str(parsed) != raw:
+        raise VisualWizardError("api_token_id invalido")
     return raw
 
 
@@ -6135,7 +6155,7 @@ def normalize_runtime_api_url(value: str) -> str:
     path = parsed.path.rstrip("/")
     if path in {"", "/"}:
         path = "/search"
-    return urllib_parse.urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+    return urllib_parse.urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, ""))
 
 
 def device_fingerprint() -> str:
@@ -6256,7 +6276,7 @@ def write_real_pairing_result(
             private_values["station_id"] = validate_environment_id(station_id_raw)
         api_token_id = str(credential.get("api_token_id") or "").strip()
         if api_token_id:
-            private_values["api_token_id"] = api_token_id
+            private_values["api_token_id"] = validate_pairing_api_token_id(api_token_id)
         write_pairing_json(private_path, private_values, out_dir)
         private_written = True
     elif private_path.exists():
@@ -9679,7 +9699,8 @@ def run_self_test() -> None:
             real_activation_id = "33333333-4444-4555-8666-777777777777"
             real_environment_id = "44444444-5555-4666-8777-888888888888"
             real_station_id = "55555555-6666-4777-8888-999999999999"
-            real_api_key = "REAL_DEVICE_KEY_FOR_SELF_TEST_123456789"
+            real_api_key = "dvh_7c4a9f83b2e146fd8a6c91e57b204d38"
+            real_api_token_id = "66666666-7777-4888-8999-aaaaaaaaaaaa"
 
             def fake_pairing_request(
                 url: str,
@@ -9708,7 +9729,7 @@ def run_self_test() -> None:
                         "credential_public": False,
                         "api_url": "https://api.example.com/search",
                         "api_key": real_api_key,
-                        "api_token_id": "token-self-test",
+                        "api_token_id": real_api_token_id,
                         "token_type": "x-api-key",
                         "environment_id": real_environment_id,
                         "station_id": real_station_id,
@@ -9783,6 +9804,50 @@ def run_self_test() -> None:
             assert_true(file_mode(real_private_path) == setup.PRIVATE_FILE_MODE, "real pairing private values should be 0600")
             real_private = json.loads(real_private_path.read_text(encoding="utf-8"))
             assert_true(real_private["api_url"].endswith("/search"), "real pairing should keep runtime search endpoint")
+            assert_true(
+                real_private["api_token_id"] == real_api_token_id,
+                "real pairing should retain a canonical API token id",
+            )
+            real_candidate = contract.build_mock_candidate()
+            real_candidate.update(
+                {
+                    "api_url": real_private["api_url"],
+                    "api_key": real_private["api_key"],
+                    "api_token_id": real_private["api_token_id"],
+                    "environment_id": real_private["environment_id"],
+                    "station_id": real_private["station_id"],
+                }
+            )
+            assert_true(
+                contract.validate_candidate_config(real_candidate, "real-dry-run")["valid"],
+                "real pairing fixture must pass the downstream config contract",
+            )
+            assert_true(
+                normalize_runtime_api_url("https://api.example.com/search?source=totem")
+                == "https://api.example.com/search?source=totem",
+                "runtime API normalization must preserve an accepted query",
+            )
+            for invalid_runtime_value in (
+                "https://%/search",
+                "https://a..example.com/search",
+                "https://api.example.com\\bad/search",
+            ):
+                try:
+                    normalize_runtime_api_url(invalid_runtime_value)
+                    raise AssertionError("invalid runtime API URL accepted")
+                except VisualWizardError:
+                    pass
+            for invalid_pairing_key in ("é" * 1500, "😀" * 16, "A" * 4097):
+                try:
+                    validate_pairing_api_key(invalid_pairing_key)
+                    raise AssertionError("invalid pairing API key accepted")
+                except VisualWizardError:
+                    pass
+            try:
+                validate_pairing_api_token_id("token-self-test")
+                raise AssertionError("non-canonical pairing API token id accepted")
+            except VisualWizardError:
+                pass
             real_public = "\n".join(
                 path.read_text(encoding="utf-8")
                 for path in sorted(pathlib.Path(str(real_session["pairing_dir"])).glob("*"))
@@ -9825,7 +9890,7 @@ def run_self_test() -> None:
                         "credential_public": False,
                         "api_url": "https://api.example.com/search",
                         "api_key": real_api_key,
-                        "api_token_id": "token-renew-self-test",
+                        "api_token_id": "88888888-9999-4aaa-8bbb-cccccccccccc",
                         "token_type": "x-api-key",
                         "environment_id": real_environment_id,
                         "station_id": real_station_id,

@@ -36,6 +36,7 @@ import totem_api_url_contract as api_contract
 import totem_config_contract_validate as config_contract
 import totem_config_writer_real as config_writer
 import totem_qr_pairing_client as pairing_client
+import totem_setup_visual_wizard as visual_wizard
 
 
 def function_body(source: str, name: str, next_name: str) -> str:
@@ -70,6 +71,8 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
                 config_writer.product_reset_validate_https_api_url(value)
             with self.assertRaises(pairing_client.PairingError):
                 pairing_client.validate_api_url(value)
+            with self.assertRaises(visual_wizard.VisualWizardError):
+                visual_wizard.normalize_runtime_api_url(value)
 
             candidate = config_contract.build_mock_candidate()
             candidate["api_url"] = value
@@ -94,11 +97,21 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
                 config_writer.product_reset_validate_api_key(value)
             with self.assertRaises(pairing_client.PairingError):
                 pairing_client.validate_api_key(value)
+            with self.assertRaises(visual_wizard.VisualWizardError):
+                visual_wizard.validate_pairing_api_key(value)
 
         self.assertEqual(
             pairing_client.PRODUCT_RESET_MAX_CREDENTIAL_BYTES,
             api_contract.MAX_PRODUCT_RESET_CREDENTIAL_BYTES,
         )
+        self.assertEqual(
+            visual_wizard.normalize_runtime_api_url(
+                "https://api.example.com/search?source=totem"
+            ),
+            "https://api.example.com/search?source=totem",
+        )
+        with self.assertRaises(visual_wizard.VisualWizardError):
+            visual_wizard.validate_pairing_api_token_id("token-self-test")
 
     def test_reopening_settings_preserves_device_token_identity_privately(self) -> None:
         session = SESSION_SCRIPT.read_text(encoding="utf-8")
