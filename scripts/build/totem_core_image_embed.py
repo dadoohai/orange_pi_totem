@@ -7,6 +7,7 @@ import datetime as dt
 import hashlib
 import json
 import re
+import subprocess
 import tarfile
 import tempfile
 import time
@@ -16,13 +17,20 @@ from typing import Any, Callable
 import derive_c15_2_1_homolog_image as base
 
 
-TOTEM_CORE_VERSION = "c26.5-local-recovery-20260718-f1d0da9-actions"
-TOTEM_CORE_RELEASE_TAG = "totem-core-c26.5-local-recovery-20260718-f1d0da9-actions"
+TOTEM_CORE_VERSION = "c26.7-local-recovery-20260718-01464f8-actions"
+TOTEM_CORE_RELEASE_TAG = "totem-core-c26.7-local-recovery-20260718-01464f8-actions"
 TOTEM_CORE_CHANNEL = "homologation"
-TOTEM_CORE_PAYLOAD_SHA256 = "b8864cc913f6e7ca4562a0e3edfe9eb0ba55a6aef5019a47a0535397ba26f4df"
-TOTEM_CORE_CREATED_AT_UTC = "2026-07-18T19:30:40Z"
-TOTEM_CORE_SOURCE_COMMIT = "f1d0da92eff5f0aa94036b0ae5a8a85e632450dc"
+TOTEM_CORE_PAYLOAD_SHA256 = "1369a5c7d04486f2d37fb11a6205ace25ae1efe2baf6bae3bd7d348ec82e5e5f"
+TOTEM_CORE_CREATED_AT_UTC = "2026-07-18T22:27:13Z"
+TOTEM_CORE_SOURCE_COMMIT = "01464f8f82a6ea758946fc7eeca552a610db91f3"
 TOTEM_CORE_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")
+TOTEM_CORE_PREVIOUS_VERSION = "c26.5-local-recovery-20260718-f1d0da9-actions"
+TOTEM_CORE_PREVIOUS_RELEASE_TAG = "totem-core-c26.5-local-recovery-20260718-f1d0da9-actions"
+TOTEM_CORE_PREVIOUS_CHANNEL = "homologation"
+TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256 = "b8864cc913f6e7ca4562a0e3edfe9eb0ba55a6aef5019a47a0535397ba26f4df"
+TOTEM_CORE_PREVIOUS_CREATED_AT_UTC = "2026-07-18T19:30:40Z"
+TOTEM_CORE_PREVIOUS_SOURCE_COMMIT = "f1d0da92eff5f0aa94036b0ae5a8a85e632450dc"
+TOTEM_CORE_PREVIOUS_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")
 UPDATE_POLICY_TARGET = "/data/updates/policy.json"
 UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-update-agent.service"
 UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-update-agent.timer"
@@ -102,6 +110,7 @@ CORE_FILES = [
     "totem_visual_splash.py",
     "totem_status_aggregate.py",
     "totem_status_render_preview.py",
+    "totem_api_url_contract.py",
     "totem_config_contract_validate.py",
     "totem_qr_pairing_client.py",
     "totem_settings_production_apply_policy.py",
@@ -116,6 +125,7 @@ CORE_FILES = [
     "totem_setup_minimal_server.py",
     "totem_setup_local_wizard.py",
 ]
+TOTEM_CORE_PREVIOUS_EXCLUDED_FILES = frozenset({"totem_api_url_contract.py"})
 
 IMAGE_FIXED_PLAYER_FILES = [
     "kiosky_service_launcher.sh",
@@ -142,54 +152,146 @@ IMAGE_FIXED_PLAYER_SYSTEMD_FILES = [
 ]
 
 
-def validate_totem_core_release_provenance(repo_root: Path, core_files: list[str]) -> dict[str, Any]:
-    release_dir = repo_root / "releases" / "core-updates" / TOTEM_CORE_VERSION
-    manifest_path = release_dir / f"dadooh-totem-core-{TOTEM_CORE_VERSION}.manifest.json"
-    payload_path = release_dir / f"dadooh-totem-core-{TOTEM_CORE_VERSION}.tar.gz"
+def _validate_totem_core_release(
+    repo_root: Path,
+    core_files: list[str],
+    *,
+    version: str,
+    channel: str,
+    source_commit: str,
+    payload_sha256: str,
+    created_at_utc: str,
+    capabilities: tuple[str, ...],
+    require_worktree_exact: bool,
+) -> tuple[dict[str, Any], dict[str, bytes]]:
+    release_dir = repo_root / "releases" / "core-updates" / version
+    manifest_path = release_dir / f"dadooh-totem-core-{version}.manifest.json"
+    payload_path = release_dir / f"dadooh-totem-core-{version}.tar.gz"
     if not manifest_path.is_file() or not payload_path.is_file():
         raise RuntimeError("totem_core_embed_release_artifacts_missing")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     expected = {
         "component": "totem-core",
-        "version": TOTEM_CORE_VERSION,
-        "channel": TOTEM_CORE_CHANNEL,
-        "source_commit": TOTEM_CORE_SOURCE_COMMIT,
+        "version": version,
+        "channel": channel,
+        "source_commit": source_commit,
         "source_dirty": False,
-        "payload_sha256": TOTEM_CORE_PAYLOAD_SHA256,
-        "created_at_utc": TOTEM_CORE_CREATED_AT_UTC,
+        "payload_sha256": payload_sha256,
+        "created_at_utc": created_at_utc,
+        "source_repo": "dadoohai/orange_pi_totem",
+        "source_branch": "foundation-v0.1",
+        "payload": payload_path.name,
     }
     if any(manifest.get(key) != value for key, value in expected.items()):
         raise RuntimeError("totem_core_embed_manifest_identity_mismatch")
     payload_sha = hashlib.sha256(payload_path.read_bytes()).hexdigest()
-    if payload_sha != TOTEM_CORE_PAYLOAD_SHA256:
+    if payload_sha != payload_sha256:
         raise RuntimeError("totem_core_embed_payload_sha256_mismatch")
+    ancestor = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", source_commit, "HEAD"],
+        cwd=repo_root,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    if ancestor.returncode != 0:
+        raise RuntimeError("totem_core_embed_source_commit_not_ancestor")
+    payload_files: dict[str, bytes] = {}
     with tarfile.open(payload_path, "r:gz") as archive:
-        members = {member.name.removeprefix("./"): member for member in archive.getmembers() if member.isfile()}
+        members: dict[str, tarfile.TarInfo] = {}
+        for member in archive.getmembers():
+            if not member.isfile():
+                continue
+            name = member.name.removeprefix("./")
+            if name in members:
+                raise RuntimeError(f"totem_core_embed_payload_duplicate_member:{name}")
+            members[name] = member
         health_member = members.get("health/totem-core-health.json")
         health_file = archive.extractfile(health_member) if health_member is not None else None
         if health_file is None:
             raise RuntimeError("totem_core_embed_payload_health_missing")
-        health = json.loads(health_file.read().decode("utf-8"))
-        if health.get("capabilities") != list(TOTEM_CORE_CAPABILITIES):
+        health_bytes = health_file.read()
+        health = json.loads(health_bytes.decode("utf-8"))
+        if health.get("capabilities") != list(capabilities):
             raise RuntimeError("totem_core_embed_payload_capabilities_mismatch")
+        payload_files["health/totem-core-health.json"] = health_bytes
+        fragment_member = members.get("manifest-fragment/totem-core.json")
+        fragment_file = archive.extractfile(fragment_member) if fragment_member is not None else None
+        if fragment_file is None:
+            raise RuntimeError("totem_core_embed_payload_fragment_missing")
+        payload_files["manifest-fragment/totem-core.json"] = fragment_file.read()
         for core_file in core_files:
             member = members.get(f"bin/{core_file}")
             extracted = archive.extractfile(member) if member is not None else None
             if extracted is None:
                 raise RuntimeError(f"totem_core_embed_payload_file_missing:{core_file}")
+            extracted_bytes = extracted.read()
+            committed = subprocess.run(
+                ["git", "show", f"{source_commit}:scripts/board/{core_file}"],
+                cwd=repo_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            if committed.returncode != 0 or extracted_bytes != committed.stdout:
+                raise RuntimeError(f"totem_core_embed_payload_commit_mismatch:{core_file}")
             source = repo_root / "scripts" / "board" / core_file
-            if extracted.read() != source.read_bytes():
+            if require_worktree_exact and extracted_bytes != source.read_bytes():
                 raise RuntimeError(f"totem_core_embed_payload_source_mismatch:{core_file}")
-    return {
-        "version": TOTEM_CORE_VERSION,
-        "channel": TOTEM_CORE_CHANNEL,
-        "source_commit": TOTEM_CORE_SOURCE_COMMIT,
+            payload_files[f"bin/{core_file}"] = extracted_bytes
+    provenance = {
+        "version": version,
+        "release_tag": f"totem-core-{version}",
+        "channel": channel,
+        "source_commit": source_commit,
         "source_dirty": False,
         "payload_sha256": payload_sha,
-        "capabilities": list(TOTEM_CORE_CAPABILITIES),
+        "created_at_utc": created_at_utc,
+        "capabilities": list(capabilities),
         "manifest": str(manifest_path.relative_to(repo_root)),
         "payload": str(payload_path.relative_to(repo_root)),
     }
+    return provenance, payload_files
+
+
+def validate_totem_core_release_provenance(repo_root: Path, core_files: list[str]) -> dict[str, Any]:
+    provenance, _payload_files = _validate_totem_core_release(
+        repo_root,
+        core_files,
+        version=TOTEM_CORE_VERSION,
+        channel=TOTEM_CORE_CHANNEL,
+        source_commit=TOTEM_CORE_SOURCE_COMMIT,
+        payload_sha256=TOTEM_CORE_PAYLOAD_SHA256,
+        created_at_utc=TOTEM_CORE_CREATED_AT_UTC,
+        capabilities=TOTEM_CORE_CAPABILITIES,
+        require_worktree_exact=True,
+    )
+    return provenance
+
+
+def validate_totem_core_previous_release_provenance(repo_root: Path, core_files: list[str]) -> dict[str, Any]:
+    previous_core_files = [
+        core_file for core_file in core_files if core_file not in TOTEM_CORE_PREVIOUS_EXCLUDED_FILES
+    ]
+    provenance, _payload_files = _validate_totem_core_release(
+        repo_root,
+        previous_core_files,
+        version=TOTEM_CORE_PREVIOUS_VERSION,
+        channel=TOTEM_CORE_PREVIOUS_CHANNEL,
+        source_commit=TOTEM_CORE_PREVIOUS_SOURCE_COMMIT,
+        payload_sha256=TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256,
+        created_at_utc=TOTEM_CORE_PREVIOUS_CREATED_AT_UTC,
+        capabilities=TOTEM_CORE_PREVIOUS_CAPABILITIES,
+        require_worktree_exact=False,
+    )
+    return provenance
+
+
+def _materialize_payload_file(work_dir: Path, slot: str, relative_path: str, content: bytes) -> Path:
+    output = work_dir / "totem-core-slots" / slot / relative_path
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(content)
+    return output
 
 
 def write_file_commands(source: Path, target: str, mode_text: str = "0755") -> list[str]:
@@ -335,16 +437,47 @@ def write_totem_core_embed(
     profile: str = "homologation",
     debugfs_batch_runner: Callable[[Path, list[str], Path], str] | None = None,
 ) -> dict[str, Any]:
-    """Embed C17.6 totem-core as image current + /opt fallback/wrappers."""
+    """Embed a distinct C26 current/previous pair plus /opt fallback/wrappers."""
     profile_config = resolve_totem_core_embed_profile(profile)
     manifest_path = repo_root / "scripts/board/totem_appliance_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     embed = manifest.get("totem_core_image_embed") or {}
     core_files = list(embed.get("core_files") or CORE_FILES)
-    release_provenance = validate_totem_core_release_provenance(repo_root, core_files)
+    release_provenance, current_payload_files = _validate_totem_core_release(
+        repo_root,
+        core_files,
+        version=TOTEM_CORE_VERSION,
+        channel=TOTEM_CORE_CHANNEL,
+        source_commit=TOTEM_CORE_SOURCE_COMMIT,
+        payload_sha256=TOTEM_CORE_PAYLOAD_SHA256,
+        created_at_utc=TOTEM_CORE_CREATED_AT_UTC,
+        capabilities=TOTEM_CORE_CAPABILITIES,
+        require_worktree_exact=True,
+    )
+    previous_core_files = [
+        core_file for core_file in core_files if core_file not in TOTEM_CORE_PREVIOUS_EXCLUDED_FILES
+    ]
+    previous_release_provenance, previous_payload_files = _validate_totem_core_release(
+        repo_root,
+        previous_core_files,
+        version=TOTEM_CORE_PREVIOUS_VERSION,
+        channel=TOTEM_CORE_PREVIOUS_CHANNEL,
+        source_commit=TOTEM_CORE_PREVIOUS_SOURCE_COMMIT,
+        payload_sha256=TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256,
+        created_at_utc=TOTEM_CORE_PREVIOUS_CREATED_AT_UTC,
+        capabilities=TOTEM_CORE_PREVIOUS_CAPABILITIES,
+        require_worktree_exact=False,
+    )
+    if TOTEM_CORE_VERSION == TOTEM_CORE_PREVIOUS_VERSION:
+        raise RuntimeError("totem_core_embed_slots_same_version")
+    if TOTEM_CORE_PAYLOAD_SHA256 == TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256:
+        raise RuntimeError("totem_core_embed_slots_same_payload")
     current_target = f"releases/{TOTEM_CORE_VERSION}"
+    previous_target = f"releases/{TOTEM_CORE_PREVIOUS_VERSION}"
     release_root = f"/data/core/totem/releases/{TOTEM_CORE_VERSION}"
+    previous_release_root = f"/data/core/totem/releases/{TOTEM_CORE_PREVIOUS_VERSION}"
     release_bin = f"{release_root}/bin"
+    previous_release_bin = f"{previous_release_root}/bin"
     fallback_bin = "/opt/totem/core-fallback/bin"
     wrappers_bin = "/opt/totem/bin"
     wrapper_py = repo_root / "scripts/board/totem_core_exec.py"
@@ -391,6 +524,10 @@ def write_totem_core_embed(
         release_bin,
         f"{release_root}/health",
         f"{release_root}/manifest-fragment",
+        previous_release_root,
+        previous_release_bin,
+        f"{previous_release_root}/health",
+        f"{previous_release_root}/manifest-fragment",
         "/opt/totem/core-fallback",
         fallback_bin,
         wrappers_bin,
@@ -445,11 +582,25 @@ def write_totem_core_embed(
     for core_file in core_files:
         if "/" in core_file or core_file.startswith("."):
             raise RuntimeError(f"unsafe_totem_core_file:{core_file}")
-        source = repo_root / "scripts/board" / core_file
-        if not source.is_file():
+        worktree_source = repo_root / "scripts/board" / core_file
+        if not worktree_source.is_file():
             raise RuntimeError(f"missing_totem_core_file:{core_file}")
-        commands.extend(write_file_commands(source, f"{fallback_bin}/{core_file}"))
-        commands.extend(write_file_commands(source, f"{release_bin}/{core_file}"))
+        current_source = _materialize_payload_file(
+            work_dir,
+            "current",
+            f"bin/{core_file}",
+            current_payload_files[f"bin/{core_file}"],
+        )
+        commands.extend(write_file_commands(current_source, f"{fallback_bin}/{core_file}"))
+        commands.extend(write_file_commands(current_source, f"{release_bin}/{core_file}"))
+        if core_file in previous_core_files:
+            previous_source = _materialize_payload_file(
+                work_dir,
+                "previous",
+                f"bin/{core_file}",
+                previous_payload_files[f"bin/{core_file}"],
+            )
+            commands.extend(write_file_commands(previous_source, f"{previous_release_bin}/{core_file}"))
         if core_file.endswith(".py"):
             commands.extend(write_file_commands(wrapper_py, f"{wrappers_bin}/{core_file}"))
         elif core_file.endswith(".sh"):
@@ -473,59 +624,29 @@ def write_totem_core_embed(
     commands.append(f"rm {FIRSTBOOT_GATE_SERVICE_WANTS}")
     commands.append(f"symlink {FIRSTBOOT_GATE_SERVICE_WANTS} {FIRSTBOOT_GATE_SERVICE_TARGET}")
 
-    health_file = work_dir / "totem-core-health.json"
-    health_file.write_text(
-        json.dumps(
-            {
-                "schema": "dadooh.totem.core.health.v1",
-                "component": "totem-core",
-                "version": TOTEM_CORE_VERSION,
-                "embedded_in_image": True,
-                "capabilities": list(TOTEM_CORE_CAPABILITIES),
-                "self_tests": [
-                    "python3 bin/totem_setup_visual_wizard.py --self-test",
-                    "python3 bin/totem_wifi_nm_adapter.py --self-test",
-                    "python3 bin/totem_visual_splash.py --self-test",
-                    "python3 bin/totem_status_render_preview.py --self-test",
-                    "python3 bin/totem_status_aggregate.py --self-test",
-                    "bash bin/totem_status_renderer.sh --self-test",
-                    "python3 bin/totem_config_contract_validate.py --self-test",
-                    "python3 bin/totem_qr_pairing_client.py --self-test",
-                    "python3 bin/totem_settings_production_apply_policy.py --self-test",
-                    "python3 bin/totem_settings_trigger.py --self-test",
-                    "python3 bin/totem_config_writer_real.py --self-test",
-                    "bash -n bin/totem_open_settings_session.sh",
-                    "bash -n bin/totem_visual_tty_guard.sh",
-                    "bash bin/totem_firstboot_gate.sh --self-test",
-                    "bash -n bin/totem_firstboot_gate.sh",
-                    "bash bin/totem_open_settings_cleanup.sh --self-test",
-                    "bash -n bin/totem_status_renderer.sh",
-                    "restore-order-static-check",
-                ],
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
+    health_file = _materialize_payload_file(
+        work_dir,
+        "current",
+        "health/totem-core-health.json",
+        current_payload_files["health/totem-core-health.json"],
     )
-    fragment_file = work_dir / "totem-core-fragment.json"
-    fragment_file.write_text(
-        json.dumps(
-            {
-                "component": "totem-core",
-                "layout": "/data/core/totem",
-                "fallback": fallback_bin,
-                "wrappers": wrappers_bin,
-                "systemd_units_included": False,
-                "updater_self_update": False,
-                "embedded_in_image": True,
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
+    fragment_file = _materialize_payload_file(
+        work_dir,
+        "current",
+        "manifest-fragment/totem-core.json",
+        current_payload_files["manifest-fragment/totem-core.json"],
+    )
+    previous_health_file = _materialize_payload_file(
+        work_dir,
+        "previous",
+        "health/totem-core-health.json",
+        previous_payload_files["health/totem-core-health.json"],
+    )
+    previous_fragment_file = _materialize_payload_file(
+        work_dir,
+        "previous",
+        "manifest-fragment/totem-core.json",
+        previous_payload_files["manifest-fragment/totem-core.json"],
     )
     state_file = work_dir / "totem-core-state.json"
     state_file.write_text(
@@ -544,7 +665,17 @@ def write_totem_core_embed(
                     "payload_sha256": TOTEM_CORE_PAYLOAD_SHA256,
                     "manifest_created_at_utc": TOTEM_CORE_CREATED_AT_UTC,
                 },
-                "previous": None,
+                "previous": {
+                    "version": TOTEM_CORE_PREVIOUS_VERSION,
+                    "channel": TOTEM_CORE_PREVIOUS_CHANNEL,
+                    "path": previous_target,
+                    "source": "image_embed_previous",
+                    "source_repo": "dadoohai/orange_pi_totem",
+                    "source_branch": "foundation-v0.1",
+                    "source_commit": TOTEM_CORE_PREVIOUS_SOURCE_COMMIT,
+                    "payload_sha256": TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256,
+                    "manifest_created_at_utc": TOTEM_CORE_PREVIOUS_CREATED_AT_UTC,
+                },
                 "last_operation": {
                     "type": "image_embed",
                     "status": "ok",
@@ -560,6 +691,20 @@ def write_totem_core_embed(
     )
     commands.extend(write_file_commands(health_file, f"{release_root}/health/totem-core-health.json", "0644"))
     commands.extend(write_file_commands(fragment_file, f"{release_root}/manifest-fragment/totem-core.json", "0644"))
+    commands.extend(
+        write_file_commands(
+            previous_health_file,
+            f"{previous_release_root}/health/totem-core-health.json",
+            "0644",
+        )
+    )
+    commands.extend(
+        write_file_commands(
+            previous_fragment_file,
+            f"{previous_release_root}/manifest-fragment/totem-core.json",
+            "0644",
+        )
+    )
     commands.extend(write_file_commands(state_file, "/data/core/totem/state.json", "0644"))
     splash_service_file = work_dir / "dadooh-visual-splash.service"
     splash_service_file.write_text(
@@ -593,6 +738,8 @@ def write_totem_core_embed(
         [
             "rm /data/core/totem/current",
             f"symlink /data/core/totem/current {current_target}",
+            "rm /data/core/totem/previous",
+            f"symlink /data/core/totem/previous {previous_target}",
         ]
     )
 
@@ -600,6 +747,7 @@ def write_totem_core_embed(
     output = runner(rootfs, commands, work_dir)
     return {
         "totem_core_current_version": TOTEM_CORE_VERSION,
+        "totem_core_previous_version": TOTEM_CORE_PREVIOUS_VERSION,
         "totem_core_embed_profile": profile,
         "totem_core_files_embedded": len(core_files),
         "image_fixed_player_files_embedded": len(IMAGE_FIXED_PLAYER_FILES),
@@ -608,6 +756,7 @@ def write_totem_core_embed(
         "totem_core_update_timer_enabled": bool(profile_config["timer_enabled"]),
         "totem_core_embed_debugfs_output_lines": len(output.splitlines()),
         "totem_core_release_provenance": release_provenance,
+        "totem_core_previous_release_provenance": previous_release_provenance,
     }
 
 
@@ -661,6 +810,31 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
     """Return an offline validation bundle for the totem-core image layout."""
     profile_config = resolve_totem_core_embed_profile(profile)
     repo_root = Path(__file__).resolve().parents[2]
+    current_release_provenance, current_payload_files = _validate_totem_core_release(
+        repo_root,
+        CORE_FILES,
+        version=TOTEM_CORE_VERSION,
+        channel=TOTEM_CORE_CHANNEL,
+        source_commit=TOTEM_CORE_SOURCE_COMMIT,
+        payload_sha256=TOTEM_CORE_PAYLOAD_SHA256,
+        created_at_utc=TOTEM_CORE_CREATED_AT_UTC,
+        capabilities=TOTEM_CORE_CAPABILITIES,
+        require_worktree_exact=True,
+    )
+    previous_core_files = [
+        core_file for core_file in CORE_FILES if core_file not in TOTEM_CORE_PREVIOUS_EXCLUDED_FILES
+    ]
+    previous_release_provenance, previous_payload_files = _validate_totem_core_release(
+        repo_root,
+        previous_core_files,
+        version=TOTEM_CORE_PREVIOUS_VERSION,
+        channel=TOTEM_CORE_PREVIOUS_CHANNEL,
+        source_commit=TOTEM_CORE_PREVIOUS_SOURCE_COMMIT,
+        payload_sha256=TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256,
+        created_at_utc=TOTEM_CORE_PREVIOUS_CREATED_AT_UTC,
+        capabilities=TOTEM_CORE_PREVIOUS_CAPABILITIES,
+        require_worktree_exact=False,
+    )
     expected_player_runtime_auth: dict[str, Any] = {}
     expected_auth_path = _profile_authorization_path(profile_config, repo_root)
     if profile == "production":
@@ -670,7 +844,12 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
             except RuntimeError:
                 expected_player_runtime_auth = {}
     release_root = f"/data/core/totem/releases/{TOTEM_CORE_VERSION}"
-    state = base.cat_file(rootfs, "/data/core/totem/state.json") or ""
+    previous_release_root = f"/data/core/totem/releases/{TOTEM_CORE_PREVIOUS_VERSION}"
+    state = _dump_text(rootfs, "/data/core/totem/state.json")
+    try:
+        state_data = json.loads(state)
+    except json.JSONDecodeError:
+        state_data = {}
     updatectl = base.cat_file(rootfs, "/opt/totem/bin/totem-updatectl") or ""
     splash_service = base.cat_file(rootfs, "/etc/systemd/system/dadooh-visual-splash.service") or ""
     update_agent_service = _dump_text(rootfs, UPDATE_AGENT_SERVICE_TARGET)
@@ -694,6 +873,10 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
     ).read_text(encoding="utf-8")
     player_dropin_wants_gc = "Wants=totem-product-reset-gc.service" in player_dropin
     health_text = _dump_text(rootfs, f"{release_root}/health/totem-core-health.json")
+    previous_health_text = _dump_text(
+        rootfs,
+        f"{previous_release_root}/health/totem-core-health.json",
+    )
     policy_text = _dump_text(rootfs, UPDATE_POLICY_TARGET)
     try:
         update_policy = json.loads(policy_text)
@@ -707,6 +890,10 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
         embedded_health = json.loads(health_text)
     except json.JSONDecodeError:
         embedded_health = {}
+    try:
+        embedded_previous_health = json.loads(previous_health_text)
+    except json.JSONDecodeError:
+        embedded_previous_health = {}
     policy_stat = base.stat_file(rootfs, UPDATE_POLICY_TARGET)
     product_reset_gc_unit_stat = base.stat_file(rootfs, PRODUCT_RESET_GC_SERVICE_TARGET)
     player_dropin_stat = base.stat_file(
@@ -714,23 +901,73 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
         "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf",
     )
     current_target = _symlink_target(rootfs, "/data/core/totem/current")
+    previous_target = _symlink_target(rootfs, "/data/core/totem/previous")
     timer_enabled = bool(base.stat_file(rootfs, UPDATE_AGENT_TIMER_WANTS).get("present", False))
     player_runtime_timer_enabled = bool(
         base.stat_file(rootfs, PLAYER_RUNTIME_UPDATE_AGENT_TIMER_WANTS).get("present", False)
     )
+    expected_current_state = {
+        "version": TOTEM_CORE_VERSION,
+        "channel": TOTEM_CORE_CHANNEL,
+        "path": f"releases/{TOTEM_CORE_VERSION}",
+        "source": "image_embed",
+        "source_repo": "dadoohai/orange_pi_totem",
+        "source_branch": "foundation-v0.1",
+        "source_commit": TOTEM_CORE_SOURCE_COMMIT,
+        "payload_sha256": TOTEM_CORE_PAYLOAD_SHA256,
+        "manifest_created_at_utc": TOTEM_CORE_CREATED_AT_UTC,
+    }
+    expected_previous_state = {
+        "version": TOTEM_CORE_PREVIOUS_VERSION,
+        "channel": TOTEM_CORE_PREVIOUS_CHANNEL,
+        "path": f"releases/{TOTEM_CORE_PREVIOUS_VERSION}",
+        "source": "image_embed_previous",
+        "source_repo": "dadoohai/orange_pi_totem",
+        "source_branch": "foundation-v0.1",
+        "source_commit": TOTEM_CORE_PREVIOUS_SOURCE_COMMIT,
+        "payload_sha256": TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256,
+        "manifest_created_at_utc": TOTEM_CORE_PREVIOUS_CREATED_AT_UTC,
+    }
 
     checks: dict[str, bool] = {
+        "totem_core_slots_versions_distinct": TOTEM_CORE_VERSION != TOTEM_CORE_PREVIOUS_VERSION,
+        "totem_core_slots_payloads_distinct": (
+            current_release_provenance["payload_sha256"]
+            != previous_release_provenance["payload_sha256"]
+        ),
         "totem_core_current_symlink_present": _is_symlink(rootfs, "/data/core/totem/current"),
         "totem_core_current_symlink_target_exact": current_target == f"releases/{TOTEM_CORE_VERSION}",
+        "totem_core_previous_symlink_present": _is_symlink(rootfs, "/data/core/totem/previous"),
+        "totem_core_previous_symlink_target_exact": (
+            previous_target == f"releases/{TOTEM_CORE_PREVIOUS_VERSION}"
+        ),
         "totem_core_state_present": _is_file(rootfs, "/data/core/totem/state.json"),
+        "totem_core_state_current_exact": state_data.get("current") == expected_current_state,
+        "totem_core_state_previous_exact": state_data.get("previous") == expected_previous_state,
         "totem_core_state_records_current_version": TOTEM_CORE_VERSION in state,
         "totem_core_state_records_current_channel": f'"channel": "{TOTEM_CORE_CHANNEL}"' in state,
         "totem_core_state_records_created_at": TOTEM_CORE_CREATED_AT_UTC in state,
         "totem_core_state_records_source_commit": TOTEM_CORE_SOURCE_COMMIT in state,
         "totem_core_state_records_payload_sha256": TOTEM_CORE_PAYLOAD_SHA256 in state,
         "totem_core_release_health_present": _is_file(rootfs, f"{release_root}/health/totem-core-health.json"),
+        "totem_core_previous_release_health_present": _is_file(
+            rootfs,
+            f"{previous_release_root}/health/totem-core-health.json",
+        ),
         "totem_core_release_health_capabilities_exact": (
             embedded_health.get("capabilities") == list(TOTEM_CORE_CAPABILITIES)
+        ),
+        "totem_core_previous_release_health_capabilities_exact": (
+            embedded_previous_health.get("capabilities")
+            == list(TOTEM_CORE_PREVIOUS_CAPABILITIES)
+        ),
+        "totem_core_release_health_payload_exact": (
+            _dump_sha256(rootfs, f"{release_root}/health/totem-core-health.json")
+            == hashlib.sha256(current_payload_files["health/totem-core-health.json"]).hexdigest()
+        ),
+        "totem_core_previous_release_health_payload_exact": (
+            _dump_sha256(rootfs, f"{previous_release_root}/health/totem-core-health.json")
+            == hashlib.sha256(previous_payload_files["health/totem-core-health.json"]).hexdigest()
         ),
         "totem_core_release_health_has_c26_companion_tests": {
             "python3 bin/totem_config_writer_real.py --self-test",
@@ -740,6 +977,18 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
         }
         <= set(embedded_health.get("self_tests") or []),
         "totem_core_release_fragment_present": _is_file(rootfs, f"{release_root}/manifest-fragment/totem-core.json"),
+        "totem_core_previous_release_fragment_present": _is_file(
+            rootfs,
+            f"{previous_release_root}/manifest-fragment/totem-core.json",
+        ),
+        "totem_core_release_fragment_payload_exact": (
+            _dump_sha256(rootfs, f"{release_root}/manifest-fragment/totem-core.json")
+            == hashlib.sha256(current_payload_files["manifest-fragment/totem-core.json"]).hexdigest()
+        ),
+        "totem_core_previous_release_fragment_payload_exact": (
+            _dump_sha256(rootfs, f"{previous_release_root}/manifest-fragment/totem-core.json")
+            == hashlib.sha256(previous_payload_files["manifest-fragment/totem-core.json"]).hexdigest()
+        ),
         "totem_core_updatectl_capable": "_totem_core_health_check" in updatectl and "_make_world_traversable" in updatectl,
         "totem_core_splash_service_uses_wrapper": "/opt/totem/bin/totem_visual_splash.py" in splash_service,
         "totem_core_update_policy_present": _is_file(rootfs, UPDATE_POLICY_TARGET),
@@ -865,11 +1114,24 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
         )
     for core_file in CORE_FILES:
         checks[f"totem_core_release_{core_file}"] = _has_exec(rootfs, f"{release_root}/bin/{core_file}")
+        checks[f"totem_core_previous_release_{core_file}"] = (
+            _has_exec(rootfs, f"{previous_release_root}/bin/{core_file}")
+            if core_file in previous_core_files
+            else not _is_file(rootfs, f"{previous_release_root}/bin/{core_file}")
+        )
         checks[f"totem_core_fallback_{core_file}"] = _has_exec(rootfs, f"/opt/totem/core-fallback/bin/{core_file}")
-        source_sha = base.file_sha256(repo_root / "scripts" / "board" / core_file)
+        source_sha = hashlib.sha256(current_payload_files[f"bin/{core_file}"]).hexdigest()
         checks[f"totem_core_release_{core_file}_source_exact"] = (
             _dump_sha256(rootfs, f"{release_root}/bin/{core_file}") == source_sha
         )
+        if core_file in previous_core_files:
+            previous_source_sha = hashlib.sha256(
+                previous_payload_files[f"bin/{core_file}"]
+            ).hexdigest()
+            checks[f"totem_core_previous_release_{core_file}_source_exact"] = (
+                _dump_sha256(rootfs, f"{previous_release_root}/bin/{core_file}")
+                == previous_source_sha
+            )
         checks[f"totem_core_fallback_{core_file}_source_exact"] = (
             _dump_sha256(rootfs, f"/opt/totem/core-fallback/bin/{core_file}") == source_sha
         )
@@ -894,4 +1156,5 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
         "checks": checks,
         "totem_core_embed_profile": profile,
         "totem_core_current_version": TOTEM_CORE_VERSION,
+        "totem_core_previous_version": TOTEM_CORE_PREVIOUS_VERSION,
     }

@@ -983,11 +983,18 @@ terminal_action_reconcile_complete
             self.assertIn("totem-actions-v1", health["capabilities"])
             image_embed = (REPO_ROOT / "scripts/build/totem_core_image_embed.py").read_text(encoding="utf-8")
             self.assertIn('TOTEM_CORE_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")', image_embed)
+            self.assertIn('TOTEM_CORE_PREVIOUS_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")', image_embed)
             self.assertIn('current_target = f"releases/{TOTEM_CORE_VERSION}"', image_embed)
-            self.assertIn('"capabilities": list(TOTEM_CORE_CAPABILITIES)', image_embed)
-            self.assertIn('health.get("capabilities") != list(TOTEM_CORE_CAPABILITIES)', image_embed)
+            self.assertIn('previous_target = f"releases/{TOTEM_CORE_PREVIOUS_VERSION}"', image_embed)
+            self.assertIn('capabilities=TOTEM_CORE_CAPABILITIES', image_embed)
+            self.assertIn('capabilities=TOTEM_CORE_PREVIOUS_CAPABILITIES', image_embed)
+            self.assertIn('health.get("capabilities") != list(capabilities)', image_embed)
             self.assertIn(
                 'embedded_health.get("capabilities") == list(TOTEM_CORE_CAPABILITIES)',
+                image_embed,
+            )
+            self.assertIn(
+                'state_data.get("previous") == expected_previous_state',
                 image_embed,
             )
 

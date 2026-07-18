@@ -437,17 +437,25 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             except ValueError:
                 pass
 
-        expected_core_version = "c26.5-local-recovery-20260718-f1d0da9-actions"
+        expected_core_version = "c26.7-local-recovery-20260718-01464f8-actions"
         expected_core_tag = f"totem-core-{expected_core_version}"
-        expected_core_sha = "b8864cc913f6e7ca4562a0e3edfe9eb0ba55a6aef5019a47a0535397ba26f4df"
+        expected_core_sha = "1369a5c7d04486f2d37fb11a6205ace25ae1efe2baf6bae3bd7d348ec82e5e5f"
         self.assertEqual(mod.TOTEM_CORE_VERSION, expected_core_version)
         self.assertEqual(mod.TOTEM_CORE_RELEASE_TAG, expected_core_tag)
         self.assertEqual(mod.TOTEM_CORE_CHANNEL, "homologation")
         self.assertEqual(mod.TOTEM_CORE_PAYLOAD_SHA256, expected_core_sha)
-        self.assertEqual(mod.TOTEM_CORE_CREATED_AT_UTC, "2026-07-18T19:30:40Z")
+        self.assertEqual(mod.TOTEM_CORE_CREATED_AT_UTC, "2026-07-18T22:27:13Z")
         self.assertEqual(
             mod.TOTEM_CORE_SOURCE_COMMIT,
-            "f1d0da92eff5f0aa94036b0ae5a8a85e632450dc",
+            "01464f8f82a6ea758946fc7eeca552a610db91f3",
+        )
+        self.assertEqual(
+            mod.TOTEM_CORE_PREVIOUS_VERSION,
+            "c26.5-local-recovery-20260718-f1d0da9-actions",
+        )
+        self.assertEqual(
+            mod.TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256,
+            "b8864cc913f6e7ca4562a0e3edfe9eb0ba55a6aef5019a47a0535397ba26f4df",
         )
         release_provenance = mod.validate_totem_core_release_provenance(
             REPO_ROOT,
@@ -455,6 +463,18 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         )
         self.assertEqual(release_provenance["channel"], "homologation")
         self.assertIs(release_provenance["source_dirty"], False)
+        previous_release_provenance = mod.validate_totem_core_previous_release_provenance(
+            REPO_ROOT,
+            mod.CORE_FILES,
+        )
+        self.assertEqual(
+            previous_release_provenance["version"],
+            mod.TOTEM_CORE_PREVIOUS_VERSION,
+        )
+        self.assertEqual(
+            previous_release_provenance["capabilities"],
+            ["product-reset-v1", "totem-actions-v1"],
+        )
         appliance = json.loads(
             (REPO_ROOT / "scripts" / "board" / "totem_appliance_manifest.json").read_text(
                 encoding="utf-8"
@@ -579,8 +599,8 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn('"not_for_distribution" not in marker_now', derive)
         self.assertIn('"not_for_production" not in marker_now', derive)
         self.assertIn("profile=totem_core_profile", derive)
-        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-17-c26"', derive)
-        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.17-c26"', derive)
+        self.assertIn('PRODUCTION_TAG = "c18-hwdecode-prod-18-c26"', derive)
+        self.assertIn('PRODUCTION_VERSION = "c18.image-prod.18-c26"', derive)
         self.assertIn('PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-16-c26-candidate"', derive)
         self.assertIn(
             'PRODUCTION_PREDECESSOR_SHA256 = "18c1b42c57809b704820f5dfa383fb05a3d254d50745cb217440f241c75e1168"',
@@ -594,8 +614,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             'PRODUCTION_IMAGE_BOUND_PLAYBACK_SUMMARY_COMMIT = "c075a5572148ed25aed000a22202f918c4157fda"',
             derive,
         )
-        self.assertIn('"totem_core_c26_5_homologation_actions_embedded"', derive)
-        self.assertIn('"image_identity_prod17_c26"', derive)
+        self.assertIn('"totem_core_c26_7_current_c26_5_previous_embedded"', derive)
+        self.assertIn('"totem_core_two_distinct_product_reset_slots"', derive)
+        self.assertIn('"image_identity_prod18_c26"', derive)
         self.assertIn('"playback_health_summary_c075a55"', derive)
         self.assertIn('"player_runtime_c25b_exact_target_preserved"', derive)
         self.assertIn('"production_successor_scope"', derive)
@@ -836,16 +857,16 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 module.load_production_support_password(link)
 
             module.validate_candidate_identity(
-                "c18-hwdecode-prod-17-c26",
-                "c18.image-prod.17-c26",
-                "/etc/dadooh/c18-hwdecode-prod-17-c26-image",
+                "c18-hwdecode-prod-18-c26",
+                "c18.image-prod.18-c26",
+                "/etc/dadooh/c18-hwdecode-prod-18-c26-image",
                 image_profile="production",
             )
             with self.assertRaises(SystemExit):
                 module.validate_candidate_identity(
-                    "c18-hwdecode-prod-17-c26",
+                    "c18-hwdecode-prod-18-c26",
                     "c18.image-prod.13",
-                    "/etc/dadooh/c18-hwdecode-prod-17-c26-image",
+                    "/etc/dadooh/c18-hwdecode-prod-18-c26-image",
                     image_profile="production",
                 )
             with self.assertRaises(SystemExit):
@@ -857,9 +878,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 )
             with self.assertRaises(SystemExit):
                 module.validate_candidate_identity(
-                    "c18-hwdecode-prod-17-c26",
-                    "c18.image-prod.17-c26",
-                    "/etc/dadooh/c18-hwdecode-prod-17-c26-image\nrm /etc/shadow",
+                    "c18-hwdecode-prod-18-c26",
+                    "c18.image-prod.18-c26",
+                    "/etc/dadooh/c18-hwdecode-prod-18-c26-image\nrm /etc/shadow",
                     image_profile="production",
                 )
 
@@ -977,6 +998,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertNotIn("totem_appliance_status_snapshot.py", core_files_block)
         self.assertNotIn("c18_display_status_collect.py", core_files_block)
         self.assertIn("totem_qr_pairing_client.py", core_files_block)
+        self.assertIn("totem_api_url_contract.py", core_files_block)
         self.assertIn("totem_settings_production_apply_policy.py", core_files_block)
         self.assertIn("TOTEM_CORE_OPTIONAL_BIN", updatectl)
         self.assertIn('"totem_qr_pairing_client.py"', updatectl)
@@ -997,7 +1019,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
         self.assertIn('"manifest-fragment/totem-core.json"', release_gate)
         self.assertIn('str(bin_dir / "totem_status_render_preview.py"), "--self-test"', updatectl)
         embed = (REPO_ROOT / "scripts" / "build" / "totem_core_image_embed.py").read_text(encoding="utf-8")
-        self.assertIn("python3 bin/totem_status_render_preview.py --self-test", embed)
+        self.assertIn("python3 bin/totem_status_render_preview.py --self-test", build)
+        self.assertIn('current_payload_files["health/totem-core-health.json"]', embed)
+        self.assertIn('previous_payload_files["health/totem-core-health.json"]', embed)
 
     def test_display_status_collector_is_read_only_public_totem_core(self) -> None:
         collector = DISPLAY_STATUS_COLLECTOR_PATH.read_text(encoding="utf-8")
