@@ -1,0 +1,9 @@
+
+2026-07-18T06:36:39Z INFO update_lock_acquired operation=rollback:totem-core lock=/run/totem-updatectl.lock
+2026-07-18T06:36:54Z INFO manual_rollback_ok rolled_to=c21.24-product-stable-20260717T025907Z-076e18b
+{
+  "rollback": "ok",
+  "rolled_to": "c21.24-product-stable-20260717T025907Z-076e18b"
+}
+
+__EXPECT_EXIT_CODE__=0

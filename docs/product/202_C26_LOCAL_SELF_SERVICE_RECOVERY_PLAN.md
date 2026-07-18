@@ -396,8 +396,8 @@ Concluido e versionado:
 - o identificador do token da ativacao agora sobrevive a uma nova gravacao pelo
   F10 sem aparecer em artefatos publicos; imagens sem C26 preservam a navegacao
   anterior entre etapas;
-- formatos C26A invisivel e C26B com capacidades e identidades distintas foram
-  construidos em testes temporarios; os pacotes oficiais ainda serao gerados;
+- pacotes oficiais C26A invisivel e C26B com capacidades e identidades
+  distintas foram gerados, versionados e passaram o gate OTA completo 85/85;
 - bloqueio runtime/package/health de C26B em imagem sem o boot graph seguro, o
   unit static exato ou o `Wants=` do player;
 - firstboot unit, marcador do boot atual e oneshot de limpeza pos-player
@@ -409,20 +409,23 @@ Concluido e versionado:
 - candidata backend `api-00483-taq` auditada com `48/48`, promovida para 100%
   e validada por smoke. A revisao anterior `api-00481-naf` permanece na tag
   `pre-c26` e `api-00469-gus` permanece como rollback historico.
+- C26A aplicado na `prod15`, revertido para C21.24 e reaplicado; politica
+  stable e timer foram restaurados, player permaneceu ativo com zero restarts
+  e as acoes ficaram escondidas como exigido;
+- imagem `c18-hwdecode-prod-16-c26-candidate` construida no commit `cdab0fe`,
+  validada offline e auditada de forma independente como segura para gravacao
+  em uma unica placa de bancada, sem claim de producao.
 
 Pendente para declarar pronto:
 
-- gerar e versionar os pacotes a partir do estado local versionado, cujo codigo
-  funcional foi fechado em `45138fd`;
-- aplicar C26A na placa e provar que nenhuma acao aparece;
-- construir/regravar a imagem sucessora e executar C26B online, offline,
+- regravar a imagem sucessora e executar C26B online, offline,
   interrupcoes, reiniciar, desligar, rollback e reaplicacao;
-- obter auditoria independente final sobre pacotes, imagem e evidencias da
+- obter auditoria independente final sobre a execucao C26B e as evidencias da
   placa;
-- registrar evidencias, promover o pacote final e atualizar a baseline somente
-  depois da auditoria conclusiva.
+- promover o pacote final e atualizar a baseline somente depois da auditoria
+  conclusiva.
 
-O gate C18 de provenance permanece vermelho em exatamente um ponto enquanto a
-fonte C26 ainda difere do pacote pinado na imagem. Isso e esperado nesta fase e
-deve desaparecer por commit, empacotamento e novo pin; nunca por relaxamento do
-gate.
+O gate OTA completo passou 85/85 para o pacote C26B. A imagem candidata tambem
+passou sua validacao offline e auditoria forense. O unico marco bloqueante
+restante e a prova fisica C26B na imagem sucessora; nenhuma inferencia desse
+estado autoriza baseline final ou producao.

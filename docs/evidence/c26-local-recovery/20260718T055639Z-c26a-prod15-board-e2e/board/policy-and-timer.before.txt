@@ -1,0 +1,9 @@
+
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /data/updates/policy.json
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /tmp/c26a-policy-stable-backup.json
+enabled
+active
+active
+0
+
+__EXPECT_EXIT_CODE__=0

@@ -1,0 +1,37 @@
+
+releases/c26.3-local-recovery-20260718-d0363b7
+releases/c21.24-product-stable-20260717T025907Z-076e18b
+{
+  "schema": "dadooh.totem.core.health.v1",
+  "component": "totem-core",
+  "capabilities": [
+    "product-reset-v1"
+  ],
+  "self_tests": [
+    "python3 bin/totem_setup_visual_wizard.py --self-test",
+    "python3 bin/totem_wifi_nm_adapter.py --self-test",
+    "python3 bin/totem_visual_splash.py --self-test",
+    "python3 bin/totem_status_render_preview.py --self-test",
+    "python3 bin/totem_status_aggregate.py --self-test",
+    "bash bin/totem_status_renderer.sh --self-test",
+    "python3 bin/totem_config_contract_validate.py --self-test",
+    "python3 bin/totem_qr_pairing_client.py --self-test",
+    "python3 bin/totem_settings_production_apply_policy.py --self-test",
+    "python3 bin/totem_settings_trigger.py --self-test",
+    "python3 bin/totem_config_writer_real.py --self-test",
+    "bash -n bin/totem_open_settings_session.sh",
+    "bash -n bin/totem_visual_tty_guard.sh",
+    "bash bin/totem_firstboot_gate.sh --self-test",
+    "bash -n bin/totem_firstboot_gate.sh",
+    "bash bin/totem_open_settings_cleanup.sh --self-test",
+    "bash -n bin/totem_status_renderer.sh",
+    "restore-order-static-check"
+  ]
+}
+usage: totem-updatectl [-h]
+                       {status,self-test,check-github-latest,list-github,apply-github-latest,apply-player-runtime-authorized,apply-manifest-url,apply-local,rollback,rollback-player-runtime-authorized,reconcile}
+                       ...
+totem-updatectl: error: argument cmd: invalid choice: 'check-image-contract' (choose from 'status', 'self-test', 'check-github-latest', 'list-github', 'apply-github-latest', 'apply-player-runtime-authorized', 'apply-manifest-url', 'apply-local', 'rollback', 'rollback-player-runtime-authorized', 'reconcile')
+image_contract_rc=2
+
+__EXPECT_EXIT_CODE__=0

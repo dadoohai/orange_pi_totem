@@ -1,0 +1,12 @@
+
+2026-07-18T07:22:23Z
+enabled
+active
+inactive
+active
+0
+releases/c26.3-local-recovery-20260718-d0363b7
+releases/c21.24-product-stable-20260717T025907Z-076e18b
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /data/updates/policy.json
+
+__EXPECT_EXIT_CODE__=0

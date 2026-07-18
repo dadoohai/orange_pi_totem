@@ -1,0 +1,16 @@
+{
+  "schema": "dadooh.c18.production_image_artifact_ready.v1",
+  "image_tag": "c18-hwdecode-prod-16-c26-candidate",
+  "image_version": "c18.image-prod.16-c26-candidate",
+  "image_file": "/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-16-c26-candidate_minimal.img",
+  "image_sha256": "18c1b42c57809b704820f5dfa383fb05a3d254d50745cb217440f241c75e1168",
+  "sha256_file": "/home/builder/totem-os/armbian-build-v25.11/output/images/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-16-c26-candidate_minimal.img.sha256",
+  "repo_commit": "cdab0fedefdc8776a9d1fbb0e0974fab9980181f",
+  "repo_tree": "831132ee22ce78d635b2b70a4d52ae05b42efa51",
+  "build_manifest_sha256": "ba9da1ad2ace0c45a9d50010f4dd25d49e91f462eb9820753d65e3ad0d0885c0",
+  "offline_validation_sha256": "39392c5934f524c8c1333ebdb2f3dc4b3b80ab37229292dd4da1c932cfd94902",
+  "build_log_sha256": "2a46637a3bde47ee3fea3fd6c06a32e8d4ac244469c0f62e1b4223ce82f0612c",
+  "evidence_directory": "/home/builder/totem-os/armbian-build-v25.11/output/c18-evidence/c18-hwdecode-prod-16-c26-candidate-cdab0fe",
+  "external_forensic_audit_required": true,
+  "ready_for_manual_card_flash": false
+}

@@ -1,0 +1,22 @@
+
+2026-07-18T05:57:44Z
+5dbff3c51ef8f148a872f73e8a63849a95fbe0bcb9119488f7bc80c2ebdb9cfc  /etc/dadooh/c18-hwdecode-prod-15-image
+player_active=active
+player_nrestarts=0
+timer_enabled=enabled
+timer_active=active
+agent_active=inactive
+/run/totem/settings-session.lock=absent
+/run/dadooh-settings/request.json=absent
+/run/totem-updatectl.lock=present
+policy={
+  "schema": "dadooh.totem.update.policy.v1",
+  "device_channel": "stable",
+  "device_track": "c18-hwdecode",
+  "allowed_components": [
+    "totem-core"
+  ],
+  "allow_prerelease": false,
+  "allow_downgrade": false
+}
+

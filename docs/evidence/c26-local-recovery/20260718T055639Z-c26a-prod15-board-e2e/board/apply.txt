@@ -1,0 +1,9 @@
+
+2026-07-18T06:34:34Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-18T06:34:34Z INFO apply_start source=local:dadooh-totem-core-c26.3-local-recovery-20260718-d0363b7.manifest.json manifest=/tmp/dadooh-totem-core-c26.3-local-recovery-20260718-d0363b7.manifest.json
+2026-07-18T06:34:34Z INFO local_payload_staged bytes=276127 sha256=58c3c12cd9aa777cec320147143b8401e6800dff392179c32356ff384f65f026
+2026-07-18T06:34:43Z INFO totem_core_health_check_starting
+2026-07-18T06:34:53Z INFO apply_success version=c26.3-local-recovery-20260718-d0363b7
+2026-07-18T06:34:53Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c26.3-local-recovery-20260718-d0363b7
+
+__EXPECT_EXIT_CODE__=0
