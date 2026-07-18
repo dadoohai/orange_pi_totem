@@ -86,10 +86,14 @@ guiadas no proprio aparelho. M11 nao bloqueia M10.
 - a `prod17` foi construida, mas a auditoria final a rejeitou: ela embute
   `current` sem `previous` e ocultaria `Restaurar` numa placa limpa. Nao gravar
   nem distribuir esse artefato;
-- pendente macro: alinhar a validacao de URL antes da limpeza, construir uma
-  imagem de identidade nova com C26.5 como retorno e uma C26 sucessora como
-  ativa, provar essa imagem na placa e so entao promover a baseline. Ate la, a
-  referencia publica continua `prod15` + C25B + C21.24.
+- a `prod18` corrigiu o layout e passou `85/85`, integridade e adulteracao, mas
+  tambem foi rejeitada antes do flash: C26.5 e um retorno byte-real, porem
+  reabre uma divergencia writer/revogacao; C26.7 ainda aceita chaves e hosts
+  extremos que podem falhar depois da limpeza local;
+- pendente macro: consolidar um contrato unico e limitado de URL, chave e
+  credencial pendente, gerar dois slots C26 novos e semanticamente seguros,
+  embuti-los em uma nova imagem, prova-la na placa e so entao promover a
+  baseline. Ate la, a referencia publica continua `prod15` + C25B + C21.24.
 
 ## Repositorio de entrega
 
@@ -923,3 +927,9 @@ podemos escolher entre:
     porque uma placa limpa ficaria sem `previous` e sem a acao Restaurar.
     Proximos marcos: corrigir o contrato de URL, criar uma sucessora com dois
     slots C26 seguros, prova-la na placa e promover explicitamente a baseline.
+19. A `prod18` materializou dois slots reais, C26.7 atual e C26.5 anterior, e
+    passou integridade, `85/85` e probes de adulteracao. Duas auditorias
+    independentes a rejeitaram antes do flash: o slot anterior nao preserva a
+    nova seguranca de validacao e o atual ainda permite credenciais/hosts que
+    so falham depois da limpeza. O proximo artefato deve conter dois slots
+    distintos ja protegidos pelo mesmo contrato de transporte.

@@ -1,0 +1,28 @@
+{
+  "schema": "dadooh.c26.production_image_two_slot_validation.v1",
+  "checked_at_utc": "2026-07-18T23:06:00Z",
+  "image_tag": "c18-hwdecode-prod-18-c26",
+  "image_sha256": "fbaf93d0438567f5312363415c9e6778c74ca1e8e9642c6e46f79f02b5ad0a4d",
+  "filesystem_check": "clean",
+  "current": {
+    "version": "c26.7-local-recovery-20260718-01464f8-actions",
+    "payload_sha256": "1369a5c7d04486f2d37fb11a6205ace25ae1efe2baf6bae3bd7d348ec82e5e5f"
+  },
+  "previous": {
+    "version": "c26.5-local-recovery-20260718-f1d0da9-actions",
+    "payload_sha256": "b8864cc913f6e7ca4562a0e3edfe9eb0ba55a6aef5019a47a0535397ba26f4df"
+  },
+  "untampered_validation": {
+    "passed": true,
+    "failed_checks": []
+  },
+  "missing_previous_symlink_probe": {
+    "performed_on_copy": true,
+    "passed": false,
+    "failed_checks": [
+      "totem_core_previous_symlink_present",
+      "totem_core_previous_symlink_target_exact"
+    ]
+  },
+  "board_touched": false
+}

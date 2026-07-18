@@ -1,0 +1,19 @@
+zerofree=/home/builder/.local/libexec/dadooh/zerofree
+base_image=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c12-ro-lab-c17-4-2-settings-restore-clean_minimal.img
+out_image=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-18-c26_minimal.img
+copy base image -> temp output ...
+linux partition offset=4194304 length=1967128576
+debugfs commands: 238 (stack libs real=11 symlink=21)
+totem-core embedded version=c26.7-local-recovery-20260718-01464f8-actions files=19
+e2fsck preparation rc=0
+e2fsck preparation output:
+armbi_root: 35567/120240 files (0.1% non-contiguous), 422389/480256 blocks
+zerofree verification=0/57867/480256
+e2fsck rc=0 (clean)
+rootfs written back into temp output image
+production support credential plaintext scan=absent
+inherited root password verifier scan=absent
+known private base-image residue scan=absent
+sha256=fbaf93d0438567f5312363415c9e6778c74ca1e8e9642c6e46f79f02b5ad0a4d
+promoted_image=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-18-c26_minimal.img
+promoted_sha256=Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-prod-18-c26_minimal.img.sha256

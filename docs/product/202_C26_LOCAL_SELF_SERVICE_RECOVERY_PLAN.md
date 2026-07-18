@@ -422,9 +422,10 @@ Evidencias decisivas:
 
 Pendente para declarar a nova baseline pronta:
 
-- alinhar a validacao da URL antes do ponto destrutivo;
-- gerar uma C26 sucessora distinta e uma imagem de identidade nova que embuta
-  C26.5 como `previous` e a sucessora como `current`;
+- unificar e limitar URL, chave de API e credencial pendente antes do ponto
+  destrutivo, incluindo a paridade writer, QR, contrato e wizard;
+- gerar dois pacotes C26 distintos que ja preservem essa seguranca e uma imagem
+  de identidade nova que use um como `previous` e o outro como `current`;
 - fazer o gate offline reprovar imagem sem retorno integro e compativel;
 - gravar somente essa nova imagem na bancada e provar boot, identidade,
   onboarding, playback, timer, `F10` fisico e as tres acoes;
@@ -433,3 +434,20 @@ Pendente para declarar a nova baseline pronta:
 Non-claim: a prova funcional atual e da `prod16` com C26.5 aplicada por pacote
 local no updater governado. A `prod17` e um artefato rejeitado e nunca deve
 substituir a baseline publica.
+
+## Auditoria prod18
+
+A `prod18` (`fbaf93d0438567f5312363415c9e6778c74ca1e8e9642c6e46f79f02b5ad0a4d`)
+foi construida no commit `50f808e` com C26.7 atual e C26.5 anterior. A imagem,
+os dois slots e os probes de adulteracao passaram, mas o artefato foi rejeitado
+antes do flash:
+
+- C26.5 aceita ao menos uma URL que o revogador recusa somente depois da
+  limpeza local;
+- C26.7 nao limita de forma composicional chave, hostname e tamanho final da
+  credencial que o revogador le;
+- voltar para C26.5, portanto, seria regressao semantica apesar do rollback
+  mecanico estar correto.
+
+Evidencia:
+`docs/evidence/c26-local-recovery/20260718T230211Z-prod18-c26-build/`.
