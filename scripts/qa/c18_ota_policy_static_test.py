@@ -595,6 +595,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             derive,
         )
         self.assertIn('"totem_core_c26_5_homologation_actions_embedded"', derive)
+        self.assertIn('"image_identity_prod17_c26"', derive)
         self.assertIn('"playback_health_summary_c075a55"', derive)
         self.assertIn('"player_runtime_c25b_exact_target_preserved"', derive)
         self.assertIn('"production_successor_scope"', derive)
@@ -849,9 +850,9 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
                 )
             with self.assertRaises(SystemExit):
                 module.validate_candidate_identity(
-                    "c18-hwdecode-prod-15",
-                    "c18.image-prod.15",
-                    "/etc/dadooh/c18-hwdecode-prod-15-image",
+                    "c18-hwdecode-prod-16-c26-candidate",
+                    "c18.image-prod.16-c26-candidate",
+                    "/etc/dadooh/c18-hwdecode-prod-16-c26-candidate-image",
                     image_profile="production",
                 )
             with self.assertRaises(SystemExit):
