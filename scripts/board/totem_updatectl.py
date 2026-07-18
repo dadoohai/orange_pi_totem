@@ -253,6 +253,7 @@ TOTEM_CORE_REQUIRED_BIN = (
 TOTEM_CORE_OPTIONAL_BIN = (
     # Added after the original C17.8 baseline. Keep optional for health so a
     # governed rollback to an older, previously valid release remains possible.
+    "totem_api_url_contract.py",
     "totem_qr_pairing_client.py",
     "totem_settings_production_apply_policy.py",
 )
@@ -2528,6 +2529,7 @@ def _totem_core_health_check(release_dir: Path) -> Tuple[bool, str]:
             return False, info
 
     optional_checks = (
+        ("totem_api_url_contract.py", ["/usr/bin/python3", str(bin_dir / "totem_api_url_contract.py"), "--self-test"]),
         ("totem_qr_pairing_client.py", ["/usr/bin/python3", str(bin_dir / "totem_qr_pairing_client.py"), "--self-test"]),
         ("totem_settings_production_apply_policy.py", ["/usr/bin/python3", str(bin_dir / "totem_settings_production_apply_policy.py"), "--self-test"]),
     )

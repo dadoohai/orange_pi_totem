@@ -49,6 +49,7 @@ CORE_FILES=(
   totem_visual_splash.py
   totem_status_aggregate.py
   totem_status_render_preview.py
+  totem_api_url_contract.py
   totem_config_contract_validate.py
   totem_qr_pairing_client.py
   totem_settings_production_apply_policy.py
@@ -232,6 +233,7 @@ ${HEALTH_CAPABILITIES_JSON}
     "python3 bin/totem_status_render_preview.py --self-test",
     "python3 bin/totem_status_aggregate.py --self-test",
     "bash bin/totem_status_renderer.sh --self-test",
+    "python3 bin/totem_api_url_contract.py --self-test",
     "python3 bin/totem_config_contract_validate.py --self-test",
     "python3 bin/totem_qr_pairing_client.py --self-test",
     "python3 bin/totem_settings_production_apply_policy.py --self-test",

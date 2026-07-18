@@ -30,6 +30,8 @@ from urllib import error as urllib_error
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 
+from totem_api_url_contract import ApiUrlContractError, validate_https_api_url
+
 
 SESSION_SCHEMA = "dadooh.c21.totem_qr_pairing.session.v1"
 RESULT_SCHEMA = "dadooh.c21.totem_qr_pairing.result.v1"
@@ -103,19 +105,17 @@ def validate_uuid(value: str, field: str) -> str:
 
 
 def validate_api_url(value: str) -> str:
-    raw = str(value or "").strip()
-    parsed = urllib_parse.urlsplit(raw)
-    if parsed.scheme != "https" or not parsed.netloc:
-        raise PairingError("api_url_invalid")
-    return raw
+    try:
+        return validate_https_api_url(value)
+    except ApiUrlContractError as exc:
+        raise PairingError("api_url_invalid") from exc
 
 
 def validate_authorize_base_url(value: str) -> str:
-    raw = str(value or "").strip()
-    parsed = urllib_parse.urlsplit(raw)
-    if parsed.scheme != "https" or not parsed.netloc:
-        raise PairingError("authorize_url_invalid")
-    return raw
+    try:
+        return validate_https_api_url(value)
+    except ApiUrlContractError as exc:
+        raise PairingError("authorize_url_invalid") from exc
 
 
 def validate_api_key(value: str) -> str:
@@ -168,27 +168,10 @@ def validate_device_fingerprint(value: str) -> str:
 
 
 def validate_product_reset_api_url(value: str) -> str:
-    if not isinstance(value, str):
-        raise PairingError("api_url_invalid")
-    raw = value.strip()
-    if (
-        not raw
-        or raw != value
-        or len(raw.encode("utf-8")) > 2048
-        or any(ord(char) < 32 or ord(char) == 127 for char in raw)
-    ):
-        raise PairingError("api_url_invalid")
-    parsed = urllib_parse.urlsplit(raw)
     try:
-        parsed.port
-    except ValueError as exc:
+        return validate_https_api_url(value)
+    except ApiUrlContractError as exc:
         raise PairingError("api_url_invalid") from exc
-    invalid_authority = bool(parsed.username or parsed.password or parsed.netloc.endswith(":"))
-    if parsed.scheme != "https" or not parsed.netloc or not parsed.hostname or invalid_authority:
-        raise PairingError("api_url_invalid")
-    if parsed.fragment:
-        raise PairingError("api_url_invalid")
-    return raw
 
 
 def product_reset_self_revocation_endpoint(api_url: str) -> str:
@@ -860,6 +843,10 @@ def run_product_reset_self_revoke_self_test(root: pathlib.Path) -> None:
         " https://api.example.com/search",
         "https://api.example.com/\nsearch",
         "https://api.example.com/" + ("x" * 2048),
+        "https://@api.example.com/search",
+        "https://api.example.com/search#",
+        "https://[2001:db8::1",
+        "https://api.example.com/\ud800",
     ):
         assert_pairing_error(
             lambda value=malformed_api_url: validate_product_reset_api_url(value),

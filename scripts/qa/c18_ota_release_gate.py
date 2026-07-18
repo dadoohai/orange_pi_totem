@@ -33,6 +33,7 @@ CURRENT_GOLDEN_IMAGE_TAG = str(CURRENT_GOLDEN["image_tag"])
 CURRENT_GOLDEN_IMAGE_SHA256 = str(CURRENT_GOLDEN["image_sha256"])
 CURRENT_GOLDEN_IMAGE_MARKER_SHA256 = str(CURRENT_GOLDEN["image_marker_sha256"])
 PY_COMPILE_TARGETS = (
+    "scripts/board/totem_api_url_contract.py",
     "scripts/board/totem_config_contract_validate.py",
     "scripts/board/totem_config_writer_real.py",
     "scripts/board/totem_visual_setup_writer_handoff.py",
@@ -270,6 +271,7 @@ TOTEM_CORE_ALLOWED_BIN_FILES = (
     "totem_visual_splash.py",
     "totem_status_aggregate.py",
     "totem_status_render_preview.py",
+    "totem_api_url_contract.py",
     "totem_config_contract_validate.py",
     "totem_qr_pairing_client.py",
     "totem_settings_production_apply_policy.py",

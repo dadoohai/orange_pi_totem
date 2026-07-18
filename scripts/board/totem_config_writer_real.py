@@ -39,6 +39,7 @@ from typing import Any
 sys.dont_write_bytecode = True
 
 import totem_config_contract_validate as contract
+from totem_api_url_contract import ApiUrlContractError, validate_https_api_url
 
 
 SCHEMA_VERSION = "dadooh-c6.2.2-config-writer-real-guardrails.v1"
@@ -1476,26 +1477,10 @@ def product_reset_current_fingerprint(ctx: ProductResetContext) -> str:
 
 
 def product_reset_validate_https_api_url(value: Any) -> str:
-    if not isinstance(value, str):
-        raise WriterError("product_reset_api_url_invalid")
-    raw = value.strip()
-    if (
-        not raw
-        or raw != value
-        or len(raw.encode("utf-8")) > 2048
-        or any(ord(char) < 32 or ord(char) == 127 for char in raw)
-    ):
-        raise WriterError("product_reset_api_url_invalid")
     try:
-        parsed = urllib_parse.urlsplit(raw)
-        _port = parsed.port
-    except ValueError as exc:
+        return validate_https_api_url(value)
+    except ApiUrlContractError as exc:
         raise WriterError("product_reset_api_url_invalid") from exc
-    if parsed.scheme != "https" or not parsed.netloc or not parsed.hostname:
-        raise WriterError("product_reset_api_url_invalid")
-    if parsed.username or parsed.password or parsed.netloc.endswith(":") or parsed.fragment:
-        raise WriterError("product_reset_api_url_invalid")
-    return raw
 
 
 def product_reset_validate_api_key(value: Any) -> str:
@@ -3048,6 +3033,10 @@ def run_product_reset_self_test() -> None:
             ("api_url", "https://reset.example.invalid:", None),
             ("api_url", "https://reset.example.invalid/search#fragment", None),
             ("api_url", "https://reset.example.invalid/" + ("x" * 2048), None),
+            ("api_url", "https://@reset.example.invalid/search", None),
+            ("api_url", "https://reset.example.invalid/search#", None),
+            ("api_url", "https://[2001:db8::1", None),
+            ("api_url", "https://reset.example.invalid/\ud800", None),
             ("api_key", "placeholder", None),
             ("api_token_id", "not-a-uuid", None),
             ("fingerprint", None, lambda: "x" * 201),

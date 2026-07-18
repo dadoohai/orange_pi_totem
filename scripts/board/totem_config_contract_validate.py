@@ -21,6 +21,8 @@ import tempfile
 from typing import Any
 from urllib.parse import urlparse
 
+from totem_api_url_contract import ApiUrlContractError, validate_https_api_url
+
 
 SCHEMA_VERSION = "dadooh-c5-config-contract-validate.v1"
 DEFAULT_OUT_DIR = "/tmp/dadooh-c5-config-contract-validate"
@@ -33,7 +35,6 @@ MOCK_API_KEY = "API_KEY_MOCK_NOT_FOR_PRODUCTION"
 MOCK_ENVIRONMENT_ID = "ENVIRONMENT_ID_MOCK"
 MOCK_STATION_ID = "STATION_ID_MOCK"
 C18_HWDECODE_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
-MAX_API_URL_BYTES = 2048
 
 REQUIRED_CONFIG_FIELDS: dict[str, type | tuple[type, ...]] = {
     "api_url": str,
@@ -481,33 +482,17 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
 
     api_url = config.get("api_url")
     if isinstance(api_url, str):
-        raw_api_url = api_url.strip()
         try:
-            parsed_api_url = urlparse(raw_api_url)
-            parsed_api_url.port
-        except ValueError:
-            parsed_api_url = None
-        api_url_is_structurally_valid = bool(
-            raw_api_url
-            and raw_api_url == api_url
-            and len(raw_api_url.encode("utf-8")) <= MAX_API_URL_BYTES
-            and not any(ord(char) < 32 or ord(char) == 127 for char in raw_api_url)
-            and parsed_api_url is not None
-            and parsed_api_url.scheme == "https"
-            and parsed_api_url.netloc
-            and parsed_api_url.hostname
-            and not parsed_api_url.username
-            and not parsed_api_url.password
-            and not parsed_api_url.netloc.endswith(":")
-            and not parsed_api_url.fragment
-        )
-        if not api_url_is_structurally_valid:
+            validate_https_api_url(api_url)
+            api_url_is_structurally_valid = True
+        except ApiUrlContractError:
+            api_url_is_structurally_valid = False
             append_invalid(
                 invalid_fields,
                 "api_url",
                 "must be a valid HTTPS URL without credentials or fragment",
             )
-        if api_url == MOCK_API_URL:
+        if api_url_is_structurally_valid and api_url == MOCK_API_URL:
             placeholder_findings.append(
                 {
                     "field": "api_url",
@@ -515,7 +500,7 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
                     "action": "allowed" if mode == "allow-mock" else "blocked",
                 }
             )
-        elif api_url_uses_invalid_domain(api_url):
+        elif api_url_is_structurally_valid and api_url_uses_invalid_domain(api_url):
             placeholder_findings.append(
                 {
                     "field": "api_url",
@@ -711,7 +696,11 @@ def run_self_test() -> None:
             "https://api.example.com/search#fragment",
             " https://api.example.com/search",
             "https://api.example.com/\nsearch",
-            "https://api.example.com/" + ("x" * MAX_API_URL_BYTES),
+            "https://api.example.com/" + ("x" * 2048),
+            "https://@api.example.com/search",
+            "https://api.example.com/search#",
+            "https://[2001:db8::1",
+            "https://api.example.com/\ud800",
         ):
             malformed = dict(mock_candidate)
             malformed["api_url"] = malformed_api_url
