@@ -168,8 +168,15 @@ def validate_device_fingerprint(value: str) -> str:
 
 
 def validate_product_reset_api_url(value: str) -> str:
-    raw = str(value or "").strip()
-    if not raw or len(raw.encode("utf-8")) > 2048:
+    if not isinstance(value, str):
+        raise PairingError("api_url_invalid")
+    raw = value.strip()
+    if (
+        not raw
+        or raw != value
+        or len(raw.encode("utf-8")) > 2048
+        or any(ord(char) < 32 or ord(char) == 127 for char in raw)
+    ):
         raise PairingError("api_url_invalid")
     parsed = urllib_parse.urlsplit(raw)
     try:
@@ -845,6 +852,19 @@ def run_product_reset_self_revoke_self_test(root: pathlib.Path) -> None:
         lambda: validate_product_reset_pending_credential_path("/home/builder/not-allowed-pending-credential.json"),
         "pending credential outside allowed paths accepted",
     )
+    for malformed_api_url in (
+        "http://api.example.com/search",
+        "https://api.example.com:",
+        "https://user:pass@api.example.com/search",
+        "https://api.example.com/search#fragment",
+        " https://api.example.com/search",
+        "https://api.example.com/\nsearch",
+        "https://api.example.com/" + ("x" * 2048),
+    ):
+        assert_pairing_error(
+            lambda value=malformed_api_url: validate_product_reset_api_url(value),
+            f"structurally invalid product-reset api_url accepted: {malformed_api_url[:80]!r}",
+        )
 
     bad_mode_path = reset_dir / "bad-mode.json"
     bad_mode_path.write_text(json.dumps(credential), encoding="utf-8")

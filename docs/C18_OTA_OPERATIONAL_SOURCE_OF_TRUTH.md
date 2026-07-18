@@ -78,16 +78,18 @@ guiadas no proprio aparelho. M11 nao bloqueia M10.
 ## Estado curto C26/M10
 
 - backend de autorrevogacao esta promovido e versionado;
-- C26.5 foi aplicada por OTA na `prod16` e passou reset online, reset offline
+- C26.5 foi aplicada por pacote local no updater governado da `prod16` e passou reset online, reset offline
   com corte fisico, retomada da mesma operacao, revogacao, nova ativacao,
   rollback, reaplicacao, desligamento e reinicio reais;
 - a placa terminou com player saudavel, config preservada, policy stable,
   timer ativo, C26.5 current e C26.4 previous;
-- a `prod17` foi construida com C26.5 exata e passou validacao offline. Ela
-  ainda nao foi gravada nem validada em hardware;
-- pendente macro: auditoria final, flash/prova da `prod17` e promocao explicita
-  da nova baseline. Ate la, a referencia publica continua `prod15` + C25B +
-  C21.24.
+- a `prod17` foi construida, mas a auditoria final a rejeitou: ela embute
+  `current` sem `previous` e ocultaria `Restaurar` numa placa limpa. Nao gravar
+  nem distribuir esse artefato;
+- pendente macro: alinhar a validacao de URL antes da limpeza, construir uma
+  imagem de identidade nova com C26.5 como retorno e uma C26 sucessora como
+  ativa, provar essa imagem na placa e so entao promover a baseline. Ate la, a
+  referencia publica continua `prod15` + C25B + C21.24.
 
 ## Repositorio de entrega
 
@@ -499,10 +501,11 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 - a `prod16` e a bancada C26 atual. C26.5 chegou por OTA e completou a campanha
   funcional de recuperacao local; isso nao promove a imagem candidata por
   inferencia;
-- a `prod17` foi construida como sucessora de distribuicao com C26.5 embutida,
+- a `prod17` foi construida com C26.5 embutida,
   SHA256
   `696bd671cfc819c51c8dcc977633d0a803fb2c986d09c3b21a2c6d099d27d00b`.
-  Validacao offline passou, mas flash e validacao live continuam obrigatorios;
+  mas foi rejeitada antes do flash porque nao possui `previous`. A sucessora
+  deve ter dois slots C26 distintos e aptos a restauracao;
 - manter como frente separada o RCA da ativacao que uma vez ficou em espera ate
   `F5`; o onboarding concluiu, mas a experiencia ainda nao e considerada
   encerrada por esse caso;
@@ -916,6 +919,7 @@ podemos escolher entre:
     da imagem.
 18. M10/C26 chegou ao fechamento fisico na `prod16`: C26.5 passou reset
     online/offline com corte, revogacao e reativacao, rollback/reaplicacao,
-    desligamento e reinicio. A `prod17` exata foi construida e validada
-    offline. Proximos marcos unicos: auditoria conclusiva, gravacao/prova da
-    `prod17` e promocao explicita da baseline.
+    desligamento e reinicio. A auditoria rejeitou a `prod17` antes da gravacao
+    porque uma placa limpa ficaria sem `previous` e sem a acao Restaurar.
+    Proximos marcos: corrigir o contrato de URL, criar uma sucessora com dois
+    slots C26 seguros, prova-la na placa e promover explicitamente a baseline.

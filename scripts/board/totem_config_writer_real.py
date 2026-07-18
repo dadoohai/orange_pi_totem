@@ -1479,7 +1479,12 @@ def product_reset_validate_https_api_url(value: Any) -> str:
     if not isinstance(value, str):
         raise WriterError("product_reset_api_url_invalid")
     raw = value.strip()
-    if not raw or raw != value:
+    if (
+        not raw
+        or raw != value
+        or len(raw.encode("utf-8")) > 2048
+        or any(ord(char) < 32 or ord(char) == 127 for char in raw)
+    ):
         raise WriterError("product_reset_api_url_invalid")
     try:
         parsed = urllib_parse.urlsplit(raw)
@@ -1488,7 +1493,7 @@ def product_reset_validate_https_api_url(value: Any) -> str:
         raise WriterError("product_reset_api_url_invalid") from exc
     if parsed.scheme != "https" or not parsed.netloc or not parsed.hostname:
         raise WriterError("product_reset_api_url_invalid")
-    if parsed.username or parsed.password or parsed.fragment:
+    if parsed.username or parsed.password or parsed.netloc.endswith(":") or parsed.fragment:
         raise WriterError("product_reset_api_url_invalid")
     return raw
 
@@ -3040,6 +3045,9 @@ def run_product_reset_self_test() -> None:
         invalid_cases: tuple[tuple[str, Any, Any], ...] = (
             ("api_url", "http://reset.example.invalid/search", None),
             ("api_url", "https://user:pass@reset.example.invalid/search", None),
+            ("api_url", "https://reset.example.invalid:", None),
+            ("api_url", "https://reset.example.invalid/search#fragment", None),
+            ("api_url", "https://reset.example.invalid/" + ("x" * 2048), None),
             ("api_key", "placeholder", None),
             ("api_token_id", "not-a-uuid", None),
             ("fingerprint", None, lambda: "x" * 201),

@@ -33,6 +33,7 @@ MOCK_API_KEY = "API_KEY_MOCK_NOT_FOR_PRODUCTION"
 MOCK_ENVIRONMENT_ID = "ENVIRONMENT_ID_MOCK"
 MOCK_STATION_ID = "STATION_ID_MOCK"
 C18_HWDECODE_WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
+MAX_API_URL_BYTES = 2048
 
 REQUIRED_CONFIG_FIELDS: dict[str, type | tuple[type, ...]] = {
     "api_url": str,
@@ -480,6 +481,32 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
 
     api_url = config.get("api_url")
     if isinstance(api_url, str):
+        raw_api_url = api_url.strip()
+        try:
+            parsed_api_url = urlparse(raw_api_url)
+            parsed_api_url.port
+        except ValueError:
+            parsed_api_url = None
+        api_url_is_structurally_valid = bool(
+            raw_api_url
+            and raw_api_url == api_url
+            and len(raw_api_url.encode("utf-8")) <= MAX_API_URL_BYTES
+            and not any(ord(char) < 32 or ord(char) == 127 for char in raw_api_url)
+            and parsed_api_url is not None
+            and parsed_api_url.scheme == "https"
+            and parsed_api_url.netloc
+            and parsed_api_url.hostname
+            and not parsed_api_url.username
+            and not parsed_api_url.password
+            and not parsed_api_url.netloc.endswith(":")
+            and not parsed_api_url.fragment
+        )
+        if not api_url_is_structurally_valid:
+            append_invalid(
+                invalid_fields,
+                "api_url",
+                "must be a valid HTTPS URL without credentials or fragment",
+            )
         if api_url == MOCK_API_URL:
             placeholder_findings.append(
                 {
@@ -676,6 +703,23 @@ def run_self_test() -> None:
         invalid_url["environment_id"] = "ENVIRONMENT_ID_REALISH"
         invalid_url["station_id"] = "STATION_ID_REALISH"
         assert_invalid(invalid_url, "real-dry-run", ".invalid api_url should fail real-dry-run")
+
+        for malformed_api_url in (
+            "http://api.example.com/search",
+            "https://api.example.com:",
+            "https://user:pass@api.example.com/search",
+            "https://api.example.com/search#fragment",
+            " https://api.example.com/search",
+            "https://api.example.com/\nsearch",
+            "https://api.example.com/" + ("x" * MAX_API_URL_BYTES),
+        ):
+            malformed = dict(mock_candidate)
+            malformed["api_url"] = malformed_api_url
+            assert_invalid(
+                malformed,
+                "allow-mock",
+                f"structurally invalid api_url accepted: {malformed_api_url[:80]!r}",
+            )
 
         station_absent = dict(mock_candidate)
         station_absent["api_url"] = "https://api.sandbox.localhost/search"

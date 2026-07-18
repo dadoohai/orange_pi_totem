@@ -1,10 +1,11 @@
 # 202 - C26 - Recuperacao local pelo usuario
 
-Status: C26.5 provada ponta a ponta na placa `prod16` por OTA, incluindo reset
+Status: C26.5 provada ponta a ponta na placa `prod16` pelo updater governado, incluindo reset
 online, reset offline com corte fisico, revogacao, nova ativacao,
-rollback/reaplicacao, reinicio e desligamento reais. A `prod17` com o mesmo
-pacote embutido foi construida e validada offline; gravacao da `prod17`,
-auditoria conclusiva e promocao da baseline ainda estao pendentes.
+rollback/reaplicacao, reinicio e desligamento reais. A auditoria final rejeitou
+a `prod17`: uma instalacao limpa teria apenas `current`, sem `previous`, e por
+isso ocultaria a restauracao. A proxima imagem deve sair com C26.5 como retorno
+conhecido e uma C26 sucessora distinta como ativa.
 
 Data: 2026-07-18
 
@@ -403,6 +404,17 @@ Concluido e versionado:
   passaram. SHA256:
   `696bd671cfc819c51c8dcc977633d0a803fb2c986d09c3b21a2c6d099d27d00b`.
 
+Achados da auditoria final:
+
+- **nao gravar nem distribuir a `prod17`**: o estado embutido possui
+  `previous=null`, enquanto a interface so libera `Restaurar` quando as duas
+  versoes suportam `product-reset-v1`;
+- o contrato geral aceitava algumas URLs de API que o cliente de revogacao
+  recusava depois da limpeza local. A validacao deve ser unica e ocorrer antes
+  do intent persistente e de qualquer remocao;
+- a prova na `prod16` sustenta o funcionamento do motor C26, mas nao promove por
+  inferencia uma imagem de fabrica.
+
 Evidencias decisivas:
 
 - `docs/evidence/c26-local-recovery/20260718T205350Z-c26-final-board-e2e/`;
@@ -410,12 +422,14 @@ Evidencias decisivas:
 
 Pendente para declarar a nova baseline pronta:
 
-- concluir a auditoria independente da execucao e dos artefatos finais;
-- gravar a `prod17` em uma placa de bancada e provar boot, identidade,
-  onboarding, playback, timer e disponibilidade das acoes a partir da imagem;
-- somente depois atualizar a referencia de distribuicao e promover o pacote
-  conforme a decisao operacional.
+- alinhar a validacao da URL antes do ponto destrutivo;
+- gerar uma C26 sucessora distinta e uma imagem de identidade nova que embuta
+  C26.5 como `previous` e a sucessora como `current`;
+- fazer o gate offline reprovar imagem sem retorno integro e compativel;
+- gravar somente essa nova imagem na bancada e provar boot, identidade,
+  onboarding, playback, timer, `F10` fisico e as tres acoes;
+- somente depois atualizar a referencia de distribuicao e promover o pacote.
 
-Non-claim: a prova funcional atual e da `prod16` com C26.5 aplicada por OTA. A
-`prod17` esta pronta como artefato offline, mas ainda nao foi gravada nem
-validada em hardware; por isso ainda nao substitui a baseline publica.
+Non-claim: a prova funcional atual e da `prod16` com C26.5 aplicada por pacote
+local no updater governado. A `prod17` e um artefato rejeitado e nunca deve
+substituir a baseline publica.
