@@ -16,12 +16,13 @@ from typing import Any, Callable
 import derive_c15_2_1_homolog_image as base
 
 
-TOTEM_CORE_VERSION = "c21.24-product-stable-20260717T025907Z-076e18b"
-TOTEM_CORE_RELEASE_TAG = "totem-core-c21.24-product-stable-20260717T025907Z-076e18b"
-TOTEM_CORE_CHANNEL = "stable"
-TOTEM_CORE_PAYLOAD_SHA256 = "2ceb8801d2f9c6b79df2295a38a289334069971701ba724d68a4cc086fbc553c"
-TOTEM_CORE_CREATED_AT_UTC = "2026-07-17T02:59:08Z"
-TOTEM_CORE_SOURCE_COMMIT = "076e18b4de08ddb98d45d0f47fc9a960f133bc80"
+TOTEM_CORE_VERSION = "c26.3-local-recovery-20260718-d0363b7-actions"
+TOTEM_CORE_RELEASE_TAG = "totem-core-c26.3-local-recovery-20260718-d0363b7-actions"
+TOTEM_CORE_CHANNEL = "homologation"
+TOTEM_CORE_PAYLOAD_SHA256 = "edd33ddc7f43bfe14472eb82c4e63f3fced53db14e8a2c90acc43dda4778a95a"
+TOTEM_CORE_CREATED_AT_UTC = "2026-07-18T05:47:33Z"
+TOTEM_CORE_SOURCE_COMMIT = "d0363b73e12b970962e7620d81a62d147bbec4de"
+TOTEM_CORE_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")
 UPDATE_POLICY_TARGET = "/data/updates/policy.json"
 UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-update-agent.service"
 UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-update-agent.timer"
@@ -164,6 +165,13 @@ def validate_totem_core_release_provenance(repo_root: Path, core_files: list[str
         raise RuntimeError("totem_core_embed_payload_sha256_mismatch")
     with tarfile.open(payload_path, "r:gz") as archive:
         members = {member.name.removeprefix("./"): member for member in archive.getmembers() if member.isfile()}
+        health_member = members.get("health/totem-core-health.json")
+        health_file = archive.extractfile(health_member) if health_member is not None else None
+        if health_file is None:
+            raise RuntimeError("totem_core_embed_payload_health_missing")
+        health = json.loads(health_file.read().decode("utf-8"))
+        if health.get("capabilities") != list(TOTEM_CORE_CAPABILITIES):
+            raise RuntimeError("totem_core_embed_payload_capabilities_mismatch")
         for core_file in core_files:
             member = members.get(f"bin/{core_file}")
             extracted = archive.extractfile(member) if member is not None else None
@@ -178,6 +186,7 @@ def validate_totem_core_release_provenance(repo_root: Path, core_files: list[str
         "source_commit": TOTEM_CORE_SOURCE_COMMIT,
         "source_dirty": False,
         "payload_sha256": payload_sha,
+        "capabilities": list(TOTEM_CORE_CAPABILITIES),
         "manifest": str(manifest_path.relative_to(repo_root)),
         "payload": str(payload_path.relative_to(repo_root)),
     }
@@ -722,8 +731,8 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
         "totem_core_state_records_source_commit": TOTEM_CORE_SOURCE_COMMIT in state,
         "totem_core_state_records_payload_sha256": TOTEM_CORE_PAYLOAD_SHA256 in state,
         "totem_core_release_health_present": _is_file(rootfs, f"{release_root}/health/totem-core-health.json"),
-        "totem_core_release_health_product_reset_capable": (
-            embedded_health.get("capabilities") == ["product-reset-v1"]
+        "totem_core_release_health_capabilities_exact": (
+            embedded_health.get("capabilities") == list(TOTEM_CORE_CAPABILITIES)
         ),
         "totem_core_release_health_has_c26_companion_tests": {
             "python3 bin/totem_config_writer_real.py --self-test",
