@@ -1391,6 +1391,7 @@ schedule_terminal_action_reconcile() {
     --collect \
     --unit="$TERMINAL_ACTION_RECONCILE_UNIT" \
     --on-active=125s \
+    --on-unit-active=30s \
     --timer-property=AccuracySec=1s \
     /opt/totem/bin/totem_open_settings_cleanup.sh \
       --reason terminal-action-timeout \
@@ -1398,7 +1399,9 @@ schedule_terminal_action_reconcile() {
       --lock-dir "$LOCK_DIR" \
       --out-dir "$REQUEST_DIR" \
       --tty "$REMOTE_TTY" \
-      --expire-terminal-action >/dev/null 2>&1
+      --expire-terminal-action \
+      --terminal-action-reconcile-unit "$TERMINAL_ACTION_RECONCILE_UNIT" \
+      >/dev/null 2>&1
 }
 
 cancel_terminal_action_reconcile() {

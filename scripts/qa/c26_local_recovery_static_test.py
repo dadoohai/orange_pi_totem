@@ -448,7 +448,9 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
         )
         self.assertIn("/usr/bin/systemd-run", reconcile)
         self.assertIn("--on-active=125s", reconcile)
+        self.assertIn("--on-unit-active=30s", reconcile)
         self.assertIn("--expire-terminal-action", reconcile)
+        self.assertIn("--terminal-action-reconcile-unit", reconcile)
         self.assertIn("/opt/totem/bin/totem_open_settings_cleanup.sh", reconcile)
         action_start = session.index("    restart|poweroff)")
         action_block = session[action_start : session.index("    product_reset)", action_start)]
@@ -465,6 +467,23 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
         self.assertGreaterEqual(action_block.count("cancel_terminal_action_reconcile"), 2)
 
         cleanup = CLEANUP_SCRIPT.read_text(encoding="utf-8")
+        complete_start = cleanup.index("terminal_action_reconcile_complete() {")
+        stop_start = cleanup.index("stop_terminal_action_reconcile() {", complete_start)
+        complete_check = cleanup[complete_start:stop_start]
+        self.assertIn('EXPIRE_TERMINAL_ACTION" = "true', complete_check)
+        self.assertIn('PLAYER_RESTORE_START_RC" = "0', complete_check)
+        normal_cleanup = cleanup[cleanup.index('rm -f "$REQUEST_DIR/request.json"') :]
+        restore_index = normal_cleanup.index("restore_product_state")
+        status_index = normal_cleanup.index("write_status false")
+        stop_index = normal_cleanup.index("stop_terminal_action_reconcile")
+        self.assertEqual(
+            [restore_index, status_index, stop_index],
+            sorted([restore_index, status_index, stop_index]),
+        )
+        self.assertNotIn(
+            "stop_terminal_action_reconcile",
+            cleanup[cleanup.index("if session_process_running; then") : cleanup.index('rm -f "$REQUEST_DIR/request.json"')],
+        )
         cleanup_start = cleanup.index("terminal_action_pending() {")
         cleanup_end = cleanup.index("\nif terminal_action_pending; then", cleanup_start)
         pending_check = cleanup[cleanup_start:cleanup_end]

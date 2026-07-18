@@ -11,6 +11,7 @@ PRODUCT_RESET_PENDING="false"
 TERMINAL_ACTION_PENDING="false"
 TERMINAL_ACTION_MAX_AGE_SEC="120"
 EXPIRE_TERMINAL_ACTION="false"
+TERMINAL_ACTION_RECONCILE_UNIT=""
 UPDATE_LOCK_FILE="${TOTEM_UPDATE_LOCK_FILE:-/run/totem-updatectl.lock}"
 UPDATE_LOCK_TIMEOUT_SEC="${TOTEM_PRODUCT_RESET_UPDATE_LOCK_TIMEOUT_SEC:-5}"
 UPDATE_LOCK_STATE="not_checked"
@@ -24,7 +25,7 @@ SELF_TEST="false"
 usage() {
   cat <<'USAGE'
 Usage:
-  totem_open_settings_cleanup.sh [--reason TEXT] [--request-dir /run/...] [--lock-dir /run/...] [--expire-terminal-action] [--self-test]
+  totem_open_settings_cleanup.sh [--reason TEXT] [--request-dir /run/...] [--lock-dir /run/...] [--expire-terminal-action] [--terminal-action-reconcile-unit UNIT] [--self-test]
 
 Best-effort cleanup for the visual Settings session. It removes only the
 public request/lock state, kills leftover visual setup processes, and restores
@@ -58,6 +59,10 @@ while [ "$#" -gt 0 ]; do
     --expire-terminal-action)
       EXPIRE_TERMINAL_ACTION="true"
       ;;
+    --terminal-action-reconcile-unit)
+      shift
+      TERMINAL_ACTION_RECONCILE_UNIT="${1:-}"
+      ;;
     --self-test)
       SELF_TEST="true"
       ;;
@@ -88,6 +93,11 @@ esac
 case "$REMOTE_TTY" in
   ''|*[!0-9]*|0) echo "error: --tty must be a positive integer" >&2; exit 2 ;;
 esac
+if [ -n "$TERMINAL_ACTION_RECONCILE_UNIT" ] \
+  && ! [[ "$TERMINAL_ACTION_RECONCILE_UNIT" =~ ^totem-terminal-action-reconcile-[0-9a-f]{32}$ ]]; then
+  echo "error: invalid --terminal-action-reconcile-unit" >&2
+  exit 2
+fi
 case "$UPDATE_LOCK_TIMEOUT_SEC" in
   ''|*[!0-9]*|0) echo "error: product reset update lock timeout must be a positive integer" >&2; exit 2 ;;
 esac
@@ -271,6 +281,21 @@ if valid:
         valid = False
 raise SystemExit(0 if valid else 1)
 PY
+}
+
+terminal_action_reconcile_complete() {
+  [ "$EXPIRE_TERMINAL_ACTION" = "true" ] || return 1
+  [ -n "$TERMINAL_ACTION_RECONCILE_UNIT" ] || return 1
+  [ ! -e "$LOCK_DIR" ] && [ ! -L "$LOCK_DIR" ] || return 1
+  [ ! -e "$REQUEST_DIR/request.json" ] && [ ! -L "$REQUEST_DIR/request.json" ] || return 1
+  [ ! -e "$TERMINAL_ACTION_MARKER" ] && [ ! -L "$TERMINAL_ACTION_MARKER" ] || return 1
+  [ "$PLAYER_RESTORE_START_RC" = "not_attempted" ] || [ "$PLAYER_RESTORE_START_RC" = "0" ]
+}
+
+stop_terminal_action_reconcile() {
+  [ -n "$TERMINAL_ACTION_RECONCILE_UNIT" ] || return 0
+  /usr/bin/systemctl --no-block stop "${TERMINAL_ACTION_RECONCILE_UNIT}.timer" \
+    >/dev/null 2>&1 || true
 }
 
 if terminal_action_pending; then
@@ -647,3 +672,6 @@ restore_tty_text_mode || true
 restore_product_state || true
 enqueue_product_reset_gc || true
 write_status false "$visual_killed_count"
+if terminal_action_reconcile_complete; then
+  stop_terminal_action_reconcile
+fi

@@ -77,8 +77,9 @@ programa uma reconciliacao monotonicamente atrasada, pede a acao ao systemd e
 somente depois da aceitacao grava `accepted`. O cleanup preserva a sessao
 apenas para um `accepted` integro e recente. Se a acao aceita nao ocorrer, o
 reconciliador forcara a restauracao do player e dos locks depois de 125
-segundos; marcador preparado, invalido ou expirado segue o mesmo caminho
-seguro.
+segundos. Se outra sessao ou o OTA estiver ativo nesse instante, ele repete a
+cada 30 segundos e desarma somente depois de concluir a limpeza; marcador
+preparado, invalido ou expirado segue o mesmo caminho seguro.
 
 ## O que a restauracao resolve
 
