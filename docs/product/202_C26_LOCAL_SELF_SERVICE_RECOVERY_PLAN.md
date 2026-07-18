@@ -1,9 +1,10 @@
 # 202 - C26 - Recuperacao local pelo usuario
 
-Status: implementacao local C26A/C26B em validacao. Nenhum backend, pacote ou
-controle foi promovido; as acoes continuam indisponiveis na placa.
+Status: backend C26 promovido e fonte local versionada. Pacotes, imagem
+sucessora e validacao na placa ainda estao pendentes; as acoes continuam
+indisponiveis na `prod15`.
 
-Data: 2026-07-17
+Data: 2026-07-18
 
 ## Missao
 
@@ -370,11 +371,11 @@ sem Armbian Imager. Ele nao bloqueia a entrega anterior de M10.
 
 ## Estado executivo desta rodada
 
-Concluido localmente, ainda nao promovido:
+Concluido e versionado:
 
-- logica de autorrevogacao exata, migracao cirurgica e logs sanitizados. O
-  `--check` reconheceu o schema vivo como compativel e confirmou
-  `absent -> absent`, sem mutacao;
+- logica de autorrevogacao exata, migracao cirurgica e logs sanitizados no
+  commit backend `cd131f00`. A migracao mudou o schema vivo de `absent` para
+  `complete`; a repeticao confirmou `complete -> complete`, sem nova mutacao;
 - o migrador aceita somente as duas DDLs oficiais exatas de `users`, incluindo
   a forma reconstruida pela migracao `0000`, e a coleta por `created_at` possui
   indice correspondente;
@@ -386,14 +387,17 @@ Concluido localmente, ainda nao promovido:
 - matriz de falhas prova retomada pelo caminho real de boot desde o primeiro
   intent duravel e remocao de credenciais em backups/last-settings;
 - boot atual e reinicio/desligamento usam provas reconciliaveis, com cenarios
-  falho, desabilitado, em execucao, boot antigo, preparado e expirado negados;
+  falho, desabilitado, em execucao, boot antigo, preparado e expirado negados.
+  O handoff exige 300 segundos continuos de atividade e novas acoes substituem
+  reconciliadores anteriores, sem crescimento periodico ilimitado;
 - suite C26 local com 16 testes e self-test visual verdes; backend C26 com 48
   testes verdes, contratos legados de ativacao com 2/2 e station scope com 4/4
   isolados, alem de 224 arquivos compilados;
 - o identificador do token da ativacao agora sobrevive a uma nova gravacao pelo
   F10 sem aparecer em artefatos publicos; imagens sem C26 preservam a navegacao
   anterior entre etapas;
-- pacote C26A invisivel e pacote C26B com capacidades e identidades distintas;
+- formatos C26A invisivel e C26B com capacidades e identidades distintas foram
+  construidos em testes temporarios; os pacotes oficiais ainda serao gerados;
 - bloqueio runtime/package/health de C26B em imagem sem o boot graph seguro, o
   unit static exato ou o `Wants=` do player;
 - firstboot unit, marcador do boot atual e oneshot de limpeza pos-player
@@ -402,18 +406,19 @@ Concluido localmente, ainda nao promovido:
   exato, retomada apos corte e bloqueio OTA ate terminar;
 - seed privado de homologacao invalidado por tombstone retomavel sem persistir
   seu conteudo, e mountpoint interno recusado antes da remocao recursiva.
+- candidata backend `api-00483-taq` auditada com `48/48`, promovida para 100%
+  e validada por smoke. A revisao anterior `api-00481-naf` permanece na tag
+  `pre-c26` e `api-00469-gus` permanece como rollback historico.
 
 Pendente para declarar pronto:
 
-- backend versionado e publicado na branch de trabalho como `cd131f00`;
-  versionar o repositorio da placa e gerar os pacotes a partir dos commits
-  exatos;
-- obter auditoria independente final sobre os estados versionados;
-- versionar e publicar backend candidato sem trafego, aplicar apenas a migracao
-  C26, auditar e promover controladamente;
+- gerar e versionar os pacotes a partir do estado local versionado, cujo codigo
+  funcional foi fechado em `45138fd`;
 - aplicar C26A na placa e provar que nenhuma acao aparece;
 - construir/regravar a imagem sucessora e executar C26B online, offline,
   interrupcoes, reiniciar, desligar, rollback e reaplicacao;
+- obter auditoria independente final sobre pacotes, imagem e evidencias da
+  placa;
 - registrar evidencias, promover o pacote final e atualizar a baseline somente
   depois da auditoria conclusiva.
 
