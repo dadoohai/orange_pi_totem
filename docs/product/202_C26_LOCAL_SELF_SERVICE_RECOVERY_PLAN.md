@@ -89,6 +89,11 @@ o mesmo intervalo de `StartLimitIntervalSec` do servico. Aceitar
 inativo, reiniciar, falhar, emitir estado invalido ou o enable anterior nao
 tiver sido restaurado, as tentativas continuam. O estado raro
 ativo-porem-desabilitado e restaurado sem habilitar o servico.
+Uma nova acao terminal so passa a valer depois de programar seu proprio
+reconciliador e retirar os anteriores de forma limitada ao prefixo C26. Falha
+ao listar ou parar uma unidade anterior cancela a nova acao; assim existe
+sempre uma recuperacao valida e no maximo um reconciliador periodico, mesmo sob
+repeticao indefinida de tentativas canceladas.
 
 ## O que a restauracao resolve
 

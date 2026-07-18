@@ -1389,6 +1389,32 @@ PY
 
 TERMINAL_ACTION_RECONCILE_UNIT=""
 
+coalesce_terminal_action_reconcilers() {
+  local keep_unit="$1"
+  local listed=""
+  local unit=""
+  if ! [[ "$keep_unit" =~ ^totem-terminal-action-reconcile-[0-9a-f]{32}$ ]]; then
+    return 1
+  fi
+  listed="$(/usr/bin/systemctl list-units \
+    --all \
+    --type=timer \
+    --plain \
+    --no-legend \
+    'totem-terminal-action-reconcile-*.timer' 2>/dev/null)" || return 1
+  while read -r unit _; do
+    [ -n "$unit" ] || continue
+    if ! [[ "$unit" =~ ^totem-terminal-action-reconcile-[0-9a-f]{32}\.timer$ ]]; then
+      return 1
+    fi
+    [ "$unit" = "${keep_unit}.timer" ] && continue
+    /usr/bin/timeout -k 1s 5s /usr/bin/systemctl stop "$unit" \
+      >/dev/null 2>&1 || return 1
+    /usr/bin/systemctl --no-block stop "${unit%.timer}.service" \
+      >/dev/null 2>&1 || true
+  done <<< "$listed"
+}
+
 schedule_terminal_action_reconcile() {
   local request_id="$1"
   local unit_suffix="${request_id//-/}"
@@ -1416,7 +1442,12 @@ schedule_terminal_action_reconcile() {
       --terminal-action-reconcile-unit "$TERMINAL_ACTION_RECONCILE_UNIT" \
       --terminal-action-player-was-active "$player_was_active" \
       --terminal-action-player-was-enabled "$player_was_enabled" \
-      >/dev/null 2>&1
+      >/dev/null 2>&1 || return 1
+  if ! coalesce_terminal_action_reconcilers "$TERMINAL_ACTION_RECONCILE_UNIT"; then
+    /usr/bin/systemctl --no-block stop "$TERMINAL_ACTION_RECONCILE_UNIT.timer" \
+      "$TERMINAL_ACTION_RECONCILE_UNIT.service" >/dev/null 2>&1 || true
+    return 1
+  fi
 }
 
 cancel_terminal_action_reconcile() {

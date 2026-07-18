@@ -442,12 +442,27 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
     def test_terminal_actions_are_reconciled_in_two_phases(self) -> None:
         session = SESSION_SCRIPT.read_text(encoding="utf-8")
         writer = function_body(session, "write_terminal_action_marker", "schedule_terminal_action_reconcile")
+        coalesce = function_body(
+            session,
+            "coalesce_terminal_action_reconcilers",
+            "schedule_terminal_action_reconcile",
+        )
         reconcile = function_body(
             session,
             "schedule_terminal_action_reconcile",
             "cancel_terminal_action_reconcile",
         )
         self.assertIn("/usr/bin/systemd-run", reconcile)
+        self.assertIn("coalesce_terminal_action_reconcilers", reconcile)
+        self.assertGreater(
+            reconcile.index("coalesce_terminal_action_reconcilers"),
+            reconcile.index("/usr/bin/systemd-run"),
+        )
+        self.assertIn("list-units", coalesce)
+        self.assertIn("totem-terminal-action-reconcile-*.timer", coalesce)
+        self.assertIn('/usr/bin/systemctl stop "$unit"', coalesce)
+        self.assertIn('stop "${unit%.timer}.service"', coalesce)
+        self.assertIn('[ "$unit" = "${keep_unit}.timer" ] && continue', coalesce)
         self.assertIn("--property=DefaultDependencies=no", reconcile)
         self.assertIn("--on-active=125s", reconcile)
         self.assertIn("--on-unit-active=30s", reconcile)
@@ -596,6 +611,65 @@ esac
                 encoding="utf-8",
             )
             fake_systemctl.chmod(0o755)
+
+            coalesce_systemctl = fake_bin / "coalesce-systemctl"
+            coalesce_systemctl.write_text(
+                """#!/bin/sh
+printf '%s\\n' \"$*\" >> \"$FAKE_COALESCE_LOG\"
+case \"${1:-}\" in
+  list-units) printf '%b' \"${FAKE_LIST_UNITS:-}\"; exit \"${FAKE_LIST_RC:-0}\" ;;
+  stop) exit \"${FAKE_STOP_RC:-0}\" ;;
+  *) exit 1 ;;
+esac
+""",
+                encoding="utf-8",
+            )
+            coalesce_systemctl.chmod(0o755)
+
+            coalesce_probe = coalesce.replace("/usr/bin/systemctl", str(coalesce_systemctl))
+
+            def run_coalesce_probe(listed: str, *, stop_rc: int = 0) -> tuple[int, str]:
+                log = root / "coalesce.log"
+                log.unlink(missing_ok=True)
+                probe_env = dict(os.environ)
+                probe_env.update(
+                    {
+                        "FAKE_COALESCE_LOG": str(log),
+                        "FAKE_LIST_UNITS": listed,
+                        "FAKE_STOP_RC": str(stop_rc),
+                    }
+                )
+                current = "totem-terminal-action-reconcile-11111111222243338444555555555555"
+                completed = subprocess.run(
+                    ["bash", "-c", coalesce_probe + f'\ncoalesce_terminal_action_reconcilers "{current}"'],
+                    env=probe_env,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                )
+                return completed.returncode, log.read_text(encoding="utf-8") if log.exists() else ""
+
+            old = "totem-terminal-action-reconcile-aaaaaaaa222243338444555555555555"
+            current = "totem-terminal-action-reconcile-11111111222243338444555555555555"
+            coalesced_rc, coalesced_log = run_coalesce_probe(
+                f"{old}.timer loaded active waiting old.timer old.service\\n"
+                f"{current}.timer loaded active waiting current.timer current.service\\n"
+            )
+            self.assertEqual(coalesced_rc, 0)
+            self.assertIn(f"stop {old}.timer", coalesced_log)
+            self.assertIn(f"--no-block stop {old}.service", coalesced_log)
+            self.assertNotIn(f"stop {current}.timer", coalesced_log)
+
+            malformed_rc, malformed_log = run_coalesce_probe("unrelated.timer loaded active waiting x y\\n")
+            self.assertNotEqual(malformed_rc, 0)
+            self.assertNotIn("stop unrelated.timer", malformed_log)
+
+            stop_failed_rc, _ = run_coalesce_probe(
+                f"{old}.timer loaded active waiting old.timer old.service\\n",
+                stop_rc=1,
+            )
+            self.assertNotEqual(stop_failed_rc, 0)
 
             restore_probe = (
                 restore
