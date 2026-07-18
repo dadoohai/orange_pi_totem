@@ -30,7 +30,13 @@ from urllib import error as urllib_error
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 
-from totem_api_url_contract import ApiUrlContractError, validate_https_api_url
+from totem_api_url_contract import (
+    MAX_PRODUCT_RESET_CREDENTIAL_BYTES,
+    ApiKeyContractError,
+    ApiUrlContractError,
+    validate_api_key_format,
+    validate_https_api_url,
+)
 
 
 SESSION_SCHEMA = "dadooh.c21.totem_qr_pairing.session.v1"
@@ -60,7 +66,7 @@ QR_QUIET_ZONE_MODULES = 4
 PRODUCT_RESET_PENDING_CREDENTIAL_PATH = pathlib.Path(
     "/data/state/totem-appliance/product-reset/pending-credential.json"
 )
-PRODUCT_RESET_MAX_CREDENTIAL_BYTES = 8 * 1024
+PRODUCT_RESET_MAX_CREDENTIAL_BYTES = MAX_PRODUCT_RESET_CREDENTIAL_BYTES
 PRODUCT_RESET_MAX_RESPONSE_BYTES = 16 * 1024
 PRODUCT_RESET_DEFAULT_TIMEOUT_SEC = 8.0
 PRODUCT_RESET_MAX_TIMEOUT_SEC = 30.0
@@ -119,9 +125,10 @@ def validate_authorize_base_url(value: str) -> str:
 
 
 def validate_api_key(value: str) -> str:
-    raw = str(value or "").strip()
-    if len(raw) < 16:
-        raise PairingError("api_key_too_short")
+    try:
+        raw = validate_api_key_format(value)
+    except ApiKeyContractError as exc:
+        raise PairingError("api_key_invalid") from exc
     lowered = raw.lower()
     if "placeholder" in lowered or "preencher" in lowered:
         raise PairingError("api_key_placeholder")
@@ -846,11 +853,27 @@ def run_product_reset_self_revoke_self_test(root: pathlib.Path) -> None:
         "https://@api.example.com/search",
         "https://api.example.com/search#",
         "https://[2001:db8::1",
+        "https://%/search",
+        "https://a..example.com/search",
+        "https://" + ("a" * 64) + ".example.com/search",
+        "https://api.example.com\\bad/search",
         "https://api.example.com/\ud800",
     ):
         assert_pairing_error(
             lambda value=malformed_api_url: validate_product_reset_api_url(value),
             f"structurally invalid product-reset api_url accepted: {malformed_api_url[:80]!r}",
+        )
+
+    for malformed_api_key in (
+        "A" * 15,
+        "A" * 4097,
+        "é" * 1500,
+        "😀" * 16,
+        ("A" * 16) + "\n",
+    ):
+        assert_pairing_error(
+            lambda value=malformed_api_key: validate_api_key(value),
+            "non-transportable api_key accepted",
         )
 
     bad_mode_path = reset_dir / "bad-mode.json"

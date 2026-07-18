@@ -21,7 +21,12 @@ import tempfile
 from typing import Any
 from urllib.parse import urlparse
 
-from totem_api_url_contract import ApiUrlContractError, validate_https_api_url
+from totem_api_url_contract import (
+    ApiKeyContractError,
+    ApiUrlContractError,
+    validate_api_key_format,
+    validate_https_api_url,
+)
 
 
 SCHEMA_VERSION = "dadooh-c5-config-contract-validate.v1"
@@ -468,6 +473,15 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
 
     api_key = config.get("api_key")
     api_key_present = isinstance(api_key, str) and bool(api_key.strip())
+    if isinstance(api_key, str) and api_key:
+        try:
+            validate_api_key_format(api_key)
+        except ApiKeyContractError:
+            append_invalid(
+                invalid_fields,
+                "api_key",
+                "must be an ASCII API key between 16 and 4096 bytes",
+            )
     api_key_placeholder = detect_api_key_placeholder(api_key)
     status["api_key_present"] = api_key_present
     status["api_key_placeholder_detected"] = api_key_placeholder
@@ -481,6 +495,7 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
         )
 
     api_url = config.get("api_url")
+    api_url_is_structurally_valid = False
     if isinstance(api_url, str):
         try:
             validate_https_api_url(api_url)
@@ -539,7 +554,7 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
             append_invalid(invalid_fields, "api_key", "required in real-dry-run")
         if api_key_placeholder:
             append_invalid(invalid_fields, "api_key", "placeholder blocked in real-dry-run")
-        if isinstance(api_url, str):
+        if isinstance(api_url, str) and api_url_is_structurally_valid:
             if api_url == MOCK_API_URL:
                 append_invalid(invalid_fields, "api_url", "known mock URL blocked in real-dry-run")
             if api_url_uses_invalid_domain(api_url):
@@ -677,6 +692,21 @@ def run_self_test() -> None:
         empty_api_key["api_key"] = ""
         assert_invalid(empty_api_key, "real-dry-run", "empty api_key should fail real-dry-run")
 
+        for malformed_api_key in (
+            "A" * 15,
+            "A" * 4097,
+            "é" * 1500,
+            "😀" * 16,
+            ("A" * 16) + "\n",
+        ):
+            malformed = dict(mock_candidate)
+            malformed["api_key"] = malformed_api_key
+            assert_invalid(
+                malformed,
+                "allow-mock",
+                "non-transportable api_key should fail cleanly",
+            )
+
         mock_api_key = dict(mock_candidate)
         mock_api_key["api_url"] = "https://api.example.com/search"
         mock_api_key["environment_id"] = "ENVIRONMENT_ID_REALISH"
@@ -700,6 +730,10 @@ def run_self_test() -> None:
             "https://@api.example.com/search",
             "https://api.example.com/search#",
             "https://[2001:db8::1",
+            "https://%/search",
+            "https://a..example.com/search",
+            "https://" + ("a" * 64) + ".example.com/search",
+            "https://api.example.com\\bad/search",
             "https://api.example.com/\ud800",
         ):
             malformed = dict(mock_candidate)

@@ -10,6 +10,7 @@ import os
 import pathlib
 import shlex
 import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -28,6 +29,14 @@ UPDATECTL_SCRIPT = BOARD_DIR / "totem_updatectl.py"
 IMAGE_EMBED = REPO_ROOT / "scripts" / "build" / "totem_core_image_embed.py"
 PACKAGE_BUILDER = REPO_ROOT / "scripts" / "deploy" / "build_totem_core_release_package.sh"
 
+if str(BOARD_DIR) not in sys.path:
+    sys.path.insert(0, str(BOARD_DIR))
+
+import totem_api_url_contract as api_contract
+import totem_config_contract_validate as config_contract
+import totem_config_writer_real as config_writer
+import totem_qr_pairing_client as pairing_client
+
 
 def function_body(source: str, name: str, next_name: str) -> str:
     start = source.index(f"{name}() {{")
@@ -44,6 +53,53 @@ def load_updatectl(module_name: str):
 
 
 class C26LocalRecoveryContractTest(unittest.TestCase):
+    def test_api_transport_contract_is_compositional_before_reset(self) -> None:
+        invalid_urls = (
+            "https://api.example.com:",
+            "https://[2001:db8::1",
+            "https://%/search",
+            "https://a..example.com/search",
+            "https://" + ("a" * 64) + ".example.com/search",
+            "https://api.example.com\\bad/search",
+            "https://api.example.com/nao-ascii-é",
+        )
+        for value in invalid_urls:
+            with self.assertRaises(api_contract.ApiUrlContractError):
+                api_contract.validate_https_api_url(value)
+            with self.assertRaises(config_writer.WriterError):
+                config_writer.product_reset_validate_https_api_url(value)
+            with self.assertRaises(pairing_client.PairingError):
+                pairing_client.validate_api_url(value)
+
+            candidate = config_contract.build_mock_candidate()
+            candidate["api_url"] = value
+            status = config_contract.validate_candidate_config(candidate, "real-dry-run")
+            self.assertFalse(status["valid"])
+            self.assertTrue(
+                any(item["field"] == "api_url" for item in status["invalid_fields"]),
+                value,
+            )
+
+        invalid_keys = (
+            "A" * 15,
+            "A" * 4097,
+            "é" * 1500,
+            "😀" * 16,
+            ("A" * 16) + "\n",
+        )
+        for value in invalid_keys:
+            with self.assertRaises(api_contract.ApiKeyContractError):
+                api_contract.validate_api_key_format(value)
+            with self.assertRaises(config_writer.WriterError):
+                config_writer.product_reset_validate_api_key(value)
+            with self.assertRaises(pairing_client.PairingError):
+                pairing_client.validate_api_key(value)
+
+        self.assertEqual(
+            pairing_client.PRODUCT_RESET_MAX_CREDENTIAL_BYTES,
+            api_contract.MAX_PRODUCT_RESET_CREDENTIAL_BYTES,
+        )
+
     def test_reopening_settings_preserves_device_token_identity_privately(self) -> None:
         session = SESSION_SCRIPT.read_text(encoding="utf-8")
         active_config_copy = function_body(

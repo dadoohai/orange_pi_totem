@@ -39,7 +39,13 @@ from typing import Any
 sys.dont_write_bytecode = True
 
 import totem_config_contract_validate as contract
-from totem_api_url_contract import ApiUrlContractError, validate_https_api_url
+from totem_api_url_contract import (
+    MAX_PRODUCT_RESET_CREDENTIAL_BYTES,
+    ApiKeyContractError,
+    ApiUrlContractError,
+    validate_api_key_format,
+    validate_https_api_url,
+)
 
 
 SCHEMA_VERSION = "dadooh-c6.2.2-config-writer-real-guardrails.v1"
@@ -1235,6 +1241,10 @@ def product_reset_checked_file(path: pathlib.Path, label: str) -> None:
         raise WriterError(f"product_reset_untrusted_path:{label}")
 
 
+def product_reset_json_payload(value: dict[str, Any]) -> bytes:
+    return (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
 def product_reset_atomic_write_json(path: pathlib.Path, value: dict[str, Any], mode: int) -> None:
     product_reset_require_existing_dir(path.parent, "write-parent")
     path_type = product_reset_existing_path_type(path)
@@ -1242,7 +1252,7 @@ def product_reset_atomic_write_json(path: pathlib.Path, value: dict[str, Any], m
         raise WriterError("product_reset_untrusted_path:write-target")
     if path_type == "file" and os.lstat(path).st_nlink != 1:
         raise WriterError("product_reset_untrusted_path:write-target")
-    payload = (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    payload = product_reset_json_payload(value)
     tmp_name: str | None = None
     fd: int | None = None
     try:
@@ -1484,12 +1494,11 @@ def product_reset_validate_https_api_url(value: Any) -> str:
 
 
 def product_reset_validate_api_key(value: Any) -> str:
-    if not isinstance(value, str):
-        raise WriterError("product_reset_api_key_invalid")
-    raw = value.strip()
-    if raw != value or len(raw) < 16 or len(raw) > 4096:
-        raise WriterError("product_reset_api_key_invalid")
-    if any(ord(ch) < 32 or ord(ch) == 127 for ch in raw):
+    try:
+        raw = validate_api_key_format(value)
+    except ApiKeyContractError as exc:
+        raise WriterError("product_reset_api_key_invalid") from exc
+    if not isinstance(raw, str):
         raise WriterError("product_reset_api_key_invalid")
     lowered = raw.lower()
     if "placeholder" in lowered or "preencher" in lowered or "mock" in lowered:
@@ -1526,7 +1535,7 @@ def product_reset_capture_active_credential(ctx: ProductResetContext, operation_
     api_token_id = active_config.get("api_token_id")
     if api_token_id is not None:
         credential["api_token_id"] = canonical_uuid(api_token_id, "api_token_id")
-    return credential
+    return product_reset_validate_pending_credential(credential)
 
 
 def product_reset_validate_pending_credential(value: dict[str, Any]) -> dict[str, Any]:
@@ -1554,6 +1563,8 @@ def product_reset_validate_pending_credential(value: dict[str, Any]) -> dict[str
         value["api_token_id"] = canonical_uuid(value.get("api_token_id"), "api_token_id")
     if "environment_id" in value or "station_id" in value:
         raise WriterError("product_reset_pending_credential_invalid")
+    if len(product_reset_json_payload(value)) > MAX_PRODUCT_RESET_CREDENTIAL_BYTES:
+        raise WriterError("product_reset_pending_credential_too_large")
     return value
 
 
@@ -3067,6 +3078,82 @@ def run_product_reset_self_test() -> None:
             assert_true((invalid_data / "config/config.json").exists(), f"invalid {field} should preserve config")
             assert_true(not (invalid_data / PRODUCT_RESET_STATE_REL / PRODUCT_RESET_INTENT_FILENAME).exists(), f"invalid {field} should not write intent")
             assert_true(not (invalid_data / PRODUCT_RESET_STATE_REL / PRODUCT_RESET_PENDING_CREDENTIAL_FILENAME).exists(), f"invalid {field} should not write pending credential")
+
+        transport_invalid_cases: tuple[tuple[str, str], ...] = (
+            ("api_url", "https://%/search"),
+            ("api_url", "https://a..example.com/search"),
+            ("api_url", "https://" + ("a" * 64) + ".example.com/search"),
+            ("api_url", "https://api.example.com\\bad/search"),
+            ("api_key", "é" * 1500),
+            ("api_key", "😀" * 16),
+            ("api_key", "A" * 4097),
+        )
+        for offset, (field, value) in enumerate(transport_invalid_cases, start=910):
+            invalid_fixture = product_reset_self_test_fixture(root, offset)
+            invalid_data = invalid_fixture["data"]
+            invalid_config = dict(invalid_fixture["active_config"])
+            invalid_config[field] = value
+            product_reset_self_test_write_json(
+                invalid_data / "config/config.json",
+                invalid_config,
+                REAL_ACTIVE_CONFIG_MODE,
+            )
+            assert_raises_writer_error(
+                lambda data=invalid_data, op=product_reset_self_test_uuid(offset): product_reset_start_or_resume(
+                    product_reset_self_test_context(data),
+                    operation_id_raw=op,
+                    start=True,
+                ),
+                f"non-transportable {field} should fail before reset",
+            )
+            assert_true((invalid_data / "config/config.json").exists(), f"invalid {field} should preserve config")
+            assert_true(
+                not (invalid_data / PRODUCT_RESET_STATE_REL / PRODUCT_RESET_INTENT_FILENAME).exists(),
+                f"invalid {field} should not write intent",
+            )
+            assert_true(
+                not (invalid_data / PRODUCT_RESET_STATE_REL / PRODUCT_RESET_PENDING_CREDENTIAL_FILENAME).exists(),
+                f"invalid {field} should not write pending credential",
+            )
+
+        oversized_pending_fixture = product_reset_self_test_fixture(root, 930)
+        oversized_pending_data = oversized_pending_fixture["data"]
+        oversized_pending_config = dict(oversized_pending_fixture["active_config"])
+        exact_url_prefix = "https://api.example.com/"
+        oversized_pending_config["api_url"] = exact_url_prefix + (
+            "x" * (2048 - len(exact_url_prefix))
+        )
+        oversized_pending_config["api_key"] = "A" * 4096
+        product_reset_self_test_write_json(
+            oversized_pending_data / "config/config.json",
+            oversized_pending_config,
+            REAL_ACTIVE_CONFIG_MODE,
+        )
+        oversized_pending_ctx = build_product_reset_context(
+            data_root_raw=str(oversized_pending_data),
+            allow_test_root=True,
+            owner_uid=1234,
+            owner_gid=5678,
+            owner_applier=lambda _path, _uid, _gid: None,
+            fingerprint_provider=lambda: "😀" * 200,
+        )
+        assert_raises_writer_error_code(
+            lambda: product_reset_start_or_resume(
+                oversized_pending_ctx,
+                operation_id_raw=product_reset_self_test_uuid(930),
+                start=True,
+            ),
+            "product_reset_pending_credential_too_large",
+            "pending credential must fit the revocation reader before reset starts",
+        )
+        assert_true(
+            (oversized_pending_data / "config/config.json").exists(),
+            "oversized pending credential should preserve active config",
+        )
+        assert_true(
+            not (oversized_pending_data / PRODUCT_RESET_STATE_REL / PRODUCT_RESET_INTENT_FILENAME).exists(),
+            "oversized pending credential should fail before intent",
+        )
 
         insecure_dir_fixture = product_reset_self_test_fixture(root, 115)
         insecure_dir_data = insecure_dir_fixture["data"]
