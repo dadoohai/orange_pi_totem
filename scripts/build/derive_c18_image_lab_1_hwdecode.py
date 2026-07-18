@@ -78,16 +78,16 @@ WRAPPER = "/opt/totem/bin/totem-mpv-hwdecode"
 KIOSK = "/opt/totem/kiosky-player/kiosk.py"
 UPDATECTL = "/opt/totem/bin/totem-updatectl"
 MARKER = str(CURRENT_GOLDEN["image_marker_path"])
-PRODUCTION_TAG = "c18-hwdecode-prod-15"
-PRODUCTION_VERSION = "c18.image-prod.15"
+PRODUCTION_TAG = "c18-hwdecode-prod-16-c26-candidate"
+PRODUCTION_VERSION = "c18.image-prod.16-c26-candidate"
 PRODUCTION_MARKER = f"/etc/dadooh/{PRODUCTION_TAG}-image"
-PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-14"
-PRODUCTION_PREDECESSOR_SHA256 = "3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682"
+PRODUCTION_PREDECESSOR_TAG = "c18-hwdecode-prod-15"
+PRODUCTION_PREDECESSOR_SHA256 = "cff33f16e3a0f62327b0b75fb2378c08da9e51e14f9a9550ded72730e2218d09"
 PRODUCTION_IMAGE_BOUND_TRANSACTION_COMMIT = "bfb0d04489ac4251908ba27396bd8ed37bead3f8"
 PRODUCTION_IMAGE_BOUND_PLAYBACK_SUMMARY_COMMIT = "c075a5572148ed25aed000a22202f918c4157fda"
 PRODUCTION_SUCCESSOR_SCOPE = (
-    "image_identity_prod15",
-    "totem_core_c21_24_stable_embedded",
+    "image_identity_prod16_c26_candidate",
+    "totem_core_c26_3_homologation_actions_embedded",
     "playback_health_summary_c075a55",
     "player_runtime_c25b_exact_target_preserved",
 )
@@ -967,7 +967,7 @@ def validate_candidate_identity(tag: str, version: str, marker: str,
     if image_profile == "production" and (
         tag != PRODUCTION_TAG or version != PRODUCTION_VERSION or marker != PRODUCTION_MARKER
     ):
-        raise SystemExit("BLOCKED: production candidate identity must match the pinned prod15 release")
+        raise SystemExit("BLOCKED: production candidate identity must match the pinned release")
 
 
 def validate_image_bound_file(commit: str, relative_path: str) -> dict[str, str]:
@@ -2111,8 +2111,8 @@ def main():
     else:
         manifest["production_image"] = True
         manifest["supersedes_production_image"] = (
-            "c18-hwdecode-prod-14 (board-validated predecessor; superseded by the "
-            "C21.24 stable product baseline and image-bound playback health summary)"
+            f"{PRODUCTION_PREDECESSOR_TAG} (board-validated predecessor; candidate adds "
+            "C26 local recovery while preserving the image-bound playback baseline)"
         )
         manifest["production_access_nonclaim"] = (
             "CSPRNG-generated shared support password SSH access remains enabled by explicit "
