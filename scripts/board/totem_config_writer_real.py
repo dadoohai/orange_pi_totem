@@ -1127,6 +1127,12 @@ def product_reset_config_file_owner_ids(ctx: ProductResetContext) -> tuple[int, 
     return root_uid, ctx.owner_gid
 
 
+def product_reset_last_settings_owner_ids(ctx: ProductResetContext) -> tuple[int, int]:
+    if ctx.allow_test_root:
+        return os.getuid(), os.getgid()
+    return product_reset_root_owned_ids()
+
+
 def product_reset_root_owned_ids() -> tuple[int, int]:
     return 0, 0
 
@@ -1984,7 +1990,7 @@ def product_reset_preflight_sources(ctx: ProductResetContext, intent: dict[str, 
         if last_type not in {"missing", "file"}:
             raise WriterError("product_reset_untrusted_path:last-settings")
         if last_type == "file":
-            owner_uid, owner_gid = product_reset_source_owner_ids(ctx)
+            owner_uid, owner_gid = product_reset_last_settings_owner_ids(ctx)
             product_reset_require_file_shape(
                 last_path,
                 "last-settings",
@@ -2936,6 +2942,46 @@ def run_product_reset_self_test() -> None:
             "CLI product reset root should reject non-/data outside self-test injection",
         )
 
+        last_settings_owner_data = root / "data-103"
+        product_reset_self_test_prepare_dir(last_settings_owner_data, 0o755)
+        product_reset_self_test_write_json(
+            last_settings_owner_data / PRODUCT_RESET_LAST_SETTINGS_REL,
+            {"schema_version": "dadooh-private-settings-context.v1"},
+        )
+        last_settings_owner_intent = product_reset_new_intent(product_reset_self_test_uuid(103))
+        real_owner_ctx = ProductResetContext(
+            data_root=last_settings_owner_data,
+            allow_test_root=False,
+            owner_uid=1234,
+            owner_gid=5678,
+        )
+        test_owner_ctx = ProductResetContext(
+            data_root=last_settings_owner_data,
+            allow_test_root=True,
+            owner_uid=1234,
+            owner_gid=5678,
+        )
+        assert_true(
+            product_reset_last_settings_owner_ids(real_owner_ctx) == (0, 0),
+            "production last-settings contract should require root ownership",
+        )
+        assert_true(
+            product_reset_last_settings_owner_ids(test_owner_ctx) == (os.getuid(), os.getgid()),
+            "test last-settings contract should use the test process ownership",
+        )
+        original_root_owned_ids = globals()["product_reset_root_owned_ids"]
+        try:
+            globals()["product_reset_root_owned_ids"] = lambda: (os.getuid(), os.getgid())
+            product_reset_preflight_sources(real_owner_ctx, last_settings_owner_intent)
+            globals()["product_reset_root_owned_ids"] = lambda: (os.getuid() + 10000, os.getgid() + 10000)
+            assert_raises_writer_error_code(
+                lambda: product_reset_preflight_sources(real_owner_ctx, last_settings_owner_intent),
+                "product_reset_untrusted_path:last-settings",
+                "last-settings with unexpected ownership must fail closed",
+            )
+        finally:
+            globals()["product_reset_root_owned_ids"] = original_root_owned_ids
+
         mountinfo_path = root / "mountinfo"
         mount_target = root / "graveyard-target"
         product_reset_self_test_prepare_dir(mount_target, PRIVATE_DIR_MODE)
@@ -3071,6 +3117,51 @@ def run_product_reset_self_test() -> None:
         assert_true(
             not (hardlink_data / PRODUCT_RESET_STATE_REL / PRODUCT_RESET_PENDING_CREDENTIAL_FILENAME).exists(),
             "hardlinked config must fail before capturing the credential",
+        )
+
+        insecure_context_fixture = product_reset_self_test_fixture(root, 118)
+        insecure_context_data = insecure_context_fixture["data"]
+        (insecure_context_data / PRODUCT_RESET_LAST_SETTINGS_REL).chmod(0o644)
+        assert_raises_writer_error_code(
+            lambda: product_reset_start_or_resume(
+                product_reset_self_test_context(insecure_context_data),
+                operation_id_raw=product_reset_self_test_uuid(118),
+                start=True,
+            ),
+            "product_reset_bad_mode:last-settings",
+            "last-settings with a non-private mode must fail before reset",
+        )
+        assert_true(
+            not (
+                insecure_context_data
+                / PRODUCT_RESET_STATE_REL
+                / PRODUCT_RESET_PENDING_CREDENTIAL_FILENAME
+            ).exists(),
+            "insecure last-settings must fail before capturing the credential",
+        )
+
+        hardlink_context_fixture = product_reset_self_test_fixture(root, 119)
+        hardlink_context_data = hardlink_context_fixture["data"]
+        os.link(
+            hardlink_context_data / PRODUCT_RESET_LAST_SETTINGS_REL,
+            hardlink_context_data / "last-settings-secret-link.json",
+        )
+        assert_raises_writer_error_code(
+            lambda: product_reset_start_or_resume(
+                product_reset_self_test_context(hardlink_context_data),
+                operation_id_raw=product_reset_self_test_uuid(119),
+                start=True,
+            ),
+            "product_reset_untrusted_path:last-settings",
+            "hardlinked last-settings must fail before reset",
+        )
+        assert_true(
+            not (
+                hardlink_context_data
+                / PRODUCT_RESET_STATE_REL
+                / PRODUCT_RESET_PENDING_CREDENTIAL_FILENAME
+            ).exists(),
+            "hardlinked last-settings must fail before capturing the credential",
         )
 
         fixture = product_reset_self_test_fixture(root, 2)
