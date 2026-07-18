@@ -437,17 +437,17 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             except ValueError:
                 pass
 
-        expected_core_version = "c26.4-local-recovery-20260718-3351084-actions"
+        expected_core_version = "c26.5-local-recovery-20260718-f1d0da9-actions"
         expected_core_tag = f"totem-core-{expected_core_version}"
-        expected_core_sha = "cd7a7bb6f82f079b3810d43d0ebc3f8496e34c0aa776b709c557dd12dd88bf2e"
+        expected_core_sha = "b8864cc913f6e7ca4562a0e3edfe9eb0ba55a6aef5019a47a0535397ba26f4df"
         self.assertEqual(mod.TOTEM_CORE_VERSION, expected_core_version)
         self.assertEqual(mod.TOTEM_CORE_RELEASE_TAG, expected_core_tag)
         self.assertEqual(mod.TOTEM_CORE_CHANNEL, "homologation")
         self.assertEqual(mod.TOTEM_CORE_PAYLOAD_SHA256, expected_core_sha)
-        self.assertEqual(mod.TOTEM_CORE_CREATED_AT_UTC, "2026-07-18T18:17:46Z")
+        self.assertEqual(mod.TOTEM_CORE_CREATED_AT_UTC, "2026-07-18T19:30:40Z")
         self.assertEqual(
             mod.TOTEM_CORE_SOURCE_COMMIT,
-            "3351084d2b3fbff1d790d39c87e102f7f6e87647",
+            "f1d0da92eff5f0aa94036b0ae5a8a85e632450dc",
         )
         release_provenance = mod.validate_totem_core_release_provenance(
             REPO_ROOT,

@@ -16,12 +16,12 @@ from typing import Any, Callable
 import derive_c15_2_1_homolog_image as base
 
 
-TOTEM_CORE_VERSION = "c26.4-local-recovery-20260718-3351084-actions"
-TOTEM_CORE_RELEASE_TAG = "totem-core-c26.4-local-recovery-20260718-3351084-actions"
+TOTEM_CORE_VERSION = "c26.5-local-recovery-20260718-f1d0da9-actions"
+TOTEM_CORE_RELEASE_TAG = "totem-core-c26.5-local-recovery-20260718-f1d0da9-actions"
 TOTEM_CORE_CHANNEL = "homologation"
-TOTEM_CORE_PAYLOAD_SHA256 = "cd7a7bb6f82f079b3810d43d0ebc3f8496e34c0aa776b709c557dd12dd88bf2e"
-TOTEM_CORE_CREATED_AT_UTC = "2026-07-18T18:17:46Z"
-TOTEM_CORE_SOURCE_COMMIT = "3351084d2b3fbff1d790d39c87e102f7f6e87647"
+TOTEM_CORE_PAYLOAD_SHA256 = "b8864cc913f6e7ca4562a0e3edfe9eb0ba55a6aef5019a47a0535397ba26f4df"
+TOTEM_CORE_CREATED_AT_UTC = "2026-07-18T19:30:40Z"
+TOTEM_CORE_SOURCE_COMMIT = "f1d0da92eff5f0aa94036b0ae5a8a85e632450dc"
 TOTEM_CORE_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")
 UPDATE_POLICY_TARGET = "/data/updates/policy.json"
 UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-update-agent.service"
