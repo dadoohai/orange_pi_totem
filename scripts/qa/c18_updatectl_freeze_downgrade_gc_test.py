@@ -2283,6 +2283,10 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             for name in updatectl.TOTEM_CORE_REQUIRED_BIN:
                 source = REPO_ROOT / "scripts" / "board" / name
                 shutil.copy2(source, bin_dir / name)
+            shutil.copy2(
+                REPO_ROOT / "scripts" / "board" / "totem_api_url_contract.py",
+                bin_dir / "totem_api_url_contract.py",
+            )
 
             ok, reason = updatectl._totem_core_health_check(release)
 
