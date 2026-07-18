@@ -1,8 +1,10 @@
 # 202 - C26 - Recuperacao local pelo usuario
 
-Status: backend C26 promovido e fonte local versionada. Pacotes, imagem
-sucessora e validacao na placa ainda estao pendentes; as acoes continuam
-indisponiveis na `prod15`.
+Status: C26.5 provada ponta a ponta na placa `prod16` por OTA, incluindo reset
+online, reset offline com corte fisico, revogacao, nova ativacao,
+rollback/reaplicacao, reinicio e desligamento reais. A `prod17` com o mesmo
+pacote embutido foi construida e validada offline; gravacao da `prod17`,
+auditoria conclusiva e promocao da baseline ainda estao pendentes.
 
 Data: 2026-07-18
 
@@ -373,59 +375,47 @@ sem Armbian Imager. Ele nao bloqueia a entrega anterior de M10.
 
 Concluido e versionado:
 
-- logica de autorrevogacao exata, migracao cirurgica e logs sanitizados no
-  commit backend `cd131f00`. A migracao mudou o schema vivo de `absent` para
-  `complete`; a repeticao confirmou `complete -> complete`, sem nova mutacao;
-- o migrador aceita somente as duas DDLs oficiais exatas de `users`, incluindo
-  a forma reconstruida pela migracao `0000`, e a coleta por `created_at` possui
-  indice correspondente;
-- as quatro combinacoes historicas legitimas de tabela runtime/admin e indice
-  atual/legado estao cobertas explicitamente. A hipotese de produto cartesiano
-  indevido foi refutada por historia do Git, teste e leitura do schema vivo;
-- C26A/C26B, retomada persistente, validacao da nova configuracao e health
-  fail-closed dos componentes;
-- matriz de falhas prova retomada pelo caminho real de boot desde o primeiro
-  intent duravel e remocao de credenciais em backups/last-settings;
-- boot atual e reinicio/desligamento usam provas reconciliaveis, com cenarios
-  falho, desabilitado, em execucao, boot antigo, preparado e expirado negados.
-  O handoff exige 300 segundos continuos de atividade e novas acoes substituem
-  reconciliadores anteriores, sem crescimento periodico ilimitado;
-- suite C26 local com 16 testes e self-test visual verdes; backend C26 com 48
-  testes verdes, contratos legados de ativacao com 2/2 e station scope com 4/4
-  isolados, alem de 224 arquivos compilados;
-- o identificador do token da ativacao agora sobrevive a uma nova gravacao pelo
-  F10 sem aparecer em artefatos publicos; imagens sem C26 preservam a navegacao
-  anterior entre etapas;
-- pacotes oficiais C26A invisivel e C26B com capacidades e identidades
-  distintas foram gerados, versionados e passaram o gate OTA completo 85/85;
-- bloqueio runtime/package/health de C26B em imagem sem o boot graph seguro, o
-  unit static exato ou o `Wants=` do player;
-- firstboot unit, marcador do boot atual e oneshot de limpeza pos-player
-  preparados para a proxima imagem;
-- limpeza pesada retirada do boot, do finalize e do onboarding, com marcador
-  exato, retomada apos corte e bloqueio OTA ate terminar;
-- seed privado de homologacao invalidado por tombstone retomavel sem persistir
-  seu conteudo, e mountpoint interno recusado antes da remocao recursiva.
-- candidata backend `api-00483-taq` auditada com `48/48`, promovida para 100%
-  e validada por smoke. A revisao anterior `api-00481-naf` permanece na tag
-  `pre-c26` e `api-00469-gus` permanece como rollback historico.
-- C26A aplicado na `prod15`, revertido para C21.24 e reaplicado; politica
-  stable e timer foram restaurados, player permaneceu ativo com zero restarts
-  e as acoes ficaram escondidas como exigido;
-- imagem `c18-hwdecode-prod-16-c26-candidate` construida no commit `cdab0fe`,
-  validada offline e auditada de forma independente como segura para gravacao
-  em uma unica placa de bancada, sem claim de producao.
+- backend de autorrevogacao exata promovido, com operacao idempotente,
+  rastreabilidade e contratos legados preservados;
+- motor local fail-closed, retomada persistente, limpeza limitada, guard OTA e
+  acoes `Reiniciar`, `Desligar` e `Restaurar` dentro do unico fluxo `F10`;
+- pacote final
+  `c26.5-local-recovery-20260718-f1d0da9-actions`, preso ao commit
+  `f1d0da92eff5f0aa94036b0ae5a8a85e632450dc` e ao payload
+  `b8864cc913f6e7ca4562a0e3edfe9eb0ba55a6aef5019a47a0535397ba26f4df`;
+- suite C26 local com 17 testes, self-test visual, testes backend e gate OTA
+  completo verdes;
+- na `prod16`, apply da C26.5, reset online, revogacao do token anterior,
+  reativacao e health de playback passaram;
+- reset sem internet foi interrompido por corte fisico depois da limpeza local.
+  O boot retomou a mesma operacao, obteve recibo de revogacao, manteve a config
+  antiga bloqueada e permitiu uma nova ativacao; o token anterior permaneceu
+  recusado;
+- rollback governado para C26.4 e reaplicacao da C26.5 preservaram config,
+  policy stable, timer e player. As janelas repetidas terminaram sem restart,
+  erro de midia ou perda de hardware decode;
+- `Desligar` foi confirmado na interface, encerrou a placa e exigiu religamento
+  fisico. `Reiniciar` foi confirmado na mesma interface, gerou novo boot e
+  voltou automaticamente. Config, contexto e policy mantiveram hashes exatos;
+- imagem `c18-hwdecode-prod-17-c26`, versao `c18.image-prod.17-c26`, construida
+  do commit `bd119ba8fcb5721ce6a6275e1f23615c20022905`, com C26.5 exata embutida.
+  A validacao offline, `e2fsck`, higiene de imagem e auditoria da identidade
+  passaram. SHA256:
+  `696bd671cfc819c51c8dcc977633d0a803fb2c986d09c3b21a2c6d099d27d00b`.
 
-Pendente para declarar pronto:
+Evidencias decisivas:
 
-- regravar a imagem sucessora e executar C26B online, offline,
-  interrupcoes, reiniciar, desligar, rollback e reaplicacao;
-- obter auditoria independente final sobre a execucao C26B e as evidencias da
-  placa;
-- promover o pacote final e atualizar a baseline somente depois da auditoria
-  conclusiva.
+- `docs/evidence/c26-local-recovery/20260718T205350Z-c26-final-board-e2e/`;
+- `docs/evidence/c26-local-recovery/20260718T204719Z-prod17-c26-build/`.
 
-O gate OTA completo passou 85/85 para o pacote C26B. A imagem candidata tambem
-passou sua validacao offline e auditoria forense. O unico marco bloqueante
-restante e a prova fisica C26B na imagem sucessora; nenhuma inferencia desse
-estado autoriza baseline final ou producao.
+Pendente para declarar a nova baseline pronta:
+
+- concluir a auditoria independente da execucao e dos artefatos finais;
+- gravar a `prod17` em uma placa de bancada e provar boot, identidade,
+  onboarding, playback, timer e disponibilidade das acoes a partir da imagem;
+- somente depois atualizar a referencia de distribuicao e promover o pacote
+  conforme a decisao operacional.
+
+Non-claim: a prova funcional atual e da `prod16` com C26.5 aplicada por OTA. A
+`prod17` esta pronta como artefato offline, mas ainda nao foi gravada nem
+validada em hardware; por isso ainda nao substitui a baseline publica.

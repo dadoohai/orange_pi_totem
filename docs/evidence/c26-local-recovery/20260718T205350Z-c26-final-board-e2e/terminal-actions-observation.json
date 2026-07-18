@@ -1,0 +1,44 @@
+{
+  "schema": "dadooh.c26.terminal_actions_board_observation.v1",
+  "board_scope": "prod16_with_c26_5_applied_by_governed_ota",
+  "poweroff": {
+    "submitted_at_utc": "2026-07-18T20:38:13Z",
+    "offline_observed_at_utc": "2026-07-18T20:38:25Z",
+    "boot_id_before": "b998c111-9aa6-45a3-a0a3-e2c7f0d32613",
+    "boot_id_after_manual_power_return": "c76ac293-d9ce-4c4f-a12c-a45ae19b433d",
+    "post_boot_capture_at_utc": "2026-07-18T20:43:30Z",
+    "ui_confirmation_captured": true,
+    "physical_power_return_required": true,
+    "first_health_passed": false,
+    "first_health_failure_reasons": [
+      "terminal_playback_healthy"
+    ],
+    "repeat_health_passed": true
+  },
+  "restart": {
+    "submitted_at_utc": "2026-07-18T21:04:53Z",
+    "prepared_marker_at_utc": "2026-07-18T21:04:57.033137Z",
+    "boot_id_before": "c76ac293-d9ce-4c4f-a12c-a45ae19b433d",
+    "boot_id_after": "f5f100ed-81b2-459b-ab51-fdafd80a19ff",
+    "post_boot_capture_at_utc": "2026-07-18T21:08:57Z",
+    "ui_confirmation_captured": true,
+    "accepted_marker_captured_before_reboot": false,
+    "accepted_marker_capture_note": "the reboot closed SSH after the prepared marker was observed",
+    "automatic_return_observed": true,
+    "config_hash_preserved": true,
+    "settings_context_hash_preserved": true,
+    "policy_hash_preserved": true,
+    "health_passed": true,
+    "health_samples": 56,
+    "hwdec_expected_samples": 56,
+    "mpv_restart": 0,
+    "media_load_failed": 0
+  },
+  "session_entry": {
+    "method": "systemd_settings_service_then_tty2_navigation",
+    "physical_f10_retested": false,
+    "physical_f10_prior_evidence": "docs/C19_VISUAL_QA_FLOW.md"
+  },
+  "secrets_in_artifact": false
+}
+

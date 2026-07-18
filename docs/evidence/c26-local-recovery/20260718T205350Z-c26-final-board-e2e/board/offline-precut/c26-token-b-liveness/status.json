@@ -1,0 +1,8 @@
+{
+  "credentials_written": false,
+  "post_reset_http_status": "not_run",
+  "pre_reset_http_status": 200,
+  "receipt_observed": false,
+  "schema": "dadooh.c26.token_liveness_probe.v1",
+  "started_at_utc": "2026-07-18T19:59:25.753809Z"
+}

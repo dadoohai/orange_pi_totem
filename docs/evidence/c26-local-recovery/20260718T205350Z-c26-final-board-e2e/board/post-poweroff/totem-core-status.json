@@ -1,0 +1,61 @@
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c26.5-local-recovery-20260718-f1d0da9-actions",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c26.4-local-recovery-20260718-3351084-actions",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-18T20:30:14Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-18T19:30:40Z",
+      "path": "/data/core/totem/releases/c26.5-local-recovery-20260718-f1d0da9-actions",
+      "payload_sha256": "b8864cc913f6e7ca4562a0e3edfe9eb0ba55a6aef5019a47a0535397ba26f4df",
+      "source": "local:dadooh-totem-core-c26.5-local-recovery-20260718-f1d0da9-actions.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "f1d0da92eff5f0aa94036b0ae5a8a85e632450dc",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c26.5-local-recovery-20260718-f1d0da9-actions"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-18T20:30:32Z",
+      "source": "local:dadooh-totem-core-c26.5-local-recovery-20260718-f1d0da9-actions.manifest.json",
+      "started_at_utc": "2026-07-18T20:29:56Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c26.5-local-recovery-20260718-f1d0da9-actions"
+    },
+    "previous": {
+      "applied_at_utc": "2026-07-18T20:25:54Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-18T18:17:46Z",
+      "path": "/data/core/totem/releases/c26.4-local-recovery-20260718-3351084-actions",
+      "payload_sha256": "cd7a7bb6f82f079b3810d43d0ebc3f8496e34c0aa776b709c557dd12dd88bf2e",
+      "source": "local:dadooh-totem-core-c26.4-local-recovery-20260718-3351084-actions.manifest.json",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "3351084d2b3fbff1d790d39c87e102f7f6e87647",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c26.4-local-recovery-20260718-3351084-actions",
+      "via": "manual_rollback"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-18T07:04:43Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}

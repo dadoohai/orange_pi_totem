@@ -1,0 +1,18 @@
+Dadooh C5.1 config contract validator
+
+schema_version: dadooh-c5-config-contract-validate.v1
+mode: real-dry-run
+valid: true
+missing_fields_count: 0
+invalid_fields_count: 0
+placeholder_findings_count: 0
+runtime_contract_findings_count: 2
+api_key_present: true
+api_key_value_written: false
+candidate_config_copied: false
+real_config_read: false
+data_written: false
+network_access: false
+systemctl_called: false
+nmcli_called: false
+mpv_called: false

@@ -1,0 +1,76 @@
+{
+  "boot_id": "f6787673-ac0f-4932-ba82-e937c04b5219",
+  "collected_at_utc": "2026-07-18T20:04:33.877396Z",
+  "config_present": false,
+  "internet_block": {
+    "ipv4_blackhole": true,
+    "ipv6_blackhole": true
+  },
+  "old_token_probe": {
+    "credentials_written": false,
+    "post_reset_http_status": "not_run",
+    "pre_reset_http_status": 200,
+    "receipt_observed": false,
+    "schema": "dadooh.c26.token_liveness_probe.v1"
+  },
+  "orientation_sha256": "80b5eed2af799e35d0b0dab5e5f49d95c6f2c6cd44cf4aae394e553902d911c8",
+  "player_unit": {
+    "ActiveState": "inactive",
+    "ExecMainStatus": "0",
+    "NRestarts": "0",
+    "Result": "success",
+    "SubState": "dead"
+  },
+  "policy_sha256": "6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f",
+  "pre_reset_reactivated_health": {
+    "failure_reasons": [],
+    "hwdec_expected_samples": 40,
+    "media_load_failed": 0,
+    "mpv_restart": 0,
+    "nrestarts_delta": 0,
+    "passed": true,
+    "samples": 40
+  },
+  "reset_status": {
+    "api_url_public": "false",
+    "code": "pending_revocation",
+    "environment_public": "false",
+    "gc_pending": "false",
+    "graveyard_count": "1",
+    "local_complete": "true",
+    "operation_id": "826ead88-92c2-4485-b310-4f84acc85c10",
+    "pending_credential": "true",
+    "phase": "local_complete",
+    "receipt_present": "false",
+    "secret_public": "false",
+    "station_public": "false"
+  },
+  "reset_status_rc": 10,
+  "rollback_probe": {
+    "rc": 40,
+    "update_lock_busy": false
+  },
+  "schema": "dadooh.c26.product_reset_offline_precut.v1",
+  "secrets_written_to_evidence": false,
+  "settings_unit": {
+    "ActiveState": "failed",
+    "ExecMainStatus": "55",
+    "NRestarts": "0",
+    "Result": "exit-code",
+    "SubState": "failed"
+  },
+  "update": {
+    "current": "releases/c26.5-local-recovery-20260718-f1d0da9-actions",
+    "guard_ok": false,
+    "guard_reason": "product_reset_graveyard_present",
+    "last_operation": {
+      "finished_at_utc": "2026-07-18T19:41:02Z",
+      "source": "local:dadooh-totem-core-c26.5-local-recovery-20260718-f1d0da9-actions.manifest.json",
+      "started_at_utc": "2026-07-18T19:40:25Z",
+      "status": "success",
+      "type": "apply",
+      "version": "c26.5-local-recovery-20260718-f1d0da9-actions"
+    },
+    "previous": "releases/c26.4-local-recovery-20260718-3351084-actions"
+  }
+}

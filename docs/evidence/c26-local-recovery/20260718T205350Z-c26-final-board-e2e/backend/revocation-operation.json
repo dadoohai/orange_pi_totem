@@ -1,0 +1,21 @@
+{
+  "sourceKind": "turso-live",
+  "payloadMode": "full",
+  "sql": "SELECT COUNT(*) AS row_count, operation_id, result_status, response_status_code, CASE WHEN api_token_id IS NOT NULL THEN 1 ELSE 0 END AS token_linked, CASE WHEN activation_id IS NOT NULL THEN 1 ELSE 0 END AS activation_linked, CASE WHEN created_at = updated_at THEN 1 ELSE 0 END AS single_commit_result, json_extract(response_body, '$.operation_id') AS response_operation_id, json_extract(response_body, '$.status') AS response_status, json_extract(response_body, '$.revoked') AS response_revoked FROM totem_self_revocation_operations WHERE operation_id = '826ead88-92c2-4485-b310-4f84acc85c10' GROUP BY operation_id, result_status, response_status_code, token_linked, activation_linked, single_commit_result, response_operation_id, response_status, response_revoked",
+  "rowCount": 1,
+  "truncated": false,
+  "rows": [
+    {
+      "row_count": 1,
+      "operation_id": "826ead88-92c2-4485-b310-4f84acc85c10",
+      "result_status": "revoked",
+      "response_status_code": 200,
+      "token_linked": 1,
+      "activation_linked": 1,
+      "single_commit_result": 1,
+      "response_operation_id": "826ead88-92c2-4485-b310-4f84acc85c10",
+      "response_status": "revoked",
+      "response_revoked": 1
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+captured_at_utc=2026-07-18T21:08:57Z
+boot_id=f5f100ed-81b2-459b-ab51-fdafd80a19ff
+config_sha256=706c030cf31d78dc390a33e05899b18f37e2bdaa3eefaf12085d8300b4b98432
+last_settings_sha256=df3a62d544d3582b470d2e9b694bf675a168f802d4371e6cb384ffc0234b297f
+orientation_sha256=e152fe8656301b15ae9b49126651f1286a8da8e10294d925db0d0b4c3bbceb89
+policy_sha256=6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f
+player=active
+player_enabled=enabled
+player_restarts=0
+settings=inactive
+timer_active=active
+timer_enabled=enabled
+lock=absent
+request=absent
+terminal_action=absent

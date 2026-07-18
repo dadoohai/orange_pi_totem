@@ -1,6 +1,6 @@
 # C18 OTA - fonte da verdade operacional
 
-Estado em 2026-07-17. Este documento e o radar curto para decidir os proximos
+Estado em 2026-07-18. Este documento e o radar curto para decidir os proximos
 passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
@@ -57,23 +57,37 @@ e tres perspectivas independentes fecharam sem blocker para a baseline.
 
 O M5 anterior nao deve ser reaberto. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
-para roadmap. A prioridade atual e M10: recuperacao local simples para o
-usuario. O recorte aprovado, ainda nao implementado, mantera `F10` abrindo o
-wizard atual e adicionara acesso discreto a reiniciar, desligar com seguranca e
-`Restaurar para configuracao inicial`. A restauracao revoga a ativacao
-exclusiva atual quando existir, remove apenas a copia local de chave legada,
-limpa config/conteudo/estado operacional e preserva Wi-Fi, orientacao, imagem
-e toda a governanca OTA. Ela nao e reinstalacao do SO: corrupcao de
-boot/rootfs continua exigindo regravacao externa da imagem. Diagnostico
-granular e novos atalhos nao entram neste recorte. A protecao de rollback OTA
-permanece interna e nao vira controle local. M4 continua em
-paralelo; grupos, dashboard e telemetria seguem no roadmap.
+para roadmap. A prioridade atual e fechar M10: recuperacao local simples para
+o usuario. C26.5 ja manteve `F10` abrindo o wizard atual e adicionou acesso
+discreto a reiniciar, desligar com seguranca e `Restaurar para configuracao
+inicial`. A restauracao revoga a ativacao exclusiva atual quando existir,
+remove apenas a copia local de chave legada, limpa config/conteudo/estado
+operacional e preserva Wi-Fi, orientacao, imagem e toda a governanca OTA. Ela
+nao e reinstalacao do SO: corrupcao de boot/rootfs continua exigindo
+regravacao externa da imagem. Diagnostico granular e novos atalhos nao entram
+neste recorte. A protecao de rollback OTA permanece interna e nao vira
+controle local. M4 continua em paralelo; grupos, dashboard e telemetria seguem
+no roadmap.
 
 M11 fica registrado como o nivel final de recuperacao: uma nova imagem com
 recovery independente ou raiz A/B permitira `Reinstalar sistema` localmente.
 A bancada atual pode ser regravada para desenvolver essa base. A primeira
 adocao exige regravacao; depois dela, reinstalacoes completas poderao ser
 guiadas no proprio aparelho. M11 nao bloqueia M10.
+
+## Estado curto C26/M10
+
+- backend de autorrevogacao esta promovido e versionado;
+- C26.5 foi aplicada por OTA na `prod16` e passou reset online, reset offline
+  com corte fisico, retomada da mesma operacao, revogacao, nova ativacao,
+  rollback, reaplicacao, desligamento e reinicio reais;
+- a placa terminou com player saudavel, config preservada, policy stable,
+  timer ativo, C26.5 current e C26.4 previous;
+- a `prod17` foi construida com C26.5 exata e passou validacao offline. Ela
+  ainda nao foi gravada nem validada em hardware;
+- pendente macro: auditoria final, flash/prova da `prod17` e promocao explicita
+  da nova baseline. Ate la, a referencia publica continua `prod15` + C25B +
+  C21.24.
 
 ## Repositorio de entrega
 
@@ -482,6 +496,13 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
   do zero e concluiu wizard, playback, OTA C25B, no-op, freeze `rc=44`, rollback
   ao fallback da imagem, restauracao, reboot e no-op pelos dois timers reais;
   a auditoria final promoveu a `prod15` como referencia atual;
+- a `prod16` e a bancada C26 atual. C26.5 chegou por OTA e completou a campanha
+  funcional de recuperacao local; isso nao promove a imagem candidata por
+  inferencia;
+- a `prod17` foi construida como sucessora de distribuicao com C26.5 embutida,
+  SHA256
+  `696bd671cfc819c51c8dcc977633d0a803fb2c986d09c3b21a2c6d099d27d00b`.
+  Validacao offline passou, mas flash e validacao live continuam obrigatorios;
 - manter como frente separada o RCA da ativacao que uma vez ficou em espera ate
   `F5`; o onboarding concluiu, mas a experiencia ainda nao e considerada
   encerrada por esse caso;
@@ -893,3 +914,8 @@ podemos escolher entre:
     atual passa a ser `prod15` + C25B + C21.24. O rate limit publico do GitHub
     fica como limite explicito para rollout concentrado, nao como falha oculta
     da imagem.
+18. M10/C26 chegou ao fechamento fisico na `prod16`: C26.5 passou reset
+    online/offline com corte, revogacao e reativacao, rollback/reaplicacao,
+    desligamento e reinicio. A `prod17` exata foi construida e validada
+    offline. Proximos marcos unicos: auditoria conclusiva, gravacao/prova da
+    `prod17` e promocao explicita da baseline.

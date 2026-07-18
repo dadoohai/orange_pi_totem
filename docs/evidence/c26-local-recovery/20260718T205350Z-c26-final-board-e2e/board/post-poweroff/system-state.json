@@ -1,0 +1,37 @@
+{
+  "boot_id": "c76ac293-d9ce-4c4f-a12c-a45ae19b433d",
+  "captured_at_utc": "2026-07-18T20:53:03.118982Z",
+  "config_contract": {
+    "api_key_present": true,
+    "api_token_id_present": true,
+    "environment_id_present": true,
+    "hwdec": null,
+    "mpv_path": null,
+    "orientation": null,
+    "rotation": null
+  },
+  "config_sha256": "706c030cf31d78dc390a33e05899b18f37e2bdaa3eefaf12085d8300b4b98432",
+  "last_settings_contract": {
+    "api_key_present": false,
+    "api_token_id_present": false,
+    "environment_id_present": true,
+    "hwdec": null,
+    "mpv_path": null,
+    "orientation": null,
+    "rotation": null
+  },
+  "last_settings_sha256": "df3a62d544d3582b470d2e9b694bf675a168f802d4371e6cb384ffc0234b297f",
+  "policy_sha256": "6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f",
+  "schema": "dadooh.c26.final_board_state.v1",
+  "sensitive_values_written": false,
+  "services": {
+    "player_active": "active",
+    "player_enabled": "enabled",
+    "player_restarts": "0",
+    "settings_active": "inactive",
+    "totem_update_timer_active": "active",
+    "totem_update_timer_enabled": "enabled"
+  },
+  "totem_core_current": "releases/c26.5-local-recovery-20260718-f1d0da9-actions",
+  "totem_core_previous": "releases/c26.4-local-recovery-20260718-3351084-actions"
+}
