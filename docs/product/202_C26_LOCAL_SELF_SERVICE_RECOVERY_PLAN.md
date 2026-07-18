@@ -83,10 +83,12 @@ preparado, invalido ou expirado segue o mesmo caminho seguro.
 Timer e servico reconciliador usam `DefaultDependencies=no` para sobreviver a
 uma transacao de shutdown iniciada mas nao concluida. O reconciliador so se
 desarma quando o estado anterior nao exigia player ativo ou quando o player
-esta comprovadamente ativo. Aceitar `start --no-block` nao basta: enquanto o
-servico ainda estiver inativo, falhar ou o enable anterior nao tiver sido
-restaurado, as tentativas continuam. O estado raro ativo-porem-desabilitado e
-restaurado sem habilitar o servico.
+esta comprovadamente ativo, em execucao e estavel por 300 segundos continuos,
+o mesmo intervalo de `StartLimitIntervalSec` do servico. Aceitar
+`start --no-block` ou uma amostra ativa nao basta: enquanto o servico estiver
+inativo, reiniciar, falhar, emitir estado invalido ou o enable anterior nao
+tiver sido restaurado, as tentativas continuam. O estado raro
+ativo-porem-desabilitado e restaurado sem habilitar o servico.
 
 ## O que a restauracao resolve
 

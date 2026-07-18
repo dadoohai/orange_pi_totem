@@ -477,8 +477,13 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
         complete_check = cleanup[complete_start:stop_start]
         self.assertIn('EXPIRE_TERMINAL_ACTION" = "true', complete_check)
         self.assertIn('[ "$PLAYER_RESTORE_START_RC" = "0" ]', complete_check)
-        self.assertIn("systemctl is-active --quiet kiosky-player.service", complete_check)
+        self.assertIn("player_service_stable", complete_check)
         self.assertNotIn("not_attempted", complete_check)
+        stable_check = function_body(cleanup, "player_service_stable", "terminal_action_reconcile_complete")
+        self.assertIn("systemctl is-active --quiet kiosky-player.service", stable_check)
+        self.assertIn("ActiveEnterTimestampMonotonic", stable_check)
+        self.assertIn("active_age_seconds >= minimum_seconds", stable_check)
+        self.assertIn('TERMINAL_ACTION_PLAYER_STABLE_SEC="300"', cleanup)
         restore = function_body(cleanup, "restore_product_state", "enqueue_product_reset_gc")
         self.assertLess(
             restore.index("systemctl is-active --quiet kiosky-player.service"),
@@ -575,6 +580,14 @@ printf '%s\\n' \"$*\" >> \"$FAKE_SYSTEMCTL_LOG\"
 case \"${1:-}\" in
   is-active) [ \"${FAKE_PLAYER_ACTIVE:-false}\" = true ] ;;
   is-enabled) [ \"${FAKE_PLAYER_ENABLED:-false}\" = true ] ;;
+  show)
+    [ \"${FAKE_SHOW_VALID:-true}\" = true ] || { printf 'invalid\\n'; exit 0; }
+    printf 'ActiveState=active\\n'
+    printf 'SubState=running\\n'
+    printf 'Result=success\\n'
+    printf 'ExecMainStatus=0\\n'
+    printf 'ActiveEnterTimestampMonotonic=%s\\n' \"${FAKE_ACTIVE_ENTER_US:-1}\"
+    ;;
   enable) exit \"${FAKE_ENABLE_RC:-0}\" ;;
   start) exit \"${FAKE_START_RC:-0}\" ;;
   *) exit 1 ;;
@@ -587,9 +600,14 @@ esac
             restore_probe = (
                 restore
                 + "\n"
+                + function_body(cleanup, "monotonic_uptime_seconds", "player_service_stable")
+                + "\n"
+                + stable_check
+                + "\n"
                 + complete_check
                 + r'''
 show_transition() { :; }
+monotonic_uptime_seconds() { printf '%s\n' "$FAKE_UPTIME_SEC"; }
 PLAYER_RESTORE_ATTEMPTED=false
 PLAYER_RESTORE_START_MODE=none
 PLAYER_RESTORE_START_RC=not_attempted
@@ -597,6 +615,7 @@ EXPIRE_TERMINAL_ACTION="$TEST_EXPIRE_TERMINAL_ACTION"
 TERMINAL_ACTION_RECONCILE_UNIT="$TEST_TERMINAL_ACTION_RECONCILE_UNIT"
 TERMINAL_ACTION_PLAYER_WAS_ACTIVE="$TEST_PLAYER_WAS_ACTIVE"
 TERMINAL_ACTION_PLAYER_WAS_ENABLED="$TEST_PLAYER_WAS_ENABLED"
+TERMINAL_ACTION_PLAYER_STABLE_SEC=300
 REQUEST_DIR="$TEST_ROOT"
 LOCK_DIR="$TEST_ROOT/missing-lock"
 TERMINAL_ACTION_MARKER="$TEST_ROOT/missing-marker"
@@ -615,6 +634,8 @@ terminal_action_reconcile_complete
                 terminal: bool = True,
                 start_rc: int = 0,
                 enable_rc: int = 0,
+                active_age_sec: int = 301,
+                show_valid: bool = True,
             ) -> tuple[subprocess.CompletedProcess[str], str]:
                 log = root / "systemctl.log"
                 log.unlink(missing_ok=True)
@@ -627,6 +648,9 @@ terminal_action_reconcile_complete
                         "FAKE_PLAYER_ENABLED": str(enabled).lower(),
                         "FAKE_START_RC": str(start_rc),
                         "FAKE_ENABLE_RC": str(enable_rc),
+                        "FAKE_UPTIME_SEC": "1000",
+                        "FAKE_ACTIVE_ENTER_US": str((1000 - active_age_sec) * 1_000_000),
+                        "FAKE_SHOW_VALID": str(show_valid).lower(),
                         "TEST_EXPIRE_TERMINAL_ACTION": str(terminal).lower(),
                         "TEST_TERMINAL_ACTION_RECONCILE_UNIT": (
                             "totem-terminal-action-reconcile-11111111222243338444555555555555"
@@ -653,6 +677,32 @@ terminal_action_reconcile_complete
             )
             self.assertEqual(active.returncode, 0)
             self.assertIn("already-active|0", active.stdout)
+
+            fresh, _ = run_restore_probe(
+                active=True,
+                enabled=False,
+                was_active=True,
+                was_enabled=False,
+                active_age_sec=10,
+            )
+            self.assertNotEqual(
+                fresh.returncode,
+                0,
+                "an active blip must keep the reconciler running until the player is stable",
+            )
+
+            malformed, _ = run_restore_probe(
+                active=True,
+                enabled=False,
+                was_active=True,
+                was_enabled=False,
+                show_valid=False,
+            )
+            self.assertNotEqual(
+                malformed.returncode,
+                0,
+                "invalid systemd stability data must fail closed",
+            )
 
             queued, queued_log = run_restore_probe(
                 active=False, enabled=False, was_active=True, was_enabled=False

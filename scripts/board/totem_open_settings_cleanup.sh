@@ -14,6 +14,8 @@ EXPIRE_TERMINAL_ACTION="false"
 TERMINAL_ACTION_RECONCILE_UNIT=""
 TERMINAL_ACTION_PLAYER_WAS_ACTIVE=""
 TERMINAL_ACTION_PLAYER_WAS_ENABLED=""
+# Match kiosky-player.service StartLimitIntervalSec before retiring this one-shot recovery.
+TERMINAL_ACTION_PLAYER_STABLE_SEC="300"
 UPDATE_LOCK_FILE="${TOTEM_UPDATE_LOCK_FILE:-/run/totem-updatectl.lock}"
 UPDATE_LOCK_TIMEOUT_SEC="${TOTEM_PRODUCT_RESET_UPDATE_LOCK_TIMEOUT_SEC:-5}"
 UPDATE_LOCK_STATE="not_checked"
@@ -304,6 +306,64 @@ raise SystemExit(0 if valid else 1)
 PY
 }
 
+monotonic_uptime_seconds() {
+  awk '{print $1}' /proc/uptime
+}
+
+player_service_stable() {
+  local properties=""
+  local uptime_seconds=""
+  systemctl is-active --quiet kiosky-player.service || return 1
+  properties="$(systemctl show kiosky-player.service \
+    --property=ActiveState \
+    --property=SubState \
+    --property=Result \
+    --property=ExecMainStatus \
+    --property=ActiveEnterTimestampMonotonic 2>/dev/null)" || return 1
+  uptime_seconds="$(monotonic_uptime_seconds 2>/dev/null)" || return 1
+  python3 - "$properties" "$uptime_seconds" "$TERMINAL_ACTION_PLAYER_STABLE_SEC" <<'PY'
+import math
+import sys
+
+raw_properties, raw_uptime, raw_minimum = sys.argv[1:]
+properties = {}
+for line in raw_properties.splitlines():
+    if "=" not in line:
+        raise SystemExit(1)
+    key, value = line.split("=", 1)
+    if not key or key in properties:
+        raise SystemExit(1)
+    properties[key] = value
+
+expected = {
+    "ActiveState": "active",
+    "SubState": "running",
+    "Result": "success",
+    "ExecMainStatus": "0",
+}
+if set(properties) != set(expected) | {"ActiveEnterTimestampMonotonic"}:
+    raise SystemExit(1)
+if any(properties.get(key) != value for key, value in expected.items()):
+    raise SystemExit(1)
+try:
+    active_enter_us = int(properties["ActiveEnterTimestampMonotonic"])
+    uptime_seconds = float(raw_uptime)
+    minimum_seconds = int(raw_minimum)
+except (KeyError, TypeError, ValueError):
+    raise SystemExit(1)
+if (
+    active_enter_us <= 0
+    or not math.isfinite(uptime_seconds)
+    or uptime_seconds < 0
+    or minimum_seconds < 1
+    or minimum_seconds > 300
+):
+    raise SystemExit(1)
+active_age_seconds = uptime_seconds - (active_enter_us / 1_000_000)
+raise SystemExit(0 if active_age_seconds >= minimum_seconds else 1)
+PY
+}
+
 terminal_action_reconcile_complete() {
   [ "$EXPIRE_TERMINAL_ACTION" = "true" ] || return 1
   [ -n "$TERMINAL_ACTION_RECONCILE_UNIT" ] || return 1
@@ -313,7 +373,7 @@ terminal_action_reconcile_complete() {
   [ "$PLAYER_RESTORE_START_RC" = "0" ] || return 1
   if [ "$TERMINAL_ACTION_PLAYER_WAS_ACTIVE" = "true" ] \
     || [ "$TERMINAL_ACTION_PLAYER_WAS_ENABLED" = "true" ]; then
-    systemctl is-active --quiet kiosky-player.service
+    player_service_stable
     return
   fi
   return 0
