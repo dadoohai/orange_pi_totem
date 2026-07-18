@@ -827,6 +827,13 @@ resume_product_reset_if_pending() {
   return 0
 }
 
+product_reset_recovery_can_open() {
+  case "${1:-}:${2:-}" in
+    55:keyboard_f10_hold|56:keyboard_f10_hold) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 totem_core_capabilities_valid() {
   python3 - "$@" <<'PY'
 import json
@@ -1385,6 +1392,10 @@ TERMINAL_ACTION_RECONCILE_UNIT=""
 schedule_terminal_action_reconcile() {
   local request_id="$1"
   local unit_suffix="${request_id//-/}"
+  local player_was_active="false"
+  local player_was_enabled="false"
+  [ "$INITIAL_SERVICE_ACTIVE" = "active" ] && player_was_active="true"
+  [ "$INITIAL_SERVICE_ENABLED" = "enabled" ] && player_was_enabled="true"
   TERMINAL_ACTION_RECONCILE_UNIT="totem-terminal-action-reconcile-${unit_suffix}"
   /usr/bin/systemd-run \
     --quiet \
@@ -1403,6 +1414,8 @@ schedule_terminal_action_reconcile() {
       --tty "$REMOTE_TTY" \
       --expire-terminal-action \
       --terminal-action-reconcile-unit "$TERMINAL_ACTION_RECONCILE_UNIT" \
+      --terminal-action-player-was-active "$player_was_active" \
+      --terminal-action-player-was-enabled "$player_was_enabled" \
       >/dev/null 2>&1
 }
 
@@ -2732,10 +2745,10 @@ if product_reset_pending; then
     c15_trace "product_reset_recovery_deferred rc=$product_reset_recovery_rc"
     show_transition product_reset_pending || true
     request_trigger="$(settings_request_trigger_type 2>/dev/null || true)"
-    if [ "$product_reset_recovery_rc" = "55" ] && [ "$request_trigger" = "keyboard_f10_hold" ]; then
+    if product_reset_recovery_can_open "$product_reset_recovery_rc" "$request_trigger"; then
       PRODUCT_RESET_RECOVERY_MODE="1"
       PRODUCT_RESET_AVAILABLE="0"
-      c17_4_trace "product_reset_network_repair_opening"
+      c17_4_trace "product_reset_recovery_opening" rc="$product_reset_recovery_rc"
     else
       exit "$product_reset_recovery_rc"
     fi

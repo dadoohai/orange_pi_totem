@@ -6645,10 +6645,10 @@ def product_reset_recovery_context_screen_svg(*, layout_rotation_deg: int) -> st
     return build_screen_svg(
         active_step=1,
         title="Restauracao pendente",
-        subtitle="Conecte um Wi-Fi para concluir.",
-        footer="Enter escolhe Wi-Fi | Esc sai",
+        subtitle="Ainda nao foi possivel concluir.",
+        footer="Enter revisa Wi-Fi e tenta | Esc sai",
         panel_title="Somente rede",
-        panel_items=["Os demais ajustes nao mudam."],
+        panel_items=["O conteudo anterior permanece protegido."],
         accent="#f59e0b",
         layout_rotation_deg=layout_rotation_deg,
         show_header_actions=False,

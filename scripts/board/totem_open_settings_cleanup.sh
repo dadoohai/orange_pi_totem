@@ -12,6 +12,8 @@ TERMINAL_ACTION_PENDING="false"
 TERMINAL_ACTION_MAX_AGE_SEC="120"
 EXPIRE_TERMINAL_ACTION="false"
 TERMINAL_ACTION_RECONCILE_UNIT=""
+TERMINAL_ACTION_PLAYER_WAS_ACTIVE=""
+TERMINAL_ACTION_PLAYER_WAS_ENABLED=""
 UPDATE_LOCK_FILE="${TOTEM_UPDATE_LOCK_FILE:-/run/totem-updatectl.lock}"
 UPDATE_LOCK_TIMEOUT_SEC="${TOTEM_PRODUCT_RESET_UPDATE_LOCK_TIMEOUT_SEC:-5}"
 UPDATE_LOCK_STATE="not_checked"
@@ -25,7 +27,7 @@ SELF_TEST="false"
 usage() {
   cat <<'USAGE'
 Usage:
-  totem_open_settings_cleanup.sh [--reason TEXT] [--request-dir /run/...] [--lock-dir /run/...] [--expire-terminal-action] [--terminal-action-reconcile-unit UNIT] [--self-test]
+  totem_open_settings_cleanup.sh [--reason TEXT] [--request-dir /run/...] [--lock-dir /run/...] [--expire-terminal-action] [--terminal-action-reconcile-unit UNIT] [--terminal-action-player-was-active BOOL] [--terminal-action-player-was-enabled BOOL] [--self-test]
 
 Best-effort cleanup for the visual Settings session. It removes only the
 public request/lock state, kills leftover visual setup processes, and restores
@@ -63,6 +65,14 @@ while [ "$#" -gt 0 ]; do
       shift
       TERMINAL_ACTION_RECONCILE_UNIT="${1:-}"
       ;;
+    --terminal-action-player-was-active)
+      shift
+      TERMINAL_ACTION_PLAYER_WAS_ACTIVE="${1:-}"
+      ;;
+    --terminal-action-player-was-enabled)
+      shift
+      TERMINAL_ACTION_PLAYER_WAS_ENABLED="${1:-}"
+      ;;
     --self-test)
       SELF_TEST="true"
       ;;
@@ -96,6 +106,17 @@ esac
 if [ -n "$TERMINAL_ACTION_RECONCILE_UNIT" ] \
   && ! [[ "$TERMINAL_ACTION_RECONCILE_UNIT" =~ ^totem-terminal-action-reconcile-[0-9a-f]{32}$ ]]; then
   echo "error: invalid --terminal-action-reconcile-unit" >&2
+  exit 2
+fi
+if [ -n "$TERMINAL_ACTION_RECONCILE_UNIT" ]; then
+  case "$TERMINAL_ACTION_PLAYER_WAS_ACTIVE:$TERMINAL_ACTION_PLAYER_WAS_ENABLED" in
+    true:true|true:false|false:true|false:false) ;;
+    *) echo "error: terminal-action player state must use canonical booleans" >&2; exit 2 ;;
+  esac
+elif [ "$EXPIRE_TERMINAL_ACTION" = "true" ] \
+  || [ -n "$TERMINAL_ACTION_PLAYER_WAS_ACTIVE" ] \
+  || [ -n "$TERMINAL_ACTION_PLAYER_WAS_ENABLED" ]; then
+  echo "error: terminal-action reconciliation arguments are incomplete" >&2
   exit 2
 fi
 case "$UPDATE_LOCK_TIMEOUT_SEC" in
@@ -289,7 +310,13 @@ terminal_action_reconcile_complete() {
   [ ! -e "$LOCK_DIR" ] && [ ! -L "$LOCK_DIR" ] || return 1
   [ ! -e "$REQUEST_DIR/request.json" ] && [ ! -L "$REQUEST_DIR/request.json" ] || return 1
   [ ! -e "$TERMINAL_ACTION_MARKER" ] && [ ! -L "$TERMINAL_ACTION_MARKER" ] || return 1
-  [ "$PLAYER_RESTORE_START_RC" = "0" ]
+  [ "$PLAYER_RESTORE_START_RC" = "0" ] || return 1
+  if [ "$TERMINAL_ACTION_PLAYER_WAS_ACTIVE" = "true" ] \
+    || [ "$TERMINAL_ACTION_PLAYER_WAS_ENABLED" = "true" ]; then
+    systemctl is-active --quiet kiosky-player.service
+    return
+  fi
+  return 0
 }
 
 stop_terminal_action_reconcile() {
@@ -423,10 +450,27 @@ restore_product_state() {
     PLAYER_RESTORE_START_RC="0"
     return 0
   fi
-  if ! systemctl is-enabled kiosky-player.service >/dev/null 2>&1; then
-    PLAYER_RESTORE_START_MODE="service-not-enabled"
-    PLAYER_RESTORE_START_RC="1"
-    return 1
+  if [ -n "$TERMINAL_ACTION_RECONCILE_UNIT" ]; then
+    if [ "$TERMINAL_ACTION_PLAYER_WAS_ENABLED" = "true" ]; then
+      PLAYER_RESTORE_ATTEMPTED="true"
+      PLAYER_RESTORE_START_MODE="enable"
+      if /usr/bin/timeout -k 1s 5s systemctl enable kiosky-player.service >/dev/null 2>&1; then
+        :
+      else
+        PLAYER_RESTORE_START_RC="$?"
+        return "$PLAYER_RESTORE_START_RC"
+      fi
+    fi
+    if [ "$TERMINAL_ACTION_PLAYER_WAS_ACTIVE" != "true" ] \
+      && [ "$TERMINAL_ACTION_PLAYER_WAS_ENABLED" != "true" ]; then
+      PLAYER_RESTORE_START_MODE="previously-inactive"
+      PLAYER_RESTORE_START_RC="0"
+      return 0
+    fi
+  elif ! systemctl is-enabled kiosky-player.service >/dev/null 2>&1; then
+      PLAYER_RESTORE_START_MODE="service-not-enabled"
+      PLAYER_RESTORE_START_RC="1"
+      return 1
   fi
   if [ -f /data/config/config.json ]; then
     show_transition player || true

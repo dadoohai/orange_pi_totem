@@ -8,6 +8,7 @@ import hashlib
 import importlib.util
 import os
 import pathlib
+import shlex
 import subprocess
 import tarfile
 import tempfile
@@ -453,6 +454,8 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
         self.assertIn("--timer-property=DefaultDependencies=no", reconcile)
         self.assertIn("--expire-terminal-action", reconcile)
         self.assertIn("--terminal-action-reconcile-unit", reconcile)
+        self.assertIn("--terminal-action-player-was-active", reconcile)
+        self.assertIn("--terminal-action-player-was-enabled", reconcile)
         self.assertIn("/opt/totem/bin/totem_open_settings_cleanup.sh", reconcile)
         action_start = session.index("    restart|poweroff)")
         action_block = session[action_start : session.index("    product_reset)", action_start)]
@@ -474,6 +477,7 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
         complete_check = cleanup[complete_start:stop_start]
         self.assertIn('EXPIRE_TERMINAL_ACTION" = "true', complete_check)
         self.assertIn('[ "$PLAYER_RESTORE_START_RC" = "0" ]', complete_check)
+        self.assertIn("systemctl is-active --quiet kiosky-player.service", complete_check)
         self.assertNotIn("not_attempted", complete_check)
         restore = function_body(cleanup, "restore_product_state", "enqueue_product_reset_gc")
         self.assertLess(
@@ -482,6 +486,7 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
         )
         self.assertIn('PLAYER_RESTORE_START_MODE="already-active"', restore)
         self.assertIn('PLAYER_RESTORE_START_MODE="service-not-enabled"', restore)
+        self.assertIn('PLAYER_RESTORE_START_MODE="previously-inactive"', restore)
         self.assertIn('PLAYER_RESTORE_START_RC="1"', restore)
         normal_cleanup = cleanup[cleanup.index('rm -f "$REQUEST_DIR/request.json"') :]
         restore_index = normal_cleanup.index("restore_product_state")
@@ -561,26 +566,37 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
                 "a stale accepted action must restore the normal cleanup path",
             )
 
+            fake_bin = root / "fake-bin"
+            fake_bin.mkdir()
+            fake_systemctl = fake_bin / "systemctl"
+            fake_systemctl.write_text(
+                """#!/bin/sh
+printf '%s\\n' \"$*\" >> \"$FAKE_SYSTEMCTL_LOG\"
+case \"${1:-}\" in
+  is-active) [ \"${FAKE_PLAYER_ACTIVE:-false}\" = true ] ;;
+  is-enabled) [ \"${FAKE_PLAYER_ENABLED:-false}\" = true ] ;;
+  enable) exit \"${FAKE_ENABLE_RC:-0}\" ;;
+  start) exit \"${FAKE_START_RC:-0}\" ;;
+  *) exit 1 ;;
+esac
+""",
+                encoding="utf-8",
+            )
+            fake_systemctl.chmod(0o755)
+
             restore_probe = (
                 restore
                 + "\n"
                 + complete_check
                 + r'''
-systemctl() {
-  case "$1:$FAKE_PLAYER_STATE" in
-    is-active:active) return 0 ;;
-    is-active:*) return 3 ;;
-    is-enabled:enabled) return 0 ;;
-    is-enabled:*) return 1 ;;
-    *) return 1 ;;
-  esac
-}
 show_transition() { :; }
 PLAYER_RESTORE_ATTEMPTED=false
 PLAYER_RESTORE_START_MODE=none
 PLAYER_RESTORE_START_RC=not_attempted
-EXPIRE_TERMINAL_ACTION=true
-TERMINAL_ACTION_RECONCILE_UNIT=totem-terminal-action-reconcile-11111111222243338444555555555555
+EXPIRE_TERMINAL_ACTION="$TEST_EXPIRE_TERMINAL_ACTION"
+TERMINAL_ACTION_RECONCILE_UNIT="$TEST_TERMINAL_ACTION_RECONCILE_UNIT"
+TERMINAL_ACTION_PLAYER_WAS_ACTIVE="$TEST_PLAYER_WAS_ACTIVE"
+TERMINAL_ACTION_PLAYER_WAS_ENABLED="$TEST_PLAYER_WAS_ENABLED"
 REQUEST_DIR="$TEST_ROOT"
 LOCK_DIR="$TEST_ROOT/missing-lock"
 TERMINAL_ACTION_MARKER="$TEST_ROOT/missing-marker"
@@ -590,10 +606,39 @@ terminal_action_reconcile_complete
 '''
             )
 
-            def run_restore_probe(state: str) -> subprocess.CompletedProcess[str]:
+            def run_restore_probe(
+                *,
+                active: bool,
+                enabled: bool,
+                was_active: bool,
+                was_enabled: bool,
+                terminal: bool = True,
+                start_rc: int = 0,
+                enable_rc: int = 0,
+            ) -> tuple[subprocess.CompletedProcess[str], str]:
+                log = root / "systemctl.log"
+                log.unlink(missing_ok=True)
                 probe_env = dict(os.environ)
-                probe_env.update({"FAKE_PLAYER_STATE": state, "TEST_ROOT": str(root)})
-                return subprocess.run(
+                probe_env.update(
+                    {
+                        "PATH": f"{fake_bin}:{probe_env['PATH']}",
+                        "FAKE_SYSTEMCTL_LOG": str(log),
+                        "FAKE_PLAYER_ACTIVE": str(active).lower(),
+                        "FAKE_PLAYER_ENABLED": str(enabled).lower(),
+                        "FAKE_START_RC": str(start_rc),
+                        "FAKE_ENABLE_RC": str(enable_rc),
+                        "TEST_EXPIRE_TERMINAL_ACTION": str(terminal).lower(),
+                        "TEST_TERMINAL_ACTION_RECONCILE_UNIT": (
+                            "totem-terminal-action-reconcile-11111111222243338444555555555555"
+                            if terminal
+                            else ""
+                        ),
+                        "TEST_PLAYER_WAS_ACTIVE": str(was_active).lower() if terminal else "",
+                        "TEST_PLAYER_WAS_ENABLED": str(was_enabled).lower() if terminal else "",
+                        "TEST_ROOT": str(root),
+                    }
+                )
+                completed = subprocess.run(
                     ["bash", "-c", restore_probe],
                     env=probe_env,
                     check=False,
@@ -601,15 +646,92 @@ terminal_action_reconcile_complete
                     text=True,
                     timeout=15,
                 )
+                return completed, log.read_text(encoding="utf-8") if log.exists() else ""
 
-            active = run_restore_probe("active")
+            active, _ = run_restore_probe(
+                active=True, enabled=False, was_active=True, was_enabled=False
+            )
             self.assertEqual(active.returncode, 0)
             self.assertIn("already-active|0", active.stdout)
-            disabled = run_restore_probe("disabled")
+
+            queued, queued_log = run_restore_probe(
+                active=False, enabled=False, was_active=True, was_enabled=False
+            )
+            self.assertNotEqual(queued.returncode, 0)
+            self.assertIn("no-block|0", queued.stdout)
+            self.assertIn("start --no-block kiosky-player.service", queued_log)
+            self.assertNotIn("enable kiosky-player.service", queued_log)
+
+            previously_inactive, _ = run_restore_probe(
+                active=False, enabled=False, was_active=False, was_enabled=False
+            )
+            self.assertEqual(previously_inactive.returncode, 0)
+            self.assertIn("previously-inactive|0", previously_inactive.stdout)
+
+            failed_start, _ = run_restore_probe(
+                active=False,
+                enabled=False,
+                was_active=True,
+                was_enabled=False,
+                start_rc=5,
+            )
+            self.assertNotEqual(failed_start.returncode, 0)
+            self.assertIn("no-block|5", failed_start.stdout)
+
+            failed_enable, _ = run_restore_probe(
+                active=False,
+                enabled=False,
+                was_active=False,
+                was_enabled=True,
+                enable_rc=6,
+            )
+            self.assertNotEqual(failed_enable.returncode, 0)
+            self.assertIn("enable|6", failed_enable.stdout)
+
+            disabled, _ = run_restore_probe(
+                active=False,
+                enabled=False,
+                was_active=False,
+                was_enabled=False,
+                terminal=False,
+            )
             self.assertNotEqual(disabled.returncode, 0)
             self.assertIn("service-not-enabled|1", disabled.stdout)
 
     def test_persistent_reset_can_recreate_its_runtime_request(self) -> None:
+        session = SESSION_SCRIPT.read_text(encoding="utf-8")
+        recovery_decision = function_body(
+            session,
+            "product_reset_recovery_can_open",
+            "totem_core_capabilities_valid",
+        )
+
+        def recovery_can_open(rc: int, trigger: str) -> bool:
+            return (
+                subprocess.run(
+                    [
+                        "bash",
+                        "-c",
+                        recovery_decision
+                        + f"\nproduct_reset_recovery_can_open {rc} {shlex.quote(trigger)}",
+                    ],
+                    check=False,
+                    timeout=15,
+                ).returncode
+                == 0
+            )
+
+        self.assertTrue(recovery_can_open(55, "keyboard_f10_hold"))
+        self.assertTrue(recovery_can_open(56, "keyboard_f10_hold"))
+        self.assertFalse(recovery_can_open(57, "keyboard_f10_hold"))
+        self.assertFalse(recovery_can_open(56, "product_reset_resume"))
+        recovery_main = session[
+            session.index("if product_reset_pending;", session.index('c15_trace "before_show_transition_2"')) :
+            session.index('if product_reset_guard_required', session.index('c15_trace "before_show_transition_2"'))
+        ]
+        self.assertIn("product_reset_recovery_can_open", recovery_main)
+        self.assertIn('PRODUCT_RESET_AVAILABLE="0"', recovery_main)
+
         trigger = TRIGGER_SCRIPT.read_text(encoding="utf-8")
         self.assertIn('write_request(request_dir, "product_reset_resume")', trigger)
         self.assertIn('product_reset_automatic_resume_action("revocation", None, "retryable") == "retry"', trigger)

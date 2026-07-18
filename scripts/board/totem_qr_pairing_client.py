@@ -392,7 +392,7 @@ def product_reset_self_revoke(
     except ProductResetRetryableError:
         return {"status": "retryable", "reason": "network"}
     except ProductResetTerminalError as exc:
-        return {"status": "terminal", "reason": str(exc)}
+        return {"status": "retryable", "reason": str(exc)}
 
     if product_reset_http_is_retryable(status):
         return {"status": "retryable", "reason": "http"}
@@ -403,15 +403,15 @@ def product_reset_self_revoke(
         response = decode_product_reset_response_body(raw_response)
         response_operation_id = str(response.get("operation_id") or "").strip()
         if response_operation_id != credential["operation_id"]:
-            return {"status": "terminal", "reason": "operation_id_mismatch"}
+            return {"status": "retryable", "reason": "operation_id_mismatch"}
         result = str(response.get("status") or "").strip()
         if result not in PRODUCT_RESET_CONFIRMED_RESULTS:
-            return {"status": "terminal", "reason": "status_malformed"}
+            return {"status": "retryable", "reason": "status_malformed"}
         revoked = response.get("revoked")
         if not isinstance(revoked, bool) or revoked != (result == "revoked"):
-            return {"status": "terminal", "reason": "revoked_malformed"}
+            return {"status": "retryable", "reason": "revoked_malformed"}
     except ProductResetTerminalError as exc:
-        return {"status": "terminal", "reason": str(exc)}
+        return {"status": "retryable", "reason": str(exc)}
 
     return {"status": "confirmed", "result": result, "operation_id": credential["operation_id"]}
 
@@ -809,22 +809,26 @@ def run_product_reset_self_revoke_self_test(root: pathlib.Path) -> None:
 
     for status in (400, 401, 403, 404, 409, 422, 302):
         assert_product_reset_outcome(credential_path, (status, {}), "terminal")
-    assert_product_reset_outcome(credential_path, (200, b"{"), "terminal")
+    assert_product_reset_outcome(credential_path, (200, b"{"), "retryable")
     assert_product_reset_outcome(
         credential_path,
         (200, {"operation_id": "323e4567-e89b-42d3-a456-426614174002", "status": "revoked", "revoked": True}),
-        "terminal",
+        "retryable",
     )
     assert_product_reset_outcome(
         credential_path,
         (200, {"operation_id": credential["operation_id"], "status": "pending", "revoked": False}),
-        "terminal",
+        "retryable",
     )
     assert_product_reset_outcome(
         credential_path,
         (200, {"operation_id": credential["operation_id"], "status": "revoked", "revoked": False}),
-        "terminal",
+        "retryable",
     )
+    oversized = FakeProductResetTransport([ProductResetTerminalError("response_too_large")])
+    assert product_reset_self_revoke(
+        str(credential_path), timeout_sec=2.0, transport=oversized
+    )["status"] == "retryable"
 
     loaded = load_product_reset_pending_credential(str(credential_path))
     assert loaded["operation_id"] == credential["operation_id"]

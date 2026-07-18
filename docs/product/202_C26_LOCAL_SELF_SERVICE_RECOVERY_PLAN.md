@@ -82,8 +82,11 @@ cada 30 segundos e desarma somente depois de concluir a limpeza; marcador
 preparado, invalido ou expirado segue o mesmo caminho seguro.
 Timer e servico reconciliador usam `DefaultDependencies=no` para sobreviver a
 uma transacao de shutdown iniciada mas nao concluida. O reconciliador so se
-desarma quando o player ja esta ativo ou seu start foi aceito; servico
-desabilitado ou start falho mantem as novas tentativas.
+desarma quando o estado anterior nao exigia player ativo ou quando o player
+esta comprovadamente ativo. Aceitar `start --no-block` nao basta: enquanto o
+servico ainda estiver inativo, falhar ou o enable anterior nao tiver sido
+restaurado, as tentativas continuam. O estado raro ativo-porem-desabilitado e
+restaurado sem habilitar o servico.
 
 ## O que a restauracao resolve
 
@@ -249,6 +252,16 @@ o mesmo `operation_id`. O usuario pode revisar a rede, mas uma nova ativacao
 fica bloqueada ate o servidor confirmar o desvinculo ou declarar explicitamente
 que a chave era legada e nao representava uma ativacao do aparelho. Isso evita
 dois donos ou dois estados ativos por causa de uma resposta perdida.
+
+Resposta 2xx grande, malformada ou semanticamente divergente e resultado
+remoto indeterminado, nunca rejeicao definitiva: o aparelho preserva a
+transacao e repete o mesmo `operation_id`. Um HTTP rejeitado sem envelope
+confirmador interrompe apenas a repeticao automatica; ele nao finaliza nem
+restaura dados antigos. Segurar `F10` abre a superficie restrita de recuperacao,
+mantem todas as demais acoes indisponiveis e permite revisar a rede e pedir uma
+nova tentativa explicita. Erro de contrato persistente continua fail-closed e
+exige correcao do backend ou suporte, pois nao existe alternativa local segura
+que possa presumir o resultado remoto.
 
 ## Entrega incremental
 
