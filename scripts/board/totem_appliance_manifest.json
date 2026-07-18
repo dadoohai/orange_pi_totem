@@ -588,6 +588,13 @@
       "active_expected_on_dev": "inactive"
     },
     {
+      "source": "scripts/board/totem-product-reset-gc.service",
+      "target": "/etc/systemd/system/totem-product-reset-gc.service",
+      "enabled": false,
+      "enabled_state": "static",
+      "active_expected_on_dev": "inactive"
+    },
+    {
       "source": "scripts/board/totem-settings-trigger.service",
       "target": "/etc/systemd/system/totem-settings-trigger.service",
       "enabled": true,

@@ -37,7 +37,7 @@ TMP_ROOT = pathlib.Path("/tmp").resolve()
 PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
 REQUIRED_PRIVATE_FIELDS = ("api_key", "api_url")
-OPTIONAL_PRIVATE_FIELDS = ("station_id", "environment_id")
+OPTIONAL_PRIVATE_FIELDS = ("station_id", "environment_id", "api_token_id")
 PRIVATE_METADATA_FIELDS = {
     "setup_source",
     "setup_interface",
@@ -272,6 +272,8 @@ def build_private_candidate(
     candidate["api_key"] = private_values["api_key"]
     if private_values.get("station_id"):
         candidate["station_id"] = private_values["station_id"]
+    if private_values.get("api_token_id"):
+        candidate["api_token_id"] = private_values["api_token_id"]
     candidate["setup_source"] = "c10.0-visual-setup-writer-handoff"
     candidate["setup_private_values_source"] = private_values_source
     candidate["setup_writer_handoff_source"] = "visual_setup_candidate"
@@ -574,6 +576,7 @@ def run_self_test() -> None:
                 "api_key": "REALISHVALUEABC1234567890",
                 "station_id": "STATION-C10-HANDOFF-SMOKE",
                 "environment_id": "IGNORED-BY-C10-HANDOFF",
+                "api_token_id": "33333333-4444-4555-8666-777777777777",
             },
         )
         assert_true(stat.S_IMODE(private_values_path.parent.stat().st_mode) == 0o700, "private dir should be 0700")
@@ -643,6 +646,10 @@ def run_self_test() -> None:
         assert_true(private_candidate["environment_id"] == "ENV-C10-HANDOFF-SMOKE", "wizard env should be preserved")
         assert_true(private_candidate["rotation_deg"] == 90, "rotation should be preserved")
         assert_true(private_candidate["api_key"] == "REALISHVALUEABC1234567890", "credential should be injected")
+        assert_true(
+            private_candidate["api_token_id"] == "33333333-4444-4555-8666-777777777777",
+            "activation token identity should survive the private handoff",
+        )
         assert_true(stat.S_IMODE((out_dir / PRIVATE_CANDIDATE_FILENAME).stat().st_mode) == 0o600, "private candidate should be 0600")
         assert_sanitized_public_artifacts(out_dir, build_source_candidate(), validate_private_values(load_json_object(private_values_path, "private values")))
     finally:

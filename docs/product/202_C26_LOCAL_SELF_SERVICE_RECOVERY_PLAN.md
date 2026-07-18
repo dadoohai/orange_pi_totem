@@ -1,7 +1,7 @@
 # 202 - C26 - Recuperacao local pelo usuario
 
-Status: decisao refinada e aprovada para implementacao. Nao declara que os
-novos controles ja existem.
+Status: implementacao local C26A/C26B em validacao. Nenhum backend, pacote ou
+controle foi promovido; as acoes continuam indisponiveis na placa.
 
 Data: 2026-07-17
 
@@ -33,12 +33,13 @@ uma segunda imagem completa. Portanto, a acao local e uma restauracao do
 produto, nao uma reinstalacao do sistema operacional nem sanitizacao completa
 para revenda.
 
-Ela e viavel em `totem-core` sobre a `prod15`, junto de um endpoint backend de
-autorrevogacao. Nao exige nova imagem nem novo unit systemd porque o wizard, a
-sessao F10 e o firstboot gate existentes ja pertencem ao pacote permitido.
-Toda a implementacao local deve permanecer nesses arquivos ja allowlisted;
-adicionar novo binario/helper, unit, sudoers/polkit ou alterar o updater volta a
-exigir nova imagem.
+O motor e a experiencia sao viaveis em `totem-core`, junto de um endpoint
+backend de autorrevogacao. A auditoria executavel, porem, confirmou uma corrida
+no boot da `prod15`: os agentes OTA podiam disputar o lock antes de o firstboot
+criar o guard. A C26A pode chegar invisivel por OTA, mas a C26B so pode ser
+exposta depois de uma imagem sucessora incorporar a ordem systemd explicita.
+Nao adicionar novo helper, sudoers/polkit nem permitir que `totem-core` altere
+units por fora da imagem.
 
 ## Experiencia escolhida
 
@@ -61,7 +62,7 @@ faz isso sem apagar a configuracao ativa antes da conclusao.
 
 Copy da restauracao:
 
-- descricao: `Desvincula este totem e volta ao inicio da configuracao.`
+- descricao: `Desvincula e volta ao inicio.`
 - titulo: `Restaurar para configuracao inicial?`
 - aviso: `O vinculo, a configuracao, o conteudo baixado e o estado local serao
   apagados. Wi-Fi, orientacao da tela, software e atualizacoes serao mantidos.`
@@ -70,6 +71,14 @@ Copy da restauracao:
 `Esc` ou `Voltar` retorna ao wizard ou a exibicao sem executar acao. Nenhuma
 acao mutante recebe foco inicial e repeticao de tecla nao pode dispara-la duas
 vezes.
+
+Reiniciar e desligar usam confirmacao em duas fases. O shell grava `prepared`,
+programa uma reconciliacao monotonicamente atrasada, pede a acao ao systemd e
+somente depois da aceitacao grava `accepted`. O cleanup preserva a sessao
+apenas para um `accepted` integro e recente. Se a acao aceita nao ocorrer, o
+reconciliador forcara a restauracao do player e dos locks depois de 125
+segundos; marcador preparado, invalido ou expirado segue o mesmo caminho
+seguro.
 
 ## O que a restauracao resolve
 
@@ -124,9 +133,25 @@ A restauracao precisa de `POST /totem-auth/self-revocations` com estas regras:
 - a operacao e a revogacao sao gravadas na mesma transacao;
 - repetir o mesmo token e `operation_id` devolve exatamente o resultado ja
   salvo, sem nova mutacao;
+- a identidade de replay expira 90 dias depois da criacao; repetir a operacao
+  nao estende esse prazo. A remocao fisica e oportunista na proxima operacao
+  valida e limitada por lote; sem trafego, linhas antigas podem permanecer,
+  mas nao ha novas linhas nem crescimento;
 - token revogado com outro `operation_id` falha; payload diferente com o mesmo
   ID falha;
 - uma ativacao antiga nunca pode revogar uma ativacao criada depois.
+- hashes de token duplicados sao ambiguos e falham fechados, mesmo quando o
+  cliente apresenta um ID;
+- ativacoes antigas sem fingerprint persistido so podem revogar o proprio token
+  quando apresentam seu `api_token_id` exato;
+- `not_device_activation` nao grava uma operacao, pois nao ha mutacao para
+  tornar idempotente; isso impede crescimento ilimitado por chaves legadas.
+
+A migracao e cirurgica e separada do journal Drizzle historico. Ela aceita
+somente schema-base compativel e alvo totalmente ausente ou exatamente
+completo. Estado parcial, trigger inesperado, colisao global de indice,
+constraint divergente ou tabela-base insuficiente falham sem tentar reparo.
+Criacao e pos-validacao precisam pertencer a uma unica transacao atomica.
 
 Nao usar revogacao ampla somente por fingerprint. Isso daria a uma credencial
 antiga poder para interromper o novo dono. A restauracao remove tambem os
@@ -142,30 +167,76 @@ Sequencia:
 
 1. adquirir os locks existentes de settings e update e parar o player;
 2. validar caminhos fixos, ownership e ausencia de symlinks inesperados;
-3. persistir credencial pendente, `operation_id` e intent com permissoes
-   privadas, escrita atomica e `fsync`;
-4. bloquear primeiro a configuracao antiga, movendo `/data/config` para um
+3. capturar a credencial em memoria e persistir primeiro `operation_id` e
+   intent privado, com escrita atomica e `fsync`; este e o primeiro ponto em
+   que o boot assume a retomada;
+4. persistir a credencial pendente; se a energia cair antes disso, o boot
+   recaptura a configuracao ainda intacta usando o mesmo intent;
+5. gravar no journal a invalidacao do seed privado de homologacao, persistir um
+   tombstone sem segredo e remover o seed com `unlink` e `fsync` antes de
+   continuar;
+6. bloquear primeiro a configuracao antiga, movendo `/data/config` para um
    destino inerte e recriando o diretorio vazio com ownership correto;
-5. mover apenas os dominios allowlisted para limpeza e recriar seus diretorios;
-6. tentar a autorrevogacao e, quando confirmada, apagar a credencial pendente;
-7. abrir o wizard no inicio somente depois de concluir o desvinculo.
+7. mover apenas os dominios allowlisted para limpeza e recriar seus diretorios;
+8. tentar a autorrevogacao e, quando confirmada, apagar a credencial pendente;
+9. abrir o wizard no inicio somente depois de concluir o desvinculo;
+10. depois de uma nova configuracao valida, gravar `gc-pending.json`, liberar o
+   onboarding e restaurar o player antes de apagar cache e midias antigas.
 
 Depois que o intent existe, a configuracao antiga nunca volta a tocar. Se a
-energia cair, o `totem-firstboot-gate.service` existente conclui apenas os
-moves/recreates locais curtos antes do player. Exclusao volumosa ocorre fora do
-caminho critico de boot, em um unico destino limitado para nao acumular lixo.
+energia cair, o `totem-firstboot-gate.service` existente conclui os
+moves/recreates e a sanitizacao limitada da configuracao antes do player. A
+exclusao volumosa de cache, midias e estado operacional nunca ocorre no
+finalize, no onboarding ou no firstboot: um oneshot de baixa prioridade apaga
+somente o UUID registrado, depois que o player foi iniciado. O marcador
+permanece ate `rmtree` e `fsync` terminarem; reboot ou retorno do player tenta
+novamente. Outro reset fica bloqueado antes do novo intent, mantendo no maximo
+um destino pendente.
+
+O tombstone `homologation-seed-disabled.json` e privado, atomico, sincronizado e
+permanece depois do GC. Ele registra apenas schema, instante e primeiro
+`operation_id`; o writer valida forma, ownership e modo do seed, mas nunca le ou
+copia seu conteudo para o intent, graveyard ou logs. Cortes antes/depois do
+tombstone e do `unlink` retomam pelo mesmo journal. Seed reaparecido, tombstone
+ausente/invalido falham fechados antes do finalize, onboarding ou nova escrita
+de configuracao. Durante uma retomada ainda mutavel, policy antiga que selecione
+o seed e removida e rebaixada para `candidate-only`; depois do tombstone, a
+mesma selecao e recusada.
+
+Antes de cada `rmtree`, o writer interpreta `/proc/self/mountinfo` e recusa o
+graveyard se ele proprio ou qualquer descendente for mountpoint. Entrada
+malformada ou ilegivel tambem falha fechada. Assim a remocao recursiva nao
+atravessa um filesystem montado internamente; permanece apenas a corrida de um
+ator privilegiado montar algo entre a verificacao e a chamada de remocao.
 
 Enquanto intent ou revogacao estiver pendente, o motor mantem o guard confiavel
 da sessao de settings. Em cada boot, o firstboot gate o recria imediatamente.
 O updater da `prod15` ja recusa apply e rollback de `totem-core` quando esse
 guard ou a sessao F10 esta ativo; portanto, depois do guard, auto-pull e
-operacao manual apenas adiam sem exigir mudanca do updater ou da policy.
+operacao manual apenas adiam. A imagem sucessora tambem bloqueia apply e
+rollback enquanto `gc-pending.json` ou um graveyard nao vazio existir, para que
+nenhuma versao sem esse protocolo entre durante a limpeza.
 
 Na `prod15`, os agentes automaticos usam `OnBootSec` de 10 e 20 minutos, mas o
-unit de firstboot nao declara `Before=` contra esses agentes. A release precisa
-provar no boot graph e em placa que o guard sempre aparece antes da primeira
-tentativa de update. Se essa condicao nao fechar, a acao nao e exposta ate uma
-imagem futura adicionar a ordem systemd explicita.
+unit de firstboot nao declara `Before=` contra esses agentes. A condicao nao
+fechou por analise do boot graph. A imagem sucessora deve embutir o unit com
+ordem explicita antes de `totem-update-agent.service` e
+`totem-player-runtime-update-agent.service`. Em runtime, C26B consulta o grafo
+carregado e permanece escondida se qualquer uma dessas arestas estiver ausente.
+Ela tambem exige que o unit esteja habilitado e tenha terminado com sucesso e
+status zero, alem de um marcador `/run` ligado ao `boot_id` atual. O marcador
+e gravado como ultima acao do firstboot e desaparece naturalmente no reboot.
+
+O mesmo gate de Reiniciar, Desligar e Restaurar exige ainda o contrato fixo da
+imagem `c26-product-reset-gc-static-v1`. O updater da imagem comprova que
+`totem-product-reset-gc.service` e o arquivo root-owned, modo 0644 e hash exato
+embutido; que o systemd o carregou do fragmento esperado como `static`, sem
+`NeedDaemonReload`; e que `kiosky-player.service` possui `Wants=` para ele. O
+pacote C26B declara esse feature em `requires.updater_features`, enquanto C26A
+nao declara: updater antigo rejeita o feature desconhecido, updater novo rejeita
+imagem antiga, unit ausente/divergente ou wiring incorreto. A mesma prova roda
+na validacao do manifesto, no health sequencial de `totem-actions-v1` e ao
+renderizar ou executar a acao.
 
 Rede nao e requisito de boot. Se estiver offline, o totem preserva o Wi-Fi,
 mostra `Restauracao pendente. Mantenha o totem conectado.` e continua tentando
@@ -186,15 +257,20 @@ dois donos ou dois estados ativos por causa de uma resposta perdida.
    ao onboarding; reboot e poweroff usam o mesmo shell pai protegido. A acao
    so aparece quando `current` e `previous` declaram suporte a
    `product-reset-v1`, deixando um rollback imediato ainda capaz de retomar a
-   operacao.
-4. **Placa e OTA:** dry-run, apply de C26A e C26B, reset online, reset
+   operacao. Tambem exige o boot graph seguro carregado, portanto fica escondida
+   na `prod15`.
+4. **Imagem sucessora:** embutir e validar o firstboot unit ordenado antes dos
+   dois agentes OTA, seu symlink de enable, a capacidade `product-reset-v1` e
+   o oneshot de limpeza puxado pelo player sem prender `multi-user.target`;
+   somente essa imagem habilita as acoes.
+5. **Placa e OTA:** dry-run, apply de C26A e C26B, reset online, reset
    interrompido/offline, reboot, rollback para C26A e reaplicacao.
 
 Apply ou rollback de `totem-core` fica indisponivel enquanto houver
-intent/revogacao pendente por meio do guard de settings que o updater atual ja
-enforca. O guard so e removido depois da conclusao. Isso impede que timer ou
-operador troque para codigo sem o contrato no meio da operacao sem criar uma
-segunda politica de update.
+intent/revogacao, marcador de limpeza ou graveyard nao vazio. O guard de
+settings cobre a transacao com o usuario; o updater fixo da imagem cobre a
+limpeza posterior. Isso impede que timer ou operador troque para codigo sem o
+contrato no meio da operacao.
 
 O fallback antigo da imagem continua fora desse contrato. Se `current` e
 `previous` forem ambos perdidos ou corrompidos, a config ja bloqueada nao volta
@@ -218,15 +294,23 @@ depois do incidente C21.
 - reset offline e cada interrupcao simulada deixam a config antiga bloqueada e
   retomam com seguranca;
 - C26B so expoe a acao com C26A em `previous`; auto-pull, apply e rollback
-  permanecem bloqueados durante intent/revogacao pendente;
-- boot graph e timestamps reais provam guard criado antes dos agentes de update
-  da `prod15`; falha nessa prova bloqueia entrega sem nova imagem;
+  permanecem bloqueados durante intent/revogacao e limpeza pendentes;
+- boot graph e timestamps reais da imagem sucessora provam guard criado antes
+  dos agentes de update; a `prod15` deve manter as acoes escondidas;
+- manifesto e health de C26B recusam imagem sem o unit static exato e sem o
+  `Wants=` do player; C26A permanece instalavel sem esse feature;
 - cortes fisicos seletivos validam intent, config bloqueada e resposta de
   revogacao, sem campanha de horas;
+- cada corte ao redor da remocao do seed termina com tombstone valido, seed
+  ausente e nenhum valor secreto copiado; reintroducao bloqueia a retomada;
+- mountpoint sintetico dentro do graveyard e recusado antes do `rmtree`;
 - cache grande nao alonga o boot nem acumula destinos indefinidamente;
 - wizard normal, player, timers, auto-pull, rollback e baseline `prod15` nao
   regridem;
 - pacote passa self-tests, QA visual, apply, rollback e reaplicacao na placa.
+- C26A e C26B nunca compartilham a mesma identidade: o pacote com acoes recebe
+  sufixo `-actions`, reservado e recusado em pacotes sem acoes, evitando
+  colisao de versao com payload diferente.
 
 ## Definicao de pronto
 
@@ -258,3 +342,57 @@ Registrar como proximo nivel de recuperacao, nao como ideia descartada:
 Este marco exige ao menos uma nova regravacao para instalar a arquitetura de
 recovery. Depois disso, as reinstalacoes futuras poderao ser locais e guiadas,
 sem Armbian Imager. Ele nao bloqueia a entrega anterior de M10.
+
+## Estado executivo desta rodada
+
+Concluido localmente, ainda nao promovido:
+
+- logica de autorrevogacao exata, migracao cirurgica e logs sanitizados. O
+  `--check` reconheceu o schema vivo como compativel e confirmou
+  `absent -> absent`, sem mutacao;
+- o migrador aceita somente as duas DDLs oficiais exatas de `users`, incluindo
+  a forma reconstruida pela migracao `0000`, e a coleta por `created_at` possui
+  indice correspondente;
+- as quatro combinacoes historicas legitimas de tabela runtime/admin e indice
+  atual/legado estao cobertas explicitamente. A hipotese de produto cartesiano
+  indevido foi refutada por historia do Git, teste e leitura do schema vivo;
+- C26A/C26B, retomada persistente, validacao da nova configuracao e health
+  fail-closed dos componentes;
+- matriz de falhas prova retomada pelo caminho real de boot desde o primeiro
+  intent duravel e remocao de credenciais em backups/last-settings;
+- boot atual e reinicio/desligamento usam provas reconciliaveis, com cenarios
+  falho, desabilitado, em execucao, boot antigo, preparado e expirado negados;
+- suite C26 local com 16 testes e self-test visual verdes; backend C26 com 48
+  testes verdes, contratos legados de ativacao com 2/2 e station scope com 4/4
+  isolados, alem de 224 arquivos compilados;
+- o identificador do token da ativacao agora sobrevive a uma nova gravacao pelo
+  F10 sem aparecer em artefatos publicos; imagens sem C26 preservam a navegacao
+  anterior entre etapas;
+- pacote C26A invisivel e pacote C26B com capacidades e identidades distintas;
+- bloqueio runtime/package/health de C26B em imagem sem o boot graph seguro, o
+  unit static exato ou o `Wants=` do player;
+- firstboot unit, marcador do boot atual e oneshot de limpeza pos-player
+  preparados para a proxima imagem;
+- limpeza pesada retirada do boot, do finalize e do onboarding, com marcador
+  exato, retomada apos corte e bloqueio OTA ate terminar;
+- seed privado de homologacao invalidado por tombstone retomavel sem persistir
+  seu conteudo, e mountpoint interno recusado antes da remocao recursiva.
+
+Pendente para declarar pronto:
+
+- backend versionado e publicado na branch de trabalho como `cd131f00`;
+  versionar o repositorio da placa e gerar os pacotes a partir dos commits
+  exatos;
+- obter auditoria independente final sobre os estados versionados;
+- versionar e publicar backend candidato sem trafego, aplicar apenas a migracao
+  C26, auditar e promover controladamente;
+- aplicar C26A na placa e provar que nenhuma acao aparece;
+- construir/regravar a imagem sucessora e executar C26B online, offline,
+  interrupcoes, reiniciar, desligar, rollback e reaplicacao;
+- registrar evidencias, promover o pacote final e atualizar a baseline somente
+  depois da auditoria conclusiva.
+
+O gate C18 de provenance permanece vermelho em exatamente um ponto enquanto a
+fonte C26 ainda difere do pacote pinado na imagem. Isso e esperado nesta fase e
+deve desaparecer por commit, empacotamento e novo pin; nunca por relaxamento do
+gate.

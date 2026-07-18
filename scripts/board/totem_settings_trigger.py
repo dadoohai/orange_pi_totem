@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 from dataclasses import dataclass
 from typing import Any
 
@@ -32,12 +33,29 @@ SCHEMA_VERSION = "dadooh-c10.6-settings-trigger.v1"
 REQUEST_SCHEMA_VERSION = 1
 DEFAULT_REQUEST_DIR = "/run/dadooh-settings"
 C17_4_TRACE_DIR = "/data/state/totem-debug/c17-4-firstboot"
+PRODUCT_RESET_STATE_DIR = pathlib.Path(
+    os.environ.get(
+        "TOTEM_PRODUCT_RESET_STATE_DIR",
+        "/data/state/totem-appliance/product-reset",
+    )
+)
+PRODUCT_RESET_STATE_MODE = 0o700
+PRODUCT_RESET_RECEIPT_MODE = 0o600
+PRODUCT_RESET_RECEIPT_MAX_BYTES = 4096
+PRODUCT_RESET_STATE_FILE_MAX_BYTES = 64 * 1024
+PRODUCT_RESET_RECEIPT_SCHEMA = "dadooh-c26a-product-reset.v1"
+PRODUCT_RESET_RECEIPT_RESULTS = frozenset({"revoked", "not_device_activation"})
 REQUEST_FILENAME = "request.json"
 STATUS_FILENAME = "trigger-status.json"
 SUMMARY_FILENAME = "summary.txt"
 DIR_MODE = 0o700
 FILE_MODE = 0o600
 LOCK_STALE_WARN_SEC = 1800
+PRODUCT_RESET_RETRY_BASE_SEC = 30.0
+PRODUCT_RESET_RETRY_MAX_SEC = 300.0
+PRODUCT_RESET_RETRY_JITTER_SEC = 5
+PRODUCT_RESET_SESSION_RETRYABLE_EXIT = "55"
+PRODUCT_RESET_SESSION_TERMINAL_EXIT = "56"
 EV_KEY = 0x01
 KEY_F10 = 68
 KEY_F12 = 88
@@ -269,6 +287,198 @@ def clear_request(request_dir: pathlib.Path) -> None:
         pass
 
 
+def product_reset_private_entry_state(path: pathlib.Path) -> tuple[str, os.stat_result | None]:
+    try:
+        info = path.stat(follow_symlinks=False)
+    except FileNotFoundError:
+        return "missing", None
+    except OSError:
+        return "suspicious", None
+    if (
+        path.is_symlink()
+        or not stat.S_ISREG(info.st_mode)
+        or info.st_uid != os.geteuid()
+        or stat.S_IMODE(info.st_mode) != PRODUCT_RESET_RECEIPT_MODE
+        or info.st_nlink != 1
+        or info.st_size <= 0
+        or info.st_size > PRODUCT_RESET_STATE_FILE_MAX_BYTES
+    ):
+        return "suspicious", None
+    return "valid", info
+
+
+def product_reset_receipt_is_finalized(path: pathlib.Path, expected_info: os.stat_result) -> bool:
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        fd = os.open(str(path), flags)
+    except OSError:
+        return False
+    try:
+        opened = os.fstat(fd)
+        if opened.st_dev != expected_info.st_dev or opened.st_ino != expected_info.st_ino or opened.st_nlink != 1:
+            return False
+        raw = os.read(fd, PRODUCT_RESET_RECEIPT_MAX_BYTES + 1)
+    finally:
+        os.close(fd)
+    if len(raw) > PRODUCT_RESET_RECEIPT_MAX_BYTES:
+        return False
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+        operation_id = str(payload.get("operation_id") or "")
+        parsed_operation_id = uuid.UUID(operation_id)
+    except (AttributeError, UnicodeDecodeError, ValueError, json.JSONDecodeError):
+        return False
+    return (
+        isinstance(payload, dict)
+        and payload.get("schema_version") == PRODUCT_RESET_RECEIPT_SCHEMA
+        and parsed_operation_id.version == 4
+        and str(parsed_operation_id) == operation_id
+        and payload.get("result") in PRODUCT_RESET_RECEIPT_RESULTS
+        and payload.get("local_complete") is True
+        and isinstance(payload.get("finalized_at_utc"), str)
+        and bool(payload["finalized_at_utc"])
+    )
+
+
+def product_reset_state_kind(state_dir: pathlib.Path = PRODUCT_RESET_STATE_DIR) -> str:
+    """Classify only trusted local reset state; suspicious shapes stay blocked."""
+    try:
+        state_info = state_dir.stat(follow_symlinks=False)
+    except FileNotFoundError:
+        return "none"
+    except OSError:
+        return "suspicious"
+    if (
+        state_dir.is_symlink()
+        or not stat.S_ISDIR(state_info.st_mode)
+        or state_info.st_uid != os.geteuid()
+        or stat.S_IMODE(state_info.st_mode) != PRODUCT_RESET_STATE_MODE
+    ):
+        return "suspicious"
+
+    entry_states = {
+        name: product_reset_private_entry_state(state_dir / name)
+        for name in ("intent.json", "pending-credential.json", "receipt.json")
+    }
+    if any(entry_state == "suspicious" for entry_state, _info in entry_states.values()):
+        return "suspicious"
+    receipt_state, receipt_info = entry_states["receipt.json"]
+    if receipt_state == "valid":
+        if receipt_info is None or not product_reset_receipt_is_finalized(state_dir / "receipt.json", receipt_info):
+            return "suspicious"
+        # A finalized receipt is proof that backend revocation has completed.
+        # It may briefly coexist with intent files after a power cut.
+        return "onboarding"
+    if any(entry_states[name][0] == "valid" for name in ("intent.json", "pending-credential.json")):
+        return "revocation"
+    return "none"
+
+
+def product_reset_pending(state_dir: pathlib.Path = PRODUCT_RESET_STATE_DIR) -> bool:
+    """Fail closed while revocation, onboarding, or a suspicious state exists."""
+    return product_reset_state_kind(state_dir) != "none"
+
+
+def product_reset_resume_request_token(request_dir: pathlib.Path) -> str | None:
+    """Return an identity for the trusted firstboot recovery handoff."""
+    path = request_dir / REQUEST_FILENAME
+    try:
+        info = path.stat(follow_symlinks=False)
+        if (
+            path.is_symlink()
+            or not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.geteuid()
+            or stat.S_IMODE(info.st_mode) != FILE_MODE
+            or info.st_nlink != 1
+            or info.st_size <= 0
+            or info.st_size > 4096
+        ):
+            return None
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    if not (
+        isinstance(payload, dict)
+        and set(payload) == {"schema_version", "requested_at", "trigger_type", "action"}
+        and payload.get("schema_version") == REQUEST_SCHEMA_VERSION
+        and payload.get("trigger_type") == "product_reset_resume"
+        and payload.get("action") == "open_settings"
+        and isinstance(payload.get("requested_at"), str)
+        and bool(payload["requested_at"])
+    ):
+        return None
+    return f"{info.st_dev}:{info.st_ino}:{info.st_mtime_ns}:{payload['requested_at']}"
+
+
+def product_reset_resume_request_pending(request_dir: pathlib.Path) -> bool:
+    return product_reset_resume_request_token(request_dir) is not None
+
+
+def product_reset_service_outcome_from_properties(properties: dict[str, str]) -> str:
+    active_state = properties.get("ActiveState", "unknown")
+    if active_state in {"active", "activating"}:
+        return "active"
+    exit_status = properties.get("ExecMainStatus", "")
+    if exit_status == PRODUCT_RESET_SESSION_TERMINAL_EXIT:
+        return "terminal"
+    if exit_status == PRODUCT_RESET_SESSION_RETRYABLE_EXIT:
+        return "retryable"
+    return "unknown"
+
+
+def product_reset_service_outcome(open_service: str) -> str:
+    if not open_service:
+        return "unknown"
+    try:
+        completed = subprocess.run(
+            ["systemctl", "show", open_service, "--property=ActiveState", "--property=ExecMainStatus"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=2,
+        )
+    except Exception:
+        return "unknown"
+    if completed.returncode != 0:
+        return "unknown"
+    properties: dict[str, str] = {}
+    for line in (completed.stdout or "").splitlines():
+        key, separator, value = line.partition("=")
+        if separator and key in {"ActiveState", "ExecMainStatus"}:
+            properties[key] = value
+    return product_reset_service_outcome_from_properties(properties)
+
+
+def product_reset_automatic_resume_action(
+    state_kind: str,
+    resume_request_token: str | None,
+    service_outcome: str,
+) -> str:
+    if state_kind == "suspicious":
+        return "blocked"
+    if state_kind == "onboarding":
+        return "active" if service_outcome == "active" else "onboarding"
+    if state_kind != "revocation":
+        return "not_requested"
+    if resume_request_token is None:
+        return "retry"
+    if service_outcome == "terminal":
+        return "terminal"
+    if service_outcome == "active":
+        return "active"
+    return "retry"
+
+
+def product_reset_retry_delay(attempt: int, *, jitter_seed: int) -> float:
+    attempt_index = max(0, int(attempt) - 1)
+    base = min(PRODUCT_RESET_RETRY_MAX_SEC, PRODUCT_RESET_RETRY_BASE_SEC * (2**min(attempt_index, 3)))
+    jitter = (int(jitter_seed) % (2 * PRODUCT_RESET_RETRY_JITTER_SEC + 1)) - PRODUCT_RESET_RETRY_JITTER_SEC
+    return max(1.0, min(PRODUCT_RESET_RETRY_MAX_SEC, base + float(jitter)))
+
+
 def write_status(request_dir: pathlib.Path, status: dict[str, Any]) -> None:
     payload = {
         "schema_version": SCHEMA_VERSION,
@@ -284,6 +494,7 @@ def write_status(request_dir: pathlib.Path, status: dict[str, Any]) -> None:
         "open_service_active_state": status.get("open_service_active_state", "unknown"),
         "stale_lock_suspected": bool(status.get("stale_lock_suspected", False)),
         "stale_lock_removed": bool(status.get("stale_lock_removed", False)),
+        "product_reset_pending": bool(status.get("product_reset_pending", False)),
         "cooldown_active": bool(status.get("cooldown_active", False)),
         "raw_key_values_logged": False,
         "characters_logged": False,
@@ -305,6 +516,7 @@ def write_status(request_dir: pathlib.Path, status: dict[str, Any]) -> None:
             f"open_service_active_state: {payload['open_service_active_state']}",
             f"stale_lock_suspected: {str(payload['stale_lock_suspected']).lower()}",
             f"stale_lock_removed: {str(payload['stale_lock_removed']).lower()}",
+            f"product_reset_pending: {str(payload['product_reset_pending']).lower()}",
             f"cooldown_active: {str(payload['cooldown_active']).lower()}",
             "raw_key_values_logged: false",
             "characters_logged: false",
@@ -501,7 +713,7 @@ def trigger_service_start(open_service: str, *, tty_guard: str = "", visual_tty:
     run_tty_guard(tty_guard, visual_tty)
     try:
         completed = subprocess.run(
-            ["systemctl", "start", open_service],
+            ["systemctl", "start", "--no-block", open_service],
             check=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -592,7 +804,92 @@ def daemon_loop(
     c17_4_trace("settings_trigger_active", session_lock=session_lock.exists())
     c17_4_trace("f10_ready", visual_tty=visual_tty)
     next_allowed = 0.0
+    next_product_reset_resume = 0.0
+    product_reset_resume_attempts = 0
+    product_reset_resume_jitter_seed = os.getpid() ^ int(time.monotonic() * 1000)
+    terminal_resume_token: str | None = None
+    last_product_reset_state_kind = "none"
     while True:
+        now = time.monotonic()
+        reset_state_kind = product_reset_state_kind()
+        reset_pending = reset_state_kind != "none"
+        resume_request_token = product_reset_resume_request_token(request_dir)
+        if reset_state_kind != last_product_reset_state_kind:
+            last_product_reset_state_kind = reset_state_kind
+            product_reset_resume_attempts = 0
+            next_product_reset_resume = now
+        if terminal_resume_token is not None and resume_request_token != terminal_resume_token:
+            terminal_resume_token = None
+            product_reset_resume_attempts = 0
+            next_product_reset_resume = now
+        if now >= next_product_reset_resume:
+            service_outcome = product_reset_service_outcome(open_service)
+            resume_action = product_reset_automatic_resume_action(
+                reset_state_kind,
+                resume_request_token,
+                service_outcome,
+            )
+            if resume_action in {"retry", "onboarding"}:
+                try:
+                    write_request(request_dir, "product_reset_resume")
+                    request_ready = product_reset_resume_request_pending(request_dir)
+                except (OSError, TriggerError):
+                    request_ready = False
+                result = (
+                    trigger_service_start(open_service, tty_guard=tty_guard, visual_tty=visual_tty)
+                    if request_ready
+                    else "request_failed"
+                )
+                product_reset_resume_attempts += 1
+                next_product_reset_resume = now + product_reset_retry_delay(
+                    product_reset_resume_attempts,
+                    jitter_seed=product_reset_resume_jitter_seed + product_reset_resume_attempts,
+                )
+                c17_4_trace(
+                    "product_reset_resume_requested",
+                    result=result,
+                    session_lock=session_lock.exists(),
+                )
+                write_status(
+                    request_dir,
+                    {
+                        "status": "product_reset_resume_requested"
+                        if result == "started"
+                        else "product_reset_resume_failed",
+                        "trigger_type": "product_reset_onboarding" if resume_action == "onboarding" else "product_reset_resume",
+                        "trigger_detected": False,
+                        "request_written": request_ready,
+                        "open_service_start_attempted": True,
+                        "open_service_start_result": result,
+                        "session_lock_active": session_lock.exists(),
+                        "open_service_active_state": service_outcome,
+                        "product_reset_pending": reset_pending,
+                    },
+                )
+            elif resume_action == "active":
+                next_product_reset_resume = now + PRODUCT_RESET_RETRY_BASE_SEC
+            elif resume_action == "terminal":
+                if terminal_resume_token != resume_request_token:
+                    c17_4_trace("product_reset_resume_terminal_suppressed")
+                    write_status(
+                        request_dir,
+                        {
+                            "status": "product_reset_resume_terminal",
+                            "trigger_type": "product_reset_resume",
+                            "trigger_detected": False,
+                            "request_written": True,
+                            "session_lock_active": session_lock.exists(),
+                            "open_service_active_state": service_outcome,
+                            "product_reset_pending": reset_pending,
+                        },
+                    )
+                terminal_resume_token = resume_request_token
+                next_product_reset_resume = float("inf")
+            elif resume_action == "blocked":
+                next_product_reset_resume = now + PRODUCT_RESET_RETRY_MAX_SEC
+            else:
+                next_product_reset_resume = now + PRODUCT_RESET_RETRY_BASE_SEC
+
         rc = wait_for_function_hold(
             device_patterns=device_patterns,
             hold_sec=hold_sec,
@@ -627,7 +924,35 @@ def daemon_loop(
                 continue
             if session_lock.exists():
                 diagnostic = session_lock_diagnostic(session_lock, open_service)
-                if diagnostic["stale_lock_suspected"]:
+                reset_pending = product_reset_pending()
+                if reset_pending and diagnostic["stale_lock_suspected"]:
+                    result = trigger_service_start(open_service, tty_guard=tty_guard, visual_tty=visual_tty)
+                    c17_4_trace(
+                        "open_settings_requested_for_product_reset",
+                        result=result,
+                        stale_lock_removed=False,
+                    )
+                    write_status(
+                        request_dir,
+                        {
+                            "status": "product_reset_service_requested"
+                            if result == "started"
+                            else "product_reset_service_failed",
+                            "trigger_type": trigger_type,
+                            "trigger_detected": True,
+                            "request_written": True,
+                            "open_service_start_attempted": True,
+                            "open_service_start_result": result,
+                            "session_lock_active": True,
+                            "stale_lock_removed": False,
+                            "product_reset_pending": True,
+                            "devices_opened_count": int(status.get("devices_opened_count", 0) or 0),
+                            **diagnostic,
+                        },
+                    )
+                    next_allowed = time.monotonic() + cooldown_sec
+                    continue
+                if diagnostic["stale_lock_suspected"] and not reset_pending:
                     removed = remove_stale_session_lock(session_lock)
                     if removed:
                         result = trigger_service_start(open_service, tty_guard=tty_guard, visual_tty=visual_tty)
@@ -651,7 +976,8 @@ def daemon_loop(
                         )
                         next_allowed = time.monotonic() + cooldown_sec
                         continue
-                clear_request(request_dir)
+                if not reset_pending:
+                    clear_request(request_dir)
                 write_status(
                     request_dir,
                     {
@@ -661,6 +987,7 @@ def daemon_loop(
                         "request_written": False,
                         "session_lock_active": True,
                         "stale_lock_removed": False,
+                        "product_reset_pending": reset_pending,
                         "devices_opened_count": int(status.get("devices_opened_count", 0) or 0),
                         **diagnostic,
                     },
@@ -741,6 +1068,24 @@ def self_test() -> None:
 
     assert daemon_wait_timeout(5.0) > 5.0
     assert daemon_wait_timeout(1.0) >= 8.0
+    assert product_reset_service_outcome_from_properties(
+        {"ActiveState": "failed", "ExecMainStatus": PRODUCT_RESET_SESSION_TERMINAL_EXIT}
+    ) == "terminal"
+    assert product_reset_service_outcome_from_properties(
+        {"ActiveState": "failed", "ExecMainStatus": PRODUCT_RESET_SESSION_RETRYABLE_EXIT}
+    ) == "retryable"
+    assert product_reset_service_outcome_from_properties({"ActiveState": "active", "ExecMainStatus": "56"}) == "active"
+    assert product_reset_automatic_resume_action("revocation", "request-1", "terminal") == "terminal"
+    assert product_reset_automatic_resume_action("revocation", "request-1", "retryable") == "retry"
+    assert product_reset_automatic_resume_action("revocation", None, "retryable") == "retry"
+    assert product_reset_automatic_resume_action("none", "request-1", "retryable") == "not_requested"
+    assert product_reset_automatic_resume_action("onboarding", None, "terminal") == "onboarding"
+    assert product_reset_automatic_resume_action("suspicious", "request-1", "retryable") == "blocked"
+    retry_delays = [product_reset_retry_delay(attempt, jitter_seed=17 + attempt) for attempt in range(1, 12)]
+    assert PRODUCT_RESET_RETRY_BASE_SEC - PRODUCT_RESET_RETRY_JITTER_SEC <= retry_delays[0] <= PRODUCT_RESET_RETRY_BASE_SEC + PRODUCT_RESET_RETRY_JITTER_SEC
+    assert retry_delays[1] > retry_delays[0]
+    assert retry_delays[-1] <= PRODUCT_RESET_RETRY_MAX_SEC
+    assert product_reset_retry_delay(1000, jitter_seed=1) <= PRODUCT_RESET_RETRY_MAX_SEC
 
     with tempfile.TemporaryDirectory(prefix="dadooh-trigger-self-test-") as raw:
         request_dir = require_public_dir(raw)
@@ -770,12 +1115,65 @@ def self_test() -> None:
             assert marker not in combined
         assert "stale_lock_suspected" in combined
         assert "stale_lock_removed" in combined
+        assert not product_reset_resume_request_pending(request_dir)
+        atomic_write_json(
+            request_dir / REQUEST_FILENAME,
+            {
+                "schema_version": REQUEST_SCHEMA_VERSION,
+                "requested_at": utc_timestamp(),
+                "trigger_type": "product_reset_resume",
+                "action": "open_settings",
+            },
+        )
+        assert product_reset_resume_request_pending(request_dir)
+        resume_token = product_reset_resume_request_token(request_dir)
+        assert resume_token is not None
+        assert product_reset_automatic_resume_action("revocation", resume_token, "terminal") == "terminal"
+        os.chmod(request_dir / REQUEST_FILENAME, 0o644)
+        assert not product_reset_resume_request_pending(request_dir)
         clear_request(request_dir)
         assert not (request_dir / REQUEST_FILENAME).exists()
         lock = request_dir / "session.lock"
         lock.mkdir()
         assert remove_stale_session_lock(lock)
         assert not lock.exists()
+        reset_state = request_dir / "product-reset"
+        reset_state.mkdir(mode=PRODUCT_RESET_STATE_MODE)
+        reset_state.chmod(PRODUCT_RESET_STATE_MODE)
+        assert not product_reset_pending(reset_state)
+        atomic_write_json(reset_state / "intent.json", {"phase": "local_complete"})
+        assert product_reset_pending(reset_state)
+        (reset_state / "intent.json").unlink()
+        atomic_write_json(reset_state / "pending-credential.json", {"credential": "private"})
+        assert product_reset_pending(reset_state)
+        (reset_state / "pending-credential.json").unlink()
+        atomic_write_json(
+            reset_state / "receipt.json",
+            {
+                "schema_version": PRODUCT_RESET_RECEIPT_SCHEMA,
+                "operation_id": "123e4567-e89b-42d3-a456-426614174000",
+                "result": "revoked",
+                "finalized_at_utc": "2026-07-17T00:00:00Z",
+                "local_complete": True,
+                "pending_credential_removed": False,
+            },
+        )
+        assert product_reset_state_kind(reset_state) == "onboarding"
+        assert product_reset_pending(reset_state)
+        atomic_write_json(reset_state / "intent.json", {"phase": "local_complete"})
+        assert product_reset_state_kind(reset_state) == "onboarding"
+        (reset_state / "intent.json").unlink()
+        # After a reboot /run has no handoff request, but receipt-only state
+        # still opens the normal onboarding session and never resumes revoke.
+        assert product_reset_automatic_resume_action("onboarding", None, "terminal") == "onboarding"
+        (reset_state / "receipt.json").unlink()
+        atomic_write_json(reset_state / "receipt.json", {"schema_version": PRODUCT_RESET_RECEIPT_SCHEMA})
+        os.chmod(reset_state / "receipt.json", 0o644)
+        assert product_reset_state_kind(reset_state) == "suspicious"
+        (reset_state / "receipt.json").unlink()
+        os.symlink("/tmp/untrusted-receipt.json", reset_state / "receipt.json")
+        assert product_reset_state_kind(reset_state) == "suspicious"
+        assert product_reset_pending(reset_state)
     print("self-test: ok")
 
 

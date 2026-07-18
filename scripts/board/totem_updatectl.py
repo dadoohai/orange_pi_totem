@@ -106,8 +106,12 @@ PLAYER_RUNTIME_REQUIRED_UPDATER_FEATURES = frozenset({
 PLAYER_RUNTIME_OPTIONAL_UPDATER_FEATURES = frozenset({
     "c25-player-surface-health-v1",
 })
+TOTEM_CORE_OPTIONAL_UPDATER_FEATURES = frozenset({
+    "c26-product-reset-gc-static-v1",
+})
 UPDATER_FEATURES = (
     TOTEM_CORE_REQUIRED_UPDATER_FEATURES
+    | TOTEM_CORE_OPTIONAL_UPDATER_FEATURES
     | PLAYER_RUNTIME_REQUIRED_UPDATER_FEATURES
     | PLAYER_RUNTIME_OPTIONAL_UPDATER_FEATURES
 )
@@ -173,9 +177,24 @@ SETTINGS_REQUEST_FILE = Path(os.environ.get("TOTEM_SETTINGS_REQUEST_FILE",
                                             "/run/dadooh-settings/request.json"))
 OPEN_SETTINGS_SERVICE = os.environ.get("TOTEM_OPEN_SETTINGS_SERVICE",
                                        "totem-open-settings.service")
+PRODUCT_RESET_GC_PENDING_FILE = Path(
+    os.environ.get(
+        "TOTEM_PRODUCT_RESET_GC_PENDING_FILE",
+        str(DATA_ROOT / "state" / "totem-appliance" / "product-reset" / "gc-pending.json"),
+    )
+)
+PRODUCT_RESET_GRAVEYARD_DIR = Path(
+    os.environ.get(
+        "TOTEM_PRODUCT_RESET_GRAVEYARD_DIR",
+        str(DATA_ROOT / "state" / "totem-appliance" / "product-reset" / "graveyard"),
+    )
+)
 SYSTEMCTL_BIN = Path("/bin/systemctl")
 if os.environ.get("TOTEM_SIMULATION") == "1" and DATA_ROOT != Path("/data"):
     SYSTEMCTL_BIN = Path(os.environ.get("TOTEM_TEST_SYSTEMCTL_BIN", str(SYSTEMCTL_BIN)))
+PRODUCT_RESET_GC_IMAGE_FEATURE = "c26-product-reset-gc-static-v1"
+PRODUCT_RESET_GC_UNIT = Path("/etc/systemd/system/totem-product-reset-gc.service")
+PRODUCT_RESET_GC_UNIT_SHA256 = "fa614f32624901e5bb5153b0994bd6b96d6b9f5fc64ee25599e9049de1748760"
 
 GITHUB_API = "https://api.github.com"
 GITHUB_RELEASE_PAGE_LIMIT = 10
@@ -1721,6 +1740,12 @@ def _validate_manifest(m: Dict[str, Any],
         unsupported_features = sorted(set(updater_features) - UPDATER_FEATURES)
         if unsupported_features:
             raise RuntimeError(f"manifest requires unsupported updater features: {unsupported_features}")
+        if PRODUCT_RESET_GC_IMAGE_FEATURE in updater_features:
+            if expected_component != "totem-core":
+                raise RuntimeError("product-reset GC image feature is valid only for totem-core")
+            image_ok, image_reason = _totem_actions_image_contract_check()
+            if not image_ok:
+                raise RuntimeError(f"totem actions image contract not met: {image_reason}")
     ver = _validate_release_version(m["version"])
     _validate_payload_name(m["payload"], component=expected_component, version=ver)
     sha = m["payload_sha256"]
@@ -2057,6 +2082,133 @@ def _systemctl(*args: str, check: bool = False) -> subprocess.CompletedProcess:
                           text=True, check=check)
 
 
+def _systemctl_show_properties(
+    unit: str,
+    property_names: Tuple[str, ...],
+    *,
+    systemctl_runner: Optional[Callable[..., subprocess.CompletedProcess]] = None,
+) -> Tuple[Optional[Dict[str, str]], str]:
+    runner = systemctl_runner or _systemctl
+    result = runner(
+        "show",
+        unit,
+        *(f"--property={name}" for name in property_names),
+    )
+    if result.returncode != 0:
+        return None, f"systemctl_show_failed:{unit}"
+    properties: Dict[str, str] = {}
+    for line in (result.stdout or "").splitlines():
+        key, separator, value = line.partition("=")
+        if not separator or key in properties:
+            return None, f"systemctl_properties_invalid:{unit}"
+        properties[key] = value
+    if set(properties) != set(property_names):
+        return None, f"systemctl_properties_incomplete:{unit}"
+    return properties, "ok"
+
+
+def _trusted_unit_sha256(
+    path: Path,
+    expected_sha256: str,
+    *,
+    expected_uid: int = 0,
+    expected_gid: int = 0,
+) -> Tuple[bool, str]:
+    try:
+        parent_info = path.parent.lstat()
+        path_info = path.lstat()
+        if (
+            stat.S_ISLNK(parent_info.st_mode)
+            or not stat.S_ISDIR(parent_info.st_mode)
+            or parent_info.st_uid != expected_uid
+            or parent_info.st_gid != expected_gid
+            or stat.S_IMODE(parent_info.st_mode) & 0o022
+            or stat.S_ISLNK(path_info.st_mode)
+            or not stat.S_ISREG(path_info.st_mode)
+            or path_info.st_uid != expected_uid
+            or path_info.st_gid != expected_gid
+            or path_info.st_nlink != 1
+            or stat.S_IMODE(path_info.st_mode) != 0o644
+        ):
+            return False, "product_reset_gc_unit_untrusted"
+        flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path, flags)
+        try:
+            opened_info = os.fstat(fd)
+            if (opened_info.st_dev, opened_info.st_ino) != (path_info.st_dev, path_info.st_ino):
+                return False, "product_reset_gc_unit_changed"
+            digest = hashlib.sha256()
+            while True:
+                chunk = os.read(fd, 64 * 1024)
+                if not chunk:
+                    break
+                digest.update(chunk)
+        finally:
+            os.close(fd)
+    except OSError:
+        return False, "product_reset_gc_unit_missing"
+    if digest.hexdigest() != expected_sha256:
+        return False, "product_reset_gc_unit_hash_mismatch"
+    return True, "ok"
+
+
+def _totem_actions_image_contract_check(
+    *,
+    gc_unit_path: Path = PRODUCT_RESET_GC_UNIT,
+    expected_unit_sha256: str = PRODUCT_RESET_GC_UNIT_SHA256,
+    expected_uid: int = 0,
+    expected_gid: int = 0,
+    systemctl_runner: Optional[Callable[..., subprocess.CompletedProcess]] = None,
+) -> Tuple[bool, str]:
+    trusted, reason = _trusted_unit_sha256(
+        gc_unit_path,
+        expected_unit_sha256,
+        expected_uid=expected_uid,
+        expected_gid=expected_gid,
+    )
+    if not trusted:
+        return False, reason
+
+    gc_properties, reason = _systemctl_show_properties(
+        "totem-product-reset-gc.service",
+        (
+            "LoadState",
+            "UnitFileState",
+            "FragmentPath",
+            "NeedDaemonReload",
+            "Type",
+            "After",
+        ),
+        systemctl_runner=systemctl_runner,
+    )
+    if gc_properties is None:
+        return False, reason
+    expected_gc = {
+        "LoadState": "loaded",
+        "UnitFileState": "static",
+        "FragmentPath": str(gc_unit_path),
+        "NeedDaemonReload": "no",
+        "Type": "oneshot",
+    }
+    if any(gc_properties.get(key) != value for key, value in expected_gc.items()):
+        return False, "product_reset_gc_unit_not_loaded_exactly"
+    if "kiosky-player.service" not in set(gc_properties["After"].split()):
+        return False, "product_reset_gc_unit_order_missing"
+
+    player_properties, reason = _systemctl_show_properties(
+        "kiosky-player.service",
+        ("LoadState", "Wants"),
+        systemctl_runner=systemctl_runner,
+    )
+    if player_properties is None:
+        return False, reason
+    if player_properties.get("LoadState") != "loaded":
+        return False, "kiosky_player_unit_not_loaded"
+    if "totem-product-reset-gc.service" not in set(player_properties["Wants"].split()):
+        return False, "kiosky_player_product_reset_gc_wants_missing"
+    return True, "c26_product_reset_gc_image_contract_ok"
+
+
 def _service_is_active() -> bool:
     r = _systemctl("is-active", SERVICE_NAME)
     return r.stdout.strip() == "active"
@@ -2164,10 +2316,33 @@ def _runtime_guard_marker_state(path: Path, *, expected: str) -> str:
     return "present"
 
 
+def _runtime_guard_directory_content_state(path: Path) -> str:
+    state = _runtime_guard_marker_state(path, expected="directory")
+    if state != "present":
+        return state
+    try:
+        next(path.iterdir())
+    except StopIteration:
+        return "empty"
+    except OSError:
+        return "untrusted"
+    return "present"
+
+
 def _component_apply_guard() -> Tuple[bool, str]:
     """Block mutable OTA while the settings/writer visual session owns the device."""
     if COMPONENT not in {"totem-core", "player-runtime"}:
         return True, "component_does_not_share_settings_surface"
+    gc_pending_state = _runtime_guard_marker_state(PRODUCT_RESET_GC_PENDING_FILE, expected="file")
+    if gc_pending_state == "untrusted":
+        return False, "product_reset_gc_pending_untrusted"
+    if gc_pending_state == "present":
+        return False, "product_reset_gc_pending"
+    graveyard_state = _runtime_guard_directory_content_state(PRODUCT_RESET_GRAVEYARD_DIR)
+    if graveyard_state == "untrusted":
+        return False, "product_reset_graveyard_untrusted"
+    if graveyard_state == "present":
+        return False, "product_reset_graveyard_present"
     settings_lock_state = _runtime_guard_marker_state(SETTINGS_LOCK, expected="directory")
     if settings_lock_state == "untrusted":
         return False, "settings_session_lock_untrusted"
@@ -2185,7 +2360,12 @@ def _component_apply_guard() -> Tuple[bool, str]:
 
 
 def _component_apply_guard_rc(reason: str) -> int:
-    if reason in {"settings_session_lock_present", "settings_request_present"}:
+    if reason in {
+        "settings_session_lock_present",
+        "settings_request_present",
+        "product_reset_gc_pending",
+        "product_reset_graveyard_present",
+    }:
         return 40
     if reason in {
         "open_settings_service_active",
@@ -2280,25 +2460,32 @@ def _restore_order_static_check(bin_dir: Path) -> Tuple[bool, str]:
     return True, "restore order ok"
 
 
-def _totem_core_declared_self_tests(release_dir: Path) -> Tuple[Optional[set[str]], str]:
+def _totem_core_declared_self_tests(
+    release_dir: Path,
+) -> Tuple[Optional[set[str]], Optional[set[str]], str]:
     health_path = release_dir / "health" / "totem-core-health.json"
     if not health_path.exists():
-        return set(), "health metadata absent"
+        return set(), set(), "health metadata absent"
     try:
         if health_path.is_symlink() or not health_path.is_file():
-            return None, "health_metadata_unsafe"
+            return None, None, "health_metadata_unsafe"
         size = health_path.stat().st_size
         if size <= 0 or size > 65536:
-            return None, "health_metadata_size_invalid"
+            return None, None, "health_metadata_size_invalid"
         payload = json.loads(health_path.read_text(encoding="utf-8"))
     except Exception as e:
-        return None, f"health_metadata_invalid:{e}"
+        return None, None, f"health_metadata_invalid:{e}"
     if not isinstance(payload, dict) or payload.get("schema") != "dadooh.totem.core.health.v1":
-        return None, "health_metadata_schema_invalid"
+        return None, None, "health_metadata_schema_invalid"
     raw_tests = payload.get("self_tests")
     if not isinstance(raw_tests, list) or not all(isinstance(item, str) and item for item in raw_tests):
-        return None, "health_metadata_self_tests_invalid"
-    return set(raw_tests), "ok"
+        return None, None, "health_metadata_self_tests_invalid"
+    raw_capabilities = payload.get("capabilities", [])
+    if not isinstance(raw_capabilities, list) or not all(
+        isinstance(item, str) and item for item in raw_capabilities
+    ):
+        return None, None, "health_metadata_capabilities_invalid"
+    return set(raw_tests), set(raw_capabilities), "ok"
 
 
 def _totem_core_health_check(release_dir: Path) -> Tuple[bool, str]:
@@ -2335,8 +2522,8 @@ def _totem_core_health_check(release_dir: Path) -> Tuple[bool, str]:
             if not ok:
                 return False, info
 
-    declared_tests, metadata_info = _totem_core_declared_self_tests(release_dir)
-    if declared_tests is None:
+    declared_tests, declared_capabilities, metadata_info = _totem_core_declared_self_tests(release_dir)
+    if declared_tests is None or declared_capabilities is None:
         return False, metadata_info
     metadata_checks = {
         "python3 bin/totem_status_aggregate.py --self-test": [
@@ -2348,6 +2535,15 @@ def _totem_core_health_check(release_dir: Path) -> Tuple[bool, str]:
         "python3 bin/totem_config_writer_real.py --self-test": [
             "/usr/bin/python3", str(bin_dir / "totem_config_writer_real.py"), "--self-test"
         ],
+        "python3 bin/totem_settings_trigger.py --self-test": [
+            "/usr/bin/python3", str(bin_dir / "totem_settings_trigger.py"), "--self-test"
+        ],
+        "bash bin/totem_firstboot_gate.sh --self-test": [
+            "/usr/bin/env", "bash", str(bin_dir / "totem_firstboot_gate.sh"), "--self-test"
+        ],
+        "bash bin/totem_open_settings_cleanup.sh --self-test": [
+            "/usr/bin/env", "bash", str(bin_dir / "totem_open_settings_cleanup.sh"), "--self-test"
+        ],
     }
     aggregate_text = (bin_dir / "totem_status_aggregate.py").read_text(encoding="utf-8", errors="replace")
     renderer_text = (bin_dir / "totem_status_renderer.sh").read_text(encoding="utf-8", errors="replace")
@@ -2356,6 +2552,19 @@ def _totem_core_health_check(release_dir: Path) -> Tuple[bool, str]:
         required_declarations.add("python3 bin/totem_status_aggregate.py --self-test")
     if 'STATUS_SVG" = "--self-test"' in renderer_text:
         required_declarations.add("bash bin/totem_status_renderer.sh --self-test")
+    if "product-reset-v1" in declared_capabilities:
+        required_declarations.update(
+            {
+                "python3 bin/totem_config_writer_real.py --self-test",
+                "python3 bin/totem_settings_trigger.py --self-test",
+                "bash bin/totem_firstboot_gate.sh --self-test",
+                "bash bin/totem_open_settings_cleanup.sh --self-test",
+            }
+        )
+    if "totem-actions-v1" in declared_capabilities:
+        image_ok, image_reason = _totem_actions_image_contract_check()
+        if not image_ok:
+            return False, f"totem_actions_image_contract:{image_reason}"
     missing_declarations = sorted(required_declarations - declared_tests)
     if missing_declarations:
         return False, "health_metadata_missing_self_tests:" + ",".join(missing_declarations)
@@ -4129,6 +4338,15 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_check_image_contract(args: argparse.Namespace) -> int:
+    if args.feature != PRODUCT_RESET_GC_IMAGE_FEATURE:
+        print("unsupported_image_contract", file=sys.stderr)
+        return 2
+    ok, reason = _totem_actions_image_contract_check()
+    print(json.dumps({"feature": args.feature, "passed": ok, "reason": reason}, sort_keys=True))
+    return 0 if ok else 1
+
+
 # ----------------------------------------------------------------------------
 # CLI
 # ----------------------------------------------------------------------------
@@ -4152,6 +4370,9 @@ def main(argv: List[str]) -> int:
                    help="Show updater state and current/previous links")
     sub.add_parser("self-test", parents=[component_parent],
                    help="Sanity check that updater can run on this device")
+    p_image_contract = sub.add_parser("check-image-contract",
+                                      help="Validate an image-fixed compatibility contract without changing state")
+    p_image_contract.add_argument("--feature", required=True)
 
     p_check = sub.add_parser("check-github-latest",
                              parents=[component_parent],
@@ -4226,6 +4447,7 @@ def main(argv: List[str]) -> int:
     handlers = {
         "status": cmd_status,
         "self-test": cmd_self_test,
+        "check-image-contract": cmd_check_image_contract,
         "check-github-latest": cmd_check_github_latest,
         "list-github": cmd_list_github,
         "apply-github-latest": cmd_apply_github_latest,

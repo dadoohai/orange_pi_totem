@@ -53,6 +53,7 @@ REQUIRED_CONFIG_FIELDS: dict[str, type | tuple[type, ...]] = {
 
 OPTIONAL_CONFIG_FIELDS: dict[str, type | tuple[type, ...]] = {
     "station_id": str,
+    "api_token_id": str,
 }
 
 PATH_RULES: dict[str, tuple[str, ...]] = {
@@ -69,6 +70,9 @@ OPTIONAL_PATH_RULES: dict[str, tuple[str, ...]] = {
 }
 
 ENVIRONMENT_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]+$")
+CANONICAL_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+)
 PLACEHOLDER_LABEL_RE = re.compile(r"(?:mock|test|example|placeholder|replace)", re.IGNORECASE)
 PROHIBITED_ID_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("url", re.compile(r"https?://", re.IGNORECASE)),
@@ -504,6 +508,11 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
         invalid_fields.append(environment_invalid)
     if station_invalid is not None:
         invalid_fields.append(station_invalid)
+
+    if "api_token_id" in config:
+        api_token_id = config.get("api_token_id")
+        if not isinstance(api_token_id, str) or CANONICAL_UUID_RE.fullmatch(api_token_id) is None:
+            append_invalid(invalid_fields, "api_token_id", "must be a canonical UUID")
 
     if environment_status["placeholder_detected"]:
         placeholder_findings.append(

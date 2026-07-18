@@ -198,6 +198,18 @@ SUMMARY_FILENAME = "summary.txt"
 CANCELLED_FILENAME = "setup-cancelled.json"
 FAILED_FILENAME = "setup-failed.json"
 ORIENTATION_FILENAME = "orientation.json"
+ACTION_REQUEST_FILENAME = "totem-action-request.json"
+ACTION_REQUEST_SCHEMA = "dadooh.totem.action-request.v1"
+ACTION_REQUEST_SOURCE = "visual_wizard_header"
+ACTION_REQUEST_EXIT_CODE = 75
+ACTION_REQUEST_MAX_BYTES = 1024
+ACTION_REQUEST_ACTIONS = frozenset({"restart", "poweroff", "product_reset"})
+PRODUCT_RESET_RECOVERY_MODE_ENV = "TOTEM_PRODUCT_RESET_RECOVERY_MODE"
+PRODUCT_RESET_RECOVERY_SIGNAL_FILENAME = "product-reset-recovery-network-ready.json"
+PRODUCT_RESET_RECOVERY_SIGNAL_SCHEMA = "dadooh.totem.product-reset-recovery.network-ready.v1"
+PRODUCT_RESET_RECOVERY_EXIT_CODE = 76
+TOTEM_ACTIONS_AVAILABLE_ENV = "TOTEM_TOTEM_ACTIONS_AVAILABLE"
+SETTINGS_SESSION_ID_RE = re.compile(r"[0-9a-f]{32}")
 PUBLIC_ORIENTATION_PATH = pathlib.Path("/data/state/totem-display/orientation.json")
 PRIVATE_SETTINGS_CONTEXT_PATH = pathlib.Path(
     os.environ.get("TOTEM_VISUAL_WIZARD_PRIVATE_SETTINGS_CONTEXT", "/data/state/totem-settings/last-settings.json")
@@ -254,6 +266,18 @@ class VisualWizardAbort(RuntimeError):
 
 class VisualWizardError(RuntimeError):
     """Public-safe visual wizard error."""
+
+
+class VisualWizardActionRequested(RuntimeError):
+    """Raised after a confirmed header action request was recorded."""
+
+    def __init__(self, action: str) -> None:
+        self.action = action
+        super().__init__(f"totem action requested: {action}")
+
+
+class VisualWizardRecoveryReady(RuntimeError):
+    """Raised after the restricted reset-recovery network signal is recorded."""
 
 
 class VisualWizardStepJump(RuntimeError):
@@ -1009,6 +1033,39 @@ def step_indicator(
     return "\n  ".join(parts)
 
 
+def header_actions_control_svg(layout: ScreenLayout, *, focus_area: str) -> str:
+    if not totem_actions_available():
+        return ""
+    focused = focus_area == "header"
+    if layout.portrait:
+        x, y, width, height = 314, 28, 82, 46
+        label_svg = (
+            f'<text x="{x + 6}" y="{y + 19}" font-family="Arial, DejaVu Sans, sans-serif" '
+            f'font-size="11" font-weight="700" fill="{VISUAL["text"]}">Acoes do</text>'
+            f'<text x="{x + 18}" y="{y + 34}" font-family="Arial, DejaVu Sans, sans-serif" '
+            f'font-size="11" font-weight="700" fill="{VISUAL["text"]}">totem</text>'
+        )
+    else:
+        x, y, width, height = 474, 34, 186, 36
+        label_svg = (
+            f'<text x="{x + 18}" y="{y + 24}" font-family="Arial, DejaVu Sans, sans-serif" '
+            f'font-size="16" font-weight="700" fill="{VISUAL["text"]}">Acoes do totem</text>'
+        )
+    fill = VISUAL["surface_selected"] if focused else "#172033"
+    stroke = VISUAL["accent_strong"] if focused else VISUAL["border_muted"]
+    stroke_width = 3 if focused else 1
+    return (
+        f'<g id="totem-actions-control" data-header-focus="{str(focused).lower()}" '
+        'data-header-label="Acoes do totem">'
+        f'<rect x="{x}" y="{y}" width="{width}" height="{height}" rx="6" fill="{fill}" '
+        f'stroke="{stroke}" stroke-width="{stroke_width}"/>'
+        f'<rect x="{x + 10}" y="{y + 11}" width="4" height="{height - 22}" rx="2" '
+        f'fill="{VISUAL["accent_strong"] if focused else VISUAL["accent_soft"]}"/>'
+        f"{label_svg}"
+        "</g>"
+    )
+
+
 def option_cards(
     options: list[Option],
     selected_index: int,
@@ -1329,8 +1386,16 @@ def build_screen_svg(
     focused_step: int | None = None,
     clock_label: object = _CLOCK_LABEL_AUTO,
     connectivity_snapshot: object = _CONNECTIVITY_SNAPSHOT_AUTO,
+    show_header_actions: bool | None = None,
+    show_step_indicator: bool = True,
 ) -> str:
     layout = screen_layout(layout_rotation_deg)
+    header_actions_visible = (
+        totem_actions_available() if show_header_actions is None else bool(show_header_actions) and totem_actions_available()
+    )
+    compact_actions_header = header_actions_visible and layout.portrait
+    header_title_size = 12 if compact_actions_header else 18
+    header_title = "Configuracao" if compact_actions_header else TITLE
     options_svg = (
         option_cards(
             options,
@@ -1377,6 +1442,11 @@ def build_screen_svg(
         if header_connectivity is not None
         else ""
     )
+    header_actions_svg = (
+        f"  {header_actions_control_svg(layout, focus_area=focus_area)}\n"
+        if header_actions_visible
+        else ""
+    )
     panel_svg = info_panel(
         safe_panel_items,
         title=panel_title,
@@ -1390,10 +1460,10 @@ def build_screen_svg(
   <rect x="0" y="12" width="{layout.width}" height="136" fill="{VISUAL["surface"]}"/>
   <rect x="{layout.margin_x}" y="32" width="120" height="38" rx="8" fill="{VISUAL["surface_active"]}" stroke="{accent}"/>
   <text x="{layout.margin_x + 18}" y="58" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="{VISUAL["text"]}">{BRAND}</text>
-  <text x="{layout.margin_x + 140}" y="57" font-family="Arial, DejaVu Sans, sans-serif" font-size="18" fill="{VISUAL["text_dim"]}">{TITLE}</text>
-  {connectivity_svg}
+  <text x="{layout.margin_x + 140}" y="57" font-family="Arial, DejaVu Sans, sans-serif" font-size="{header_title_size}" fill="{VISUAL["text_dim"]}">{header_title}</text>
+{header_actions_svg}  {connectivity_svg}
   <text x="{note_x}" y="{note_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" fill="{VISUAL["text_dim"]}">{escape_text(layout_note)}</text>
-  {step_indicator(active_step, layout_rotation_deg=layout_rotation_deg, focused_step=focused_step, focus_area=focus_area)}
+  {step_indicator(active_step, layout_rotation_deg=layout_rotation_deg, focused_step=focused_step, focus_area=focus_area) if show_step_indicator else ""}
   <text x="{layout.margin_x}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="38" font-weight="700" fill="{VISUAL["text"]}">{escape_text(title)}</text>
   {svg_lines(subtitle, x=layout.margin_x + 2, y=subtitle_y, size=19, fill=VISUAL["text_muted"], width=subtitle_width, line_gap=28, max_lines=1)}
   {options_svg}
@@ -1403,6 +1473,520 @@ def build_screen_svg(
   {footer_text(footer, layout_rotation_deg=layout_rotation_deg)}
 </svg>
 """
+
+
+def normalize_focus_area(value: str) -> str:
+    return value if value in {"content", "steps", "header"} else "content"
+
+
+def initial_navigation_focus(initial_focus_area: str, *, restricted: bool = False) -> str:
+    if restricted:
+        return "content"
+    focus_area = normalize_focus_area(initial_focus_area)
+    if focus_area == "header" and not totem_actions_available():
+        return "steps"
+    return focus_area
+
+
+def totem_actions_available(environ: dict[str, str] | None = None) -> bool:
+    source = os.environ if environ is None else environ
+    return not product_reset_recovery_mode(source) and source.get(TOTEM_ACTIONS_AVAILABLE_ENV) == "1"
+
+
+def product_reset_recovery_mode(environ: dict[str, str] | None = None) -> bool:
+    source = os.environ if environ is None else environ
+    return source.get(PRODUCT_RESET_RECOVERY_MODE_ENV) == "1"
+
+
+def product_reset_available(environ: dict[str, str] | None = None) -> bool:
+    source = os.environ if environ is None else environ
+    return (
+        not product_reset_recovery_mode(source)
+        and str(source.get("TOTEM_PRODUCT_RESET_AVAILABLE", "")).strip() == "1"
+    )
+
+
+def totem_action_options(
+    *,
+    reset_available: bool | None = None,
+    environ: dict[str, str] | None = None,
+) -> list[Option]:
+    if not totem_actions_available(environ):
+        return []
+    can_reset = (
+        product_reset_available(environ)
+        if reset_available is None
+        else bool(reset_available) and not product_reset_recovery_mode(environ)
+    )
+    options = [
+        Option("restart", "Reiniciar", "Reinicia o totem por completo."),
+        Option("poweroff", "Desligar", "Desliga o totem com seguranca."),
+    ]
+    if can_reset:
+        options.append(
+            Option(
+                "product_reset",
+                "Restaurar para configuracao inicial",
+                "Desvincula e volta ao inicio.",
+            )
+        )
+    return options
+
+
+def totem_action_confirmation_copy(action: str) -> tuple[str, str]:
+    if action == "restart":
+        return "Reiniciar o totem?", "O totem voltara automaticamente."
+    if action == "poweroff":
+        return "Desligar o totem?", "Reconecte a energia quando quiser ligar."
+    if action == "product_reset":
+        return (
+            "Restaurar para configuracao inicial?",
+            "O vinculo, a configuracao, o conteudo baixado e o estado local serao apagados. "
+            "Wi-Fi, orientacao da tela, software e atualizacoes serao mantidos.",
+        )
+    raise VisualWizardError("acao do totem indisponivel")
+
+
+def totem_action_confirm_option(action: str) -> Option:
+    if action == "restart":
+        return Option("confirm", "Reiniciar", "Reinicia o totem agora.")
+    if action == "poweroff":
+        return Option("confirm", "Desligar", "Desliga o totem agora.")
+    if action == "product_reset":
+        return Option("confirm", "Restaurar", "Volta ao inicio da configuracao.")
+    raise VisualWizardError("acao do totem indisponivel")
+
+
+def totem_action_modal_svg(
+    *,
+    title: str,
+    subtitle: str,
+    options: list[Option],
+    selected_index: int,
+    layout: ScreenLayout,
+    confirmation: bool = False,
+    subtitle_max_lines: int = 2,
+) -> str:
+    if layout.portrait:
+        x, y, width = 48, 176, 672
+        row_height, row_gap = 82, 10
+        title_size, subtitle_width = 30, 52
+    else:
+        x, y, width = 166, 194, 692
+        row_height, row_gap = 70, 10
+        title_size, subtitle_width = 30, 58
+    subtitle_extra = max(0, subtitle_max_lines - 2) * 22
+    card_height = (
+        128
+        + subtitle_extra
+        + len(options) * row_height
+        + max(0, len(options) - 1) * row_gap
+    )
+    if confirmation:
+        card_height += 28
+    rows = []
+    row_y = y + 112 + subtitle_extra
+    for index, option in enumerate(options):
+        selected = index == selected_index
+        fill = VISUAL["surface_selected"] if selected else VISUAL["surface"]
+        stroke = VISUAL["accent_strong"] if selected else VISUAL["border"]
+        rail = VISUAL["accent_strong"] if selected else VISUAL["border_muted"]
+        marker = ">" if selected else str(index + 1)
+        rows.append(
+            f'<rect x="{x + 24}" y="{row_y}" width="{width - 48}" height="{row_height}" rx="7" '
+            f'fill="{fill}" stroke="{stroke}" stroke-width="{3 if selected else 1}"/>'
+            f'<rect x="{x + 24}" y="{row_y}" width="7" height="{row_height}" rx="3" fill="{rail}"/>'
+            f'<rect x="{x + 48}" y="{row_y + 16}" width="{row_height - 32}" height="{row_height - 32}" rx="7" '
+            f'fill="{VISUAL["accent_strong"] if selected else "#263244"}"/>'
+            f'<text x="{x + 61}" y="{row_y + row_height // 2 + 7}" font-family="Arial, DejaVu Sans, sans-serif" '
+            f'font-size="20" font-weight="700" fill="{VISUAL["text_dark"] if selected else VISUAL["text_dim"]}">{marker}</text>'
+            f'{svg_lines(option.label, x=x + 102, y=row_y + 31, size=21, fill=VISUAL["text"], width=44 if layout.portrait else 42, line_gap=25, max_lines=1, weight=700)}'
+            f'{svg_lines(option.description, x=x + 102, y=row_y + 57, size=16, fill=VISUAL["text_muted"], width=52 if layout.portrait else 54, line_gap=21, max_lines=1)}'
+        )
+        row_y += row_height + row_gap
+    return f"""
+  <rect x="0" y="148" width="{layout.width}" height="{layout.height - 230}" fill="#07111f"/>
+  <g id="totem-actions-modal" data-modal-kind="{'confirmation' if confirmation else 'menu'}">
+    <rect x="{x}" y="{y}" width="{width}" height="{card_height}" rx="8" fill="{VISUAL['surface_raised']}" stroke="{VISUAL['border']}" stroke-width="2"/>
+    <rect x="{x}" y="{y}" width="8" height="{card_height}" rx="4" fill="{VISUAL['accent']}"/>
+    <text x="{x + 32}" y="{y + 45}" font-family="Arial, DejaVu Sans, sans-serif" font-size="{title_size}" font-weight="700" fill="{VISUAL['text']}">{escape_text(title)}</text>
+    {svg_lines(subtitle, x=x + 34, y=y + 77, size=17, fill=VISUAL['text_muted'], width=subtitle_width, line_gap=22, max_lines=subtitle_max_lines)}
+    {' '.join(rows)}
+  </g>
+"""
+
+
+def totem_actions_menu_screen_svg(
+    *,
+    active_step: int,
+    selected_index: int,
+    layout_rotation_deg: int,
+    reset_available: bool | None = None,
+) -> str:
+    if not totem_actions_available():
+        raise VisualWizardError("acoes do totem indisponiveis")
+    layout = screen_layout(layout_rotation_deg)
+    options = totem_action_options(reset_available=reset_available)
+    return build_screen_svg(
+        active_step=active_step,
+        focused_step=active_step,
+        focus_area="modal",
+        title="",
+        subtitle="",
+        footer="Enter abre | Esc volta",
+        panel_items=[],
+        extra_svg=totem_action_modal_svg(
+            title="Acoes do totem",
+            subtitle="Escolha uma acao.",
+            options=options,
+            selected_index=max(0, min(len(options) - 1, selected_index)),
+            layout=layout,
+        ),
+        layout_rotation_deg=layout_rotation_deg,
+    )
+
+
+def totem_action_confirmation_screen_svg(
+    *,
+    active_step: int,
+    action: str,
+    selected_index: int,
+    layout_rotation_deg: int,
+) -> str:
+    if not totem_actions_available():
+        raise VisualWizardError("acoes do totem indisponiveis")
+    title, subtitle = totem_action_confirmation_copy(action)
+    options = [
+        Option("cancel", "Cancelar", "Nenhuma acao sera solicitada."),
+        totem_action_confirm_option(action),
+    ]
+    layout = screen_layout(layout_rotation_deg)
+    return build_screen_svg(
+        active_step=active_step,
+        focused_step=active_step,
+        focus_area="modal",
+        title="",
+        subtitle="",
+        footer="Enter seleciona | Esc volta",
+        panel_items=[],
+        extra_svg=totem_action_modal_svg(
+            title=title,
+            subtitle=subtitle,
+            options=options,
+            selected_index=max(0, min(len(options) - 1, selected_index)),
+            layout=layout,
+            confirmation=True,
+            subtitle_max_lines=3 if action == "product_reset" else 2,
+        ),
+        accent="#f59e0b" if action == "product_reset" else "#06b6d4",
+        layout_rotation_deg=layout_rotation_deg,
+    )
+
+
+def validate_settings_session_id(value: Any) -> str:
+    candidate = str(value or "").strip()
+    if SETTINGS_SESSION_ID_RE.fullmatch(candidate) is None:
+        raise VisualWizardError("sessao de ajustes indisponivel")
+    return candidate
+
+
+def validate_product_reset_recovery_signal(payload: dict[str, Any]) -> None:
+    expected_fields = {
+        "schema_version",
+        "settings_session_id",
+        "result",
+        "recorded_at_utc",
+    }
+    if set(payload) != expected_fields:
+        raise VisualWizardError("sinal de recuperacao invalido")
+    if payload.get("schema_version") != PRODUCT_RESET_RECOVERY_SIGNAL_SCHEMA:
+        raise VisualWizardError("sinal de recuperacao invalido")
+    validate_settings_session_id(payload.get("settings_session_id"))
+    if payload.get("result") != "network_ready":
+        raise VisualWizardError("sinal de recuperacao invalido")
+    timestamp = payload.get("recorded_at_utc")
+    try:
+        parsed_timestamp = dt.datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise VisualWizardError("sinal de recuperacao invalido") from exc
+    if (
+        not isinstance(timestamp, str)
+        or not timestamp.endswith("Z")
+        or parsed_timestamp.tzinfo is None
+        or parsed_timestamp.utcoffset() != dt.timedelta(0)
+    ):
+        raise VisualWizardError("sinal de recuperacao invalido")
+
+
+def write_product_reset_recovery_signal(
+    out_dir: pathlib.Path,
+    *,
+    environ: dict[str, str] | None = None,
+    recorded_at_utc: str | None = None,
+) -> dict[str, str]:
+    if out_dir.is_symlink():
+        raise VisualWizardError("diretorio de recuperacao indisponivel")
+    prepare_private_dir(out_dir)
+    try:
+        out_stat = os.lstat(out_dir)
+    except OSError as exc:
+        raise VisualWizardError("diretorio de recuperacao indisponivel") from exc
+    if not stat.S_ISDIR(out_stat.st_mode):
+        raise VisualWizardError("diretorio de recuperacao indisponivel")
+    path = out_dir / PRODUCT_RESET_RECOVERY_SIGNAL_FILENAME
+    try:
+        target_stat = os.lstat(path)
+    except FileNotFoundError:
+        target_stat = None
+    except OSError as exc:
+        raise VisualWizardError("sinal de recuperacao indisponivel") from exc
+    if target_stat is not None and (
+        not stat.S_ISREG(target_stat.st_mode) or target_stat.st_nlink != 1
+    ):
+        raise VisualWizardError("sinal de recuperacao indisponivel")
+    source = os.environ if environ is None else environ
+    payload = {
+        "schema_version": PRODUCT_RESET_RECOVERY_SIGNAL_SCHEMA,
+        "settings_session_id": validate_settings_session_id(source.get("TOTEM_SETTINGS_SESSION_ID", "")),
+        "result": "network_ready",
+        "recorded_at_utc": recorded_at_utc or utc_timestamp(),
+    }
+    validate_product_reset_recovery_signal(payload)
+    atomic_write_private_json(path, payload, out_dir)
+    try:
+        target_stat = os.lstat(path)
+        stored = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise VisualWizardError("sinal de recuperacao indisponivel") from exc
+    if (
+        not stat.S_ISREG(target_stat.st_mode)
+        or target_stat.st_nlink != 1
+        or file_mode(path) != setup.PRIVATE_FILE_MODE
+    ):
+        raise VisualWizardError("sinal de recuperacao indisponivel")
+    validate_product_reset_recovery_signal(stored)
+    if stored != payload:
+        raise VisualWizardError("sinal de recuperacao indisponivel")
+    return payload
+
+
+def validate_totem_action_request_payload(payload: dict[str, Any]) -> None:
+    expected_fields = {
+        "schema_version",
+        "request_id",
+        "settings_session_id",
+        "action",
+        "source",
+        "confirmed_at_utc",
+    }
+    if set(payload) != expected_fields:
+        raise VisualWizardError("pedido de acao invalido")
+    if payload.get("schema_version") != ACTION_REQUEST_SCHEMA:
+        raise VisualWizardError("pedido de acao invalido")
+    if payload.get("action") not in ACTION_REQUEST_ACTIONS:
+        raise VisualWizardError("pedido de acao invalido")
+    if payload.get("source") != ACTION_REQUEST_SOURCE:
+        raise VisualWizardError("pedido de acao invalido")
+    validate_settings_session_id(payload.get("settings_session_id"))
+    request_id = payload.get("request_id")
+    try:
+        parsed_request_id = uuid.UUID(str(request_id))
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise VisualWizardError("pedido de acao invalido") from exc
+    if parsed_request_id.version != 4 or str(parsed_request_id) != request_id:
+        raise VisualWizardError("pedido de acao invalido")
+    confirmed_at = payload.get("confirmed_at_utc")
+    try:
+        parsed_confirmed_at = dt.datetime.fromisoformat(str(confirmed_at).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise VisualWizardError("pedido de acao invalido") from exc
+    if (
+        not isinstance(confirmed_at, str)
+        or not confirmed_at.endswith("Z")
+        or parsed_confirmed_at.tzinfo is None
+        or parsed_confirmed_at.utcoffset() != dt.timedelta(0)
+    ):
+        raise VisualWizardError("pedido de acao invalido")
+
+
+def action_request_payload(
+    action: str,
+    *,
+    environ: dict[str, str] | None = None,
+    request_id: str | None = None,
+    confirmed_at_utc: str | None = None,
+) -> dict[str, str]:
+    source = os.environ if environ is None else environ
+    payload = {
+        "schema_version": ACTION_REQUEST_SCHEMA,
+        "request_id": request_id or str(uuid.uuid4()),
+        "settings_session_id": validate_settings_session_id(source.get("TOTEM_SETTINGS_SESSION_ID", "")),
+        "action": action,
+        "source": ACTION_REQUEST_SOURCE,
+        "confirmed_at_utc": confirmed_at_utc or utc_timestamp(),
+    }
+    validate_totem_action_request_payload(payload)
+    return payload
+
+
+def require_safe_action_request_target(path: pathlib.Path, out_dir: pathlib.Path) -> None:
+    if out_dir.is_symlink():
+        raise VisualWizardError("diretorio de acao indisponivel")
+    prepare_private_dir(out_dir)
+    try:
+        out_stat = os.lstat(out_dir)
+    except OSError as exc:
+        raise VisualWizardError("diretorio de acao indisponivel") from exc
+    if not stat.S_ISDIR(out_stat.st_mode):
+        raise VisualWizardError("diretorio de acao indisponivel")
+    try:
+        target_stat = os.lstat(path)
+    except FileNotFoundError:
+        target_stat = None
+    except OSError as exc:
+        raise VisualWizardError("arquivo de acao indisponivel") from exc
+    if target_stat is not None and (
+        not stat.S_ISREG(target_stat.st_mode) or target_stat.st_nlink != 1
+    ):
+        raise VisualWizardError("arquivo de acao indisponivel")
+
+
+def write_totem_action_request(
+    out_dir: pathlib.Path,
+    action: str,
+    *,
+    environ: dict[str, str] | None = None,
+    request_id: str | None = None,
+    confirmed_at_utc: str | None = None,
+) -> dict[str, str]:
+    path = out_dir / ACTION_REQUEST_FILENAME
+    require_safe_action_request_target(path, out_dir)
+    payload = action_request_payload(
+        action,
+        environ=environ,
+        request_id=request_id,
+        confirmed_at_utc=confirmed_at_utc,
+    )
+    serialized = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
+    if len((serialized + "\n").encode("utf-8")) > ACTION_REQUEST_MAX_BYTES:
+        raise VisualWizardError("pedido de acao excede o limite")
+    atomic_write_private_text(path, serialized, out_dir)
+    try:
+        target_stat = os.lstat(path)
+        stored = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise VisualWizardError("arquivo de acao indisponivel") from exc
+    if (
+        not stat.S_ISREG(target_stat.st_mode)
+        or target_stat.st_nlink != 1
+        or file_mode(path) != setup.PRIVATE_FILE_MODE
+        or path.stat().st_size > ACTION_REQUEST_MAX_BYTES
+    ):
+        raise VisualWizardError("arquivo de acao indisponivel")
+    validate_totem_action_request_payload(stored)
+    if stored != payload:
+        raise VisualWizardError("arquivo de acao indisponivel")
+    return payload
+
+
+def run_totem_action_confirmation(
+    display: VisualDisplay,
+    *,
+    active_step: int,
+    action: str,
+    layout_rotation_deg: int,
+) -> bool:
+    if not totem_actions_available():
+        return False
+    selected = 0
+    while True:
+        display.show(
+            f"26-totem-action-confirm-{action}",
+            totem_action_confirmation_screen_svg(
+                active_step=active_step,
+                action=action,
+                selected_index=selected,
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        key = read_key()
+        if key == "up":
+            selected = max(0, selected - 1)
+            continue
+        if key == "down":
+            selected = min(1, selected + 1)
+            continue
+        if key in {"escape", "b", "B", "back"}:
+            return False
+        if key in {"q", "Q"}:
+            raise VisualWizardAbort("setup visual cancelado pelo operador")
+        if key == "enter":
+            if selected == 0:
+                return False
+            write_totem_action_request(display.out_dir, action)
+            raise VisualWizardActionRequested(action)
+
+
+def run_totem_actions_menu(
+    display: VisualDisplay,
+    *,
+    active_step: int,
+    layout_rotation_deg: int,
+) -> None:
+    if not totem_actions_available():
+        return
+    options = totem_action_options()
+    selected = 0
+    while True:
+        display.show(
+            "26-totem-actions-menu",
+            totem_actions_menu_screen_svg(
+                active_step=active_step,
+                selected_index=selected,
+                layout_rotation_deg=layout_rotation_deg,
+            ),
+        )
+        key = read_key()
+        if key == "up":
+            selected = max(0, selected - 1)
+            continue
+        if key == "down":
+            selected = min(len(options) - 1, selected + 1)
+            continue
+        if key in {"escape", "b", "B", "back"}:
+            return
+        if key in {"q", "Q"}:
+            raise VisualWizardAbort("setup visual cancelado pelo operador")
+        if key == "enter":
+            run_totem_action_confirmation(
+                display,
+                active_step=active_step,
+                action=options[selected].key,
+                layout_rotation_deg=layout_rotation_deg,
+            )
+
+
+def handle_header_focus_key(
+    display: VisualDisplay,
+    key: str,
+    *,
+    active_step: int,
+    layout_rotation_deg: int,
+) -> str:
+    if not totem_actions_available():
+        return "content"
+    if key == "down":
+        return "steps"
+    if key == "enter":
+        run_totem_actions_menu(
+            display,
+            active_step=active_step,
+            layout_rotation_deg=layout_rotation_deg,
+        )
+        return "header"
+    if key in {"q", "Q"}:
+        raise VisualWizardAbort("setup visual cancelado pelo operador")
+    return "header"
 
 
 def visual_renderer_name() -> str:
@@ -2102,6 +2686,13 @@ def adjacent_navigable_step(step: int, delta: int) -> int:
 
 
 def option_footer(*, focus_area: str, primary: str, allow_back: bool) -> str:
+    if not totem_actions_available():
+        if focus_area == "steps":
+            return "Enter abre | Esc volta"
+        suffix = "Esc volta" if allow_back else "Esc cancela"
+        return f"{primary} | Cima etapas | Baixo escolhe | {suffix}"
+    if focus_area == "header":
+        return "Enter abre | Baixo etapas | Esc volta"
     if focus_area == "steps":
         return "Enter abre | Esc volta"
     suffix = "Esc volta" if allow_back else "Esc cancela"
@@ -2109,6 +2700,10 @@ def option_footer(*, focus_area: str, primary: str, allow_back: bool) -> str:
 
 
 def handle_step_focus_key(key: str, *, focused_step: int, active_step: int) -> tuple[str, int]:
+    if key == "up":
+        if not totem_actions_available():
+            return "steps", focused_step
+        return "header", focused_step
     if key == "left":
         next_step = adjacent_navigable_step(focused_step, -1)
         if next_step != active_step:
@@ -2142,7 +2737,7 @@ def choose_option(
     context_provider: Callable[[], tuple[list[str], str, dict[str, Any]]] | None = None,
 ) -> Option | None:
     selected = max(0, min(len(options) - 1, int(initial_selected_index))) if options else 0
-    focus_area = "steps" if initial_focus_area == "steps" else "content"
+    focus_area = initial_navigation_focus(initial_focus_area)
     focused_step = active_step
     while True:
         rendered_panel_items = panel_items
@@ -2182,6 +2777,14 @@ def choose_option(
             else read_key()
         )
         if key == "timeout":
+            continue
+        if focus_area == "header":
+            focus_area = handle_header_focus_key(
+                display,
+                key,
+                active_step=active_step,
+                layout_rotation_deg=layout_rotation_deg,
+            )
             continue
         if focus_area == "steps":
             if allow_back and key in {"b", "B", "back", "escape"}:
@@ -2229,7 +2832,7 @@ def choose_orientation(
     options = [Option(str(item["key"]), str(item["label"]), str(item["description"])) for item in DISPLAY_OPTIONS]
     selected = selected_orientation_index_for_rotation(initial_rotation_deg)
     current_layout_rotation_deg = normalize_rotation_deg(initial_rotation_deg)
-    focus_area = "steps" if initial_focus_area == "steps" else "content"
+    focus_area = initial_navigation_focus(initial_focus_area)
     focused_step = 0
     needs_render = True
     while True:
@@ -2262,6 +2865,15 @@ def choose_orientation(
             )
             needs_render = False
         key = read_key()
+        if focus_area == "header":
+            focus_area = handle_header_focus_key(
+                display,
+                key,
+                active_step=0,
+                layout_rotation_deg=current_layout_rotation_deg,
+            )
+            needs_render = True
+            continue
         if focus_area == "steps":
             if key in {"escape", "q", "Q"}:
                 raise VisualWizardAbort("setup visual cancelado pelo operador")
@@ -2326,6 +2938,14 @@ def choose_orientation(
                 ),
             )
             confirm_key = read_key()
+            if confirm_focus_area == "header":
+                confirm_focus_area = handle_header_focus_key(
+                    display,
+                    confirm_key,
+                    active_step=0,
+                    layout_rotation_deg=layout_rotation_deg,
+                )
+                continue
             if confirm_focus_area == "steps":
                 if confirm_key in {"b", "B", "back", "escape"}:
                     needs_render = True
@@ -2500,12 +3120,13 @@ def read_text_field(
     escape_returns_back: bool = False,
     validation_error_message: str = "Formato invalido.",
     initial_focus_area: str = "content",
+    restricted: bool = False,
 ) -> str | None:
     value = str(initial_value or "")[:max_length]
     cursor = len(value)
     error = ""
     reveal_hidden_value = False
-    focus_area = "steps" if initial_focus_area == "steps" else "content"
+    focus_area = initial_navigation_focus(initial_focus_area, restricted=restricted)
     focused_step = active_step
     hidden_toggle_available = bool(hidden and allow_hidden_toggle and display.framebuffer is not None)
     needs_render = True
@@ -2523,7 +3144,17 @@ def read_text_field(
                 key = read_key(timeout_sec=TEXT_INPUT_MIN_RENDER_INTERVAL_SEC - (now - last_render_at))
                 if key != "timeout":
                     for drained_key in drain_key_repeats(key):
-                        if focus_area == "steps":
+                        if not restricted and focus_area == "header":
+                            focus_area = handle_header_focus_key(
+                                display,
+                                drained_key,
+                                active_step=active_step,
+                                layout_rotation_deg=layout_rotation_deg,
+                            )
+                            needs_render = True
+                            force_render = True
+                            break
+                        if not restricted and focus_area == "steps":
                             if allow_back and drained_key in {"back", "escape"}:
                                 return None
                             if drained_key in {"escape", "q", "Q"}:
@@ -2536,7 +3167,7 @@ def read_text_field(
                             needs_render = True
                             force_render = True
                             break
-                        if drained_key == "up":
+                        if drained_key == "up" and not restricted:
                             focus_area = "steps"
                             focused_step = active_step
                             needs_render = True
@@ -2611,7 +3242,7 @@ def read_text_field(
                 )
             elif hidden and allow_hidden_toggle and custom_footer:
                 footer = custom_footer.replace(" | F2 {toggle}", "").replace("F2 {toggle} | ", "")
-            if focus_area == "steps":
+            if focus_area in {"steps", "header"}:
                 footer = option_footer(focus_area=focus_area, primary="Enter edita", allow_back=allow_back)
             visual_state = (hint, note, reveal_hidden_value, cursor, focus_area, focused_step)
             if visual_state != last_visual_state:
@@ -2628,6 +3259,8 @@ def read_text_field(
                     "panel_items": panel_items,
                     "accent": "#ef4444" if error else "#06b6d4",
                     "layout_rotation_deg": layout_rotation_deg,
+                    "show_header_actions": not restricted,
+                    "show_step_indicator": not restricted,
                 }
                 display_svg = build_screen_svg(**screen_kwargs)
                 artifact_svg = None
@@ -2652,7 +3285,17 @@ def read_text_field(
 
         key = read_key()
         for drained_key in drain_key_repeats(key):
-            if focus_area == "steps":
+            if not restricted and focus_area == "header":
+                focus_area = handle_header_focus_key(
+                    display,
+                    drained_key,
+                    active_step=active_step,
+                    layout_rotation_deg=layout_rotation_deg,
+                )
+                needs_render = True
+                force_render = True
+                break
+            if not restricted and focus_area == "steps":
                 if allow_back and drained_key in {"back", "escape"}:
                     return None
                 if drained_key in {"escape", "q", "Q"}:
@@ -2665,7 +3308,7 @@ def read_text_field(
                 needs_render = True
                 force_render = True
                 break
-            if drained_key == "up":
+            if drained_key == "up" and not restricted:
                 focus_area = "steps"
                 focused_step = active_step
                 needs_render = True
@@ -3520,6 +4163,9 @@ def wifi_list_screen_svg(
     refresh_message: str,
     layout_rotation_deg: int,
     refreshing: bool = False,
+    focus_area: str = "content",
+    focused_step: int | None = None,
+    restricted: bool = False,
 ) -> str:
     page_size = wifi_list_page_size(layout_rotation_deg)
     visible_networks, page_start, page_end, page_index, page_count = page_items(
@@ -3540,6 +4186,10 @@ def wifi_list_screen_svg(
         selected_line = "Use R para atualizar"
         primary_action = "Enter atualiza"
         footer = "Enter atualiza | R atualiza | Esc volta"
+    if not restricted and focus_area in {"steps", "header"}:
+        footer = option_footer(focus_area=focus_area, primary=primary_action, allow_back=True)
+    elif restricted:
+        footer = f"{primary_action} | Setas rolam | R atualiza | Esc sai"
     cached = list_status == "cached"
     unavailable = list_status not in {"ok", "cached"}
     if refreshing:
@@ -3571,6 +4221,8 @@ def wifi_list_screen_svg(
         accent = "#64748b"
     return build_screen_svg(
         active_step=1,
+        focused_step=focused_step,
+        focus_area=focus_area,
         title="Selecionar Wi-Fi",
         subtitle=subtitle,
         footer=footer,
@@ -3580,10 +4232,17 @@ def wifi_list_screen_svg(
         panel_items=panel_items,
         accent=accent,
         layout_rotation_deg=layout_rotation_deg,
+        show_header_actions=not restricted,
+        show_step_indicator=not restricted,
     )
 
 
-def wifi_connecting_screen_svg(*, layout_rotation_deg: int, security_present: bool = True) -> str:
+def wifi_connecting_screen_svg(
+    *,
+    layout_rotation_deg: int,
+    security_present: bool = True,
+    restricted: bool = False,
+) -> str:
     return build_screen_svg(
         active_step=1,
         title="Conectando ao Wi-Fi",
@@ -3597,6 +4256,8 @@ def wifi_connecting_screen_svg(*, layout_rotation_deg: int, security_present: bo
         ],
         accent="#f59e0b",
         layout_rotation_deg=layout_rotation_deg,
+        show_header_actions=not restricted,
+        show_step_indicator=not restricted,
     )
 
 
@@ -3604,6 +4265,7 @@ def wifi_success_screen_svg(
     *,
     layout_rotation_deg: int,
     connectivity_snapshot: dict[str, Any] | None = None,
+    restricted: bool = False,
 ) -> str:
     presentation = connectivity_presentation(connectivity_snapshot)
     state = normalize_connectivity_snapshot(connectivity_snapshot)
@@ -3611,6 +4273,7 @@ def wifi_success_screen_svg(
         return wifi_portal_required_screen_svg(
             layout_rotation_deg=layout_rotation_deg,
             connectivity_snapshot=state,
+            restricted=restricted,
         )
     if state["internet"] == "online":
         subtitle = "Rede salva e servico Dadooh acessivel."
@@ -3638,6 +4301,8 @@ def wifi_success_screen_svg(
         accent=presentation.accent if state["internet"] != "offline" else "#f59e0b",
         layout_rotation_deg=layout_rotation_deg,
         connectivity_snapshot=state,
+        show_header_actions=not restricted,
+        show_step_indicator=not restricted,
     )
 
 
@@ -3645,6 +4310,7 @@ def wifi_portal_required_screen_svg(
     *,
     layout_rotation_deg: int,
     connectivity_snapshot: dict[str, Any] | None = None,
+    restricted: bool = False,
 ) -> str:
     state = normalize_connectivity_snapshot(connectivity_snapshot)
     return build_screen_svg(
@@ -3661,6 +4327,8 @@ def wifi_portal_required_screen_svg(
         accent="#f59e0b",
         layout_rotation_deg=layout_rotation_deg,
         connectivity_snapshot=state,
+        show_header_actions=not restricted,
+        show_step_indicator=not restricted,
     )
 
 
@@ -3669,6 +4337,7 @@ def resolve_captive_portal_requirement(
     network: dict[str, Any],
     *,
     layout_rotation_deg: int,
+    restricted: bool = False,
 ) -> dict[str, Any] | None:
     current = dict(network)
     while current.get("connectivity_captive_portal") == "required":
@@ -3678,6 +4347,7 @@ def resolve_captive_portal_requirement(
             wifi_portal_required_screen_svg(
                 layout_rotation_deg=layout_rotation_deg,
                 connectivity_snapshot=snapshot,
+                restricted=restricted,
             ),
         )
         action = read_advertised_action("r", "R", "enter", "escape", "q", "Q")
@@ -3778,6 +4448,7 @@ def wifi_failure_screen_svg(
     layout_rotation_deg: int,
     failure_category: Any = "nm_activation_failed_generic",
     previous_profile_available: bool = False,
+    restricted: bool = False,
 ) -> str:
     presentation = wifi_failure_presentation(
         failure_category=failure_category,
@@ -3801,6 +4472,8 @@ def wifi_failure_screen_svg(
         panel_items=[hint, restoration, "Ethernet nao foi alterado."],
         accent="#ef4444",
         layout_rotation_deg=layout_rotation_deg,
+        show_header_actions=not restricted,
+        show_step_indicator=not restricted,
     )
 
 
@@ -3831,6 +4504,7 @@ def choose_wifi_network(
     initial_networks: list[dict[str, Any]] | None = None,
     initial_selected_ssid: str = "",
     initial_selected_security_present: bool | str | None = None,
+    restricted: bool = False,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
     if initial_networks is None:
         networks, scan_status = wifi_adapter.list_wifi_networks_for_local_ui(
@@ -3858,6 +4532,8 @@ def choose_wifi_network(
                 break
     last_refresh_attempt = time.monotonic()
     last_successful_refresh = last_refresh_attempt if scan_status == "ok" else None
+    focus_area = "content"
+    focused_step = 1
     needs_render = True
     while True:
         now = time.monotonic()
@@ -3871,12 +4547,36 @@ def choose_wifi_network(
                     updated_age_sec=int(now - (last_successful_refresh or last_refresh_attempt)),
                     refresh_message=refresh_message,
                     layout_rotation_deg=layout_rotation_deg,
+                    focus_area=focus_area,
+                    focused_step=focused_step,
+                    restricted=restricted,
                 ),
             )
             needs_render = False
 
         wait_sec = max(0.0, WIFI_LIST_REFRESH_SEC - (time.monotonic() - last_refresh_attempt))
         key = read_key(timeout_sec=wait_sec)
+        if not restricted and focus_area == "header" and key != "timeout":
+            focus_area = handle_header_focus_key(
+                display,
+                key,
+                active_step=1,
+                layout_rotation_deg=layout_rotation_deg,
+            )
+            needs_render = True
+            continue
+        if not restricted and focus_area == "steps" and key != "timeout":
+            if key in {"b", "B", "back", "escape"}:
+                return None
+            if key in {"q", "Q"}:
+                raise VisualWizardAbort("setup visual cancelado pelo operador")
+            focus_area, focused_step = handle_step_focus_key(
+                key,
+                focused_step=focused_step,
+                active_step=1,
+            )
+            needs_render = True
+            continue
         if key == "timeout":
             display.show(
                 "02-wifi-list-refreshing",
@@ -3888,6 +4588,7 @@ def choose_wifi_network(
                     refresh_message="Atualizacao automatica.",
                     layout_rotation_deg=layout_rotation_deg,
                     refreshing=True,
+                    restricted=restricted,
                 ),
             )
             refreshed, refreshed_status = wifi_adapter.list_wifi_networks_for_local_ui(
@@ -3918,6 +4619,7 @@ def choose_wifi_network(
                     refresh_message="Atualizacao manual.",
                     layout_rotation_deg=layout_rotation_deg,
                     refreshing=True,
+                    restricted=restricted,
                 ),
             )
             refreshed, refreshed_status = wifi_adapter.list_wifi_networks_for_local_ui(
@@ -3937,7 +4639,16 @@ def choose_wifi_network(
             last_refresh_attempt = refreshed_at
             needs_render = True
             continue
-        if key in {"up", "left"} and networks:
+        if key == "up" and networks:
+            if selected_index == 0 and not restricted:
+                focus_area = "steps"
+                focused_step = 1
+            else:
+                selected_index = max(0, selected_index - 1)
+            refresh_message = ""
+            needs_render = True
+            continue
+        if key == "left" and networks:
             selected_index = max(0, selected_index - 1)
             refresh_message = ""
             needs_render = True
@@ -3970,6 +4681,7 @@ def choose_wifi_network(
                     refresh_message="Atualizacao manual.",
                     layout_rotation_deg=layout_rotation_deg,
                     refreshing=True,
+                    restricted=restricted,
                 ),
             )
             refreshed, refreshed_status = wifi_adapter.list_wifi_networks_for_local_ui(
@@ -4001,6 +4713,7 @@ def collect_wifi_password(
     selected_network: dict[str, Any],
     layout_rotation_deg: int,
     initial_value: str = "",
+    restricted: bool = False,
 ) -> str | None:
     return read_text_field(
         display,
@@ -4021,6 +4734,7 @@ def collect_wifi_password(
         layout_rotation_deg=layout_rotation_deg,
         initial_value=initial_value,
         custom_footer="Enter conecta | Esc troca rede | F2 {toggle}",
+        restricted=restricted,
     )
 
 
@@ -4077,6 +4791,7 @@ def apply_wifi_persistent_attempt(
     security_present: bool,
     selection_metadata: dict[str, Any],
     layout_rotation_deg: int,
+    restricted: bool = False,
 ) -> dict[str, Any]:
     wifi_out_dir = require_tmp_dir(str(out_dir / WIFI_APPLY_DIRNAME))
     prepare_private_dir(wifi_out_dir)
@@ -4128,6 +4843,7 @@ def apply_wifi_persistent_attempt(
                 wifi_connecting_screen_svg(
                     layout_rotation_deg=layout_rotation_deg,
                     security_present=security_present,
+                    restricted=restricted,
                 ),
             )
             process = subprocess.Popen(command, stdout=stdout_handle, stderr=subprocess.DEVNULL, text=True)
@@ -4137,6 +4853,7 @@ def apply_wifi_persistent_attempt(
                     wifi_connecting_screen_svg(
                         layout_rotation_deg=layout_rotation_deg,
                         security_present=security_present,
+                        restricted=restricted,
                     ),
                 )
                 time.sleep(1)
@@ -4178,6 +4895,7 @@ def run_wifi_persistent(
     out_dir: pathlib.Path,
     *,
     layout_rotation_deg: int,
+    restricted: bool = False,
 ) -> dict[str, Any] | None:
     c1523_phase("wifi_step_entered", mode="persistent")
     networks: list[dict[str, Any]] | None = None
@@ -4185,13 +4903,15 @@ def run_wifi_persistent(
     selected_security_present: bool | str | None = None
     psk = ""
     while True:
-        selected = choose_wifi_network(
-            display,
-            layout_rotation_deg=layout_rotation_deg,
-            initial_networks=networks,
-            initial_selected_ssid=selected_ssid,
-            initial_selected_security_present=selected_security_present,
-        )
+        choose_kwargs: dict[str, Any] = {
+            "layout_rotation_deg": layout_rotation_deg,
+            "initial_networks": networks,
+            "initial_selected_ssid": selected_ssid,
+            "initial_selected_security_present": selected_security_present,
+        }
+        if restricted:
+            choose_kwargs["restricted"] = True
+        selected = choose_wifi_network(display, **choose_kwargs)
         if selected is None:
             return None
         selected_network, networks = selected
@@ -4207,24 +4927,27 @@ def run_wifi_persistent(
 
         while True:
             if security_present and prompt_for_password:
-                entered_psk = collect_wifi_password(
-                    display,
-                    selected_network=selected_network,
-                    layout_rotation_deg=layout_rotation_deg,
-                    initial_value=psk,
-                )
+                password_kwargs: dict[str, Any] = {
+                    "selected_network": selected_network,
+                    "layout_rotation_deg": layout_rotation_deg,
+                    "initial_value": psk,
+                }
+                if restricted:
+                    password_kwargs["restricted"] = True
+                entered_psk = collect_wifi_password(display, **password_kwargs)
                 if entered_psk is None:
                     break
                 psk = entered_psk
-            network = apply_wifi_persistent_attempt(
-                display,
-                out_dir,
-                ssid=selected_ssid,
-                psk=psk if security_present else None,
-                security_present=security_present,
-                selection_metadata=selection_metadata,
-                layout_rotation_deg=layout_rotation_deg,
-            )
+            apply_kwargs: dict[str, Any] = {
+                "ssid": selected_ssid,
+                "psk": psk if security_present else None,
+                "security_present": security_present,
+                "selection_metadata": selection_metadata,
+                "layout_rotation_deg": layout_rotation_deg,
+            }
+            if restricted:
+                apply_kwargs["restricted"] = True
+            network = apply_wifi_persistent_attempt(display, out_dir, **apply_kwargs)
             if network["wifi_link_ready"]:
                 network = apply_connectivity_snapshot(
                     network,
@@ -4237,6 +4960,7 @@ def run_wifi_persistent(
                         wifi_success_screen_svg(
                             layout_rotation_deg=layout_rotation_deg,
                             connectivity_snapshot=connectivity_snapshot,
+                            restricted=restricted,
                         ),
                     )
                     wait_enter_or_timeout(WIFI_SUCCESS_AUTO_ADVANCE_SEC)
@@ -4251,6 +4975,7 @@ def run_wifi_persistent(
                     layout_rotation_deg=layout_rotation_deg,
                     failure_category=network["failure_category"],
                     previous_profile_available=bool(network["previous_profile_available"]),
+                    restricted=restricted,
                 ),
             )
             action = read_advertised_action("enter", "b", "B", "back", "escape")
@@ -4917,7 +5642,7 @@ def review_and_confirm(
         environment_id.strip() and (environment_status == "retained" or environment_preflight is not None)
     )
     environment_note = environment_review_note(environment_id, environment_preflight, environment_status)
-    focus_area = "steps" if initial_focus_area == "steps" else "content"
+    focus_area = initial_navigation_focus(initial_focus_area)
     focused_step = 3
     while True:
         retain_live_portal_requirement(network)
@@ -4942,7 +5667,11 @@ def review_and_confirm(
             primary = "Enter corrige"
             panel_title = "Bloqueado"
             panel_items = ["Sem candidata parcial.", "Revise os pendentes.", "Nada salvo."]
-        footer = "Enter abre | Esc volta" if focus_area == "steps" else f"{primary} | Cima menu | Esc volta"
+        footer = (
+            option_footer(focus_area=focus_area, primary=primary, allow_back=True)
+            if focus_area in {"steps", "header"}
+            else f"{primary} | Cima menu | Esc volta"
+        )
         display.show(
             "05-review",
             build_screen_svg(
@@ -4978,6 +5707,14 @@ def review_and_confirm(
             ),
         )
         key = read_key()
+        if focus_area == "header":
+            focus_area = handle_header_focus_key(
+                display,
+                key,
+                active_step=3,
+                layout_rotation_deg=int(rotation["rotation_deg"]),
+            )
+            continue
         if focus_area == "steps":
             if key in {"b", "B", "back", "escape"}:
                 return None
@@ -5904,6 +6641,57 @@ def show_complete(display: VisualDisplay, status: dict[str, Any]) -> None:
     wait_enter_or_cancel()
 
 
+def product_reset_recovery_context_screen_svg(*, layout_rotation_deg: int) -> str:
+    return build_screen_svg(
+        active_step=1,
+        title="Restauracao pendente",
+        subtitle="Conecte um Wi-Fi para concluir.",
+        footer="Enter escolhe Wi-Fi | Esc sai",
+        panel_title="Somente rede",
+        panel_items=["Os demais ajustes nao mudam."],
+        accent="#f59e0b",
+        layout_rotation_deg=layout_rotation_deg,
+        show_header_actions=False,
+        show_step_indicator=False,
+    )
+
+
+def run_product_reset_recovery(
+    display: VisualDisplay,
+    out_dir: pathlib.Path,
+    *,
+    layout_rotation_deg: int,
+    environ: dict[str, str] | None = None,
+) -> dict[str, str]:
+    if not product_reset_recovery_mode(environ):
+        raise VisualWizardError("recuperacao de restauracao indisponivel")
+    display.show(
+        "27-product-reset-recovery",
+        product_reset_recovery_context_screen_svg(layout_rotation_deg=layout_rotation_deg),
+    )
+    if read_advertised_action("enter", "escape") != "enter":
+        raise VisualWizardAbort("recuperacao de restauracao cancelada pelo operador")
+    network = run_wifi_persistent(
+        display,
+        out_dir,
+        layout_rotation_deg=layout_rotation_deg,
+        restricted=True,
+    )
+    if network is None:
+        raise VisualWizardAbort("recuperacao de restauracao cancelada pelo operador")
+    network = resolve_captive_portal_requirement(
+        display,
+        network,
+        layout_rotation_deg=layout_rotation_deg,
+        restricted=True,
+    )
+    if network is None:
+        raise VisualWizardAbort("recuperacao de restauracao cancelada pelo operador")
+    if not bool(network.get("wifi_link_ready", False)):
+        raise VisualWizardError("Wi-Fi nao confirmado")
+    return write_product_reset_recovery_signal(out_dir, environ=environ)
+
+
 def run_visual_wizard(
     out_dir: pathlib.Path,
     *,
@@ -5916,19 +6704,27 @@ def run_visual_wizard(
     set_connectivity_indicator_runtime(True)
     set_connectivity_refresh_callback(display.refresh_connectivity_header)
     c1523_phase("wizard_started")
+    recovery_mode = product_reset_recovery_mode()
     private_context = load_private_settings_context(private_settings_context_path) if private_settings_context_path else {}
     initial_rotation_deg = initial_rotation_from_context(private_context)
-    initial_environment_id = str(private_context.get("environment_id", ""))
+    initial_environment_id = "" if recovery_mode else str(private_context.get("environment_id", ""))
     state = initial_wizard_state(
         initial_rotation_deg,
         initial_environment_id,
-        retain_existing_environment=private_context_is_applied(private_context),
-        initial_network=retained_network_from_context(private_context),
+        retain_existing_environment=not recovery_mode and private_context_is_applied(private_context),
+        initial_network=None if recovery_mode else retained_network_from_context(private_context),
     )
     active_step = initial_wizard_step(state)
     entry_focus_area = "content"
     try:
         with RawKeyboard():
+            if recovery_mode:
+                run_product_reset_recovery(
+                    display,
+                    out_dir,
+                    layout_rotation_deg=int(state.rotation["rotation_deg"]),
+                )
+                raise VisualWizardRecoveryReady()
             while True:
                 layout_rotation_deg = int(state.rotation["rotation_deg"])
                 try:
@@ -6210,18 +7006,19 @@ def run_visual_wizard(
                     active_step = int(exc.step)
                     entry_focus_area = exc.focus_area
     except VisualWizardAbort:
-        try:
-            observation = cancelled_wifi_observation(out_dir)
-            display.show(
-                "07-cancelled",
-                build_cancelled_screen_svg(
-                    observation,
-                    layout_rotation_deg=int(state.rotation["rotation_deg"]),
-                ),
-            )
-            time.sleep(1.2)
-        except Exception:
-            pass
+        if not recovery_mode:
+            try:
+                observation = cancelled_wifi_observation(out_dir)
+                display.show(
+                    "07-cancelled",
+                    build_cancelled_screen_svg(
+                        observation,
+                        layout_rotation_deg=int(state.rotation["rotation_deg"]),
+                    ),
+                )
+                time.sleep(1.2)
+            except Exception:
+                pass
         raise
     finally:
         try:
@@ -6239,6 +7036,31 @@ def generate_preview_screens(out_dir: pathlib.Path) -> None:
         "internet": "online",
     }
     preview_connectivity_copy = connectivity_presentation(preview_connectivity)
+    for preview_name, layout_rotation_deg in (("landscape", 0), ("portrait", 90)):
+        if totem_actions_available():
+            display.show(
+                f"26-totem-actions-menu-{preview_name}",
+                totem_actions_menu_screen_svg(
+                    active_step=1,
+                    selected_index=0,
+                    layout_rotation_deg=layout_rotation_deg,
+                    reset_available=True,
+                ),
+            )
+            for action in ("restart", "poweroff", "product_reset"):
+                display.show(
+                    f"26-totem-action-confirm-{action}-{preview_name}",
+                    totem_action_confirmation_screen_svg(
+                        active_step=1,
+                        action=action,
+                        selected_index=0,
+                        layout_rotation_deg=layout_rotation_deg,
+                    ),
+                )
+        display.show(
+            f"27-product-reset-recovery-{preview_name}",
+            product_reset_recovery_context_screen_svg(layout_rotation_deg=layout_rotation_deg),
+        )
     display.show(
         "01-orientation",
         build_screen_svg(
@@ -6831,6 +7653,12 @@ def run_self_test() -> None:
         "dynamic connection options should retain the current verified choice",
     )
 
+    actions_env_was_set = TOTEM_ACTIONS_AVAILABLE_ENV in os.environ
+    actions_env_value = os.environ.get(TOTEM_ACTIONS_AVAILABLE_ENV)
+    recovery_env_was_set = PRODUCT_RESET_RECOVERY_MODE_ENV in os.environ
+    recovery_env_value = os.environ.get(PRODUCT_RESET_RECOVERY_MODE_ENV)
+    os.environ.pop(TOTEM_ACTIONS_AVAILABLE_ENV, None)
+    os.environ.pop(PRODUCT_RESET_RECOVERY_MODE_ENV, None)
     root = pathlib.Path(tempfile.mkdtemp(prefix="dadooh-c9-9-visual-wizard-self-test-", dir="/tmp"))
     try:
         synthetic_ssid = "TEST_WIFI_SHOULD_NOT_LEAK"
@@ -6838,6 +7666,75 @@ def run_self_test() -> None:
         context_environment_id = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
         primary_environment_id = "11111111-2222-4333-8444-555555555555"
         public_environment_id = "22222222-3333-4444-8555-666666666666"
+        assert_true(
+            not totem_actions_available({})
+            and not totem_actions_available({TOTEM_ACTIONS_AVAILABLE_ENV: "true"})
+            and totem_actions_available({TOTEM_ACTIONS_AVAILABLE_ENV: "1"})
+            and not totem_actions_available(
+                {
+                    TOTEM_ACTIONS_AVAILABLE_ENV: "1",
+                    PRODUCT_RESET_RECOVERY_MODE_ENV: "1",
+                }
+            ),
+            "totem actions must require the exact capability and stay hidden during recovery",
+        )
+        hidden_actions_svg = build_screen_svg(
+            active_step=1,
+            title="Wi-Fi",
+            subtitle="Selecione uma rede.",
+            footer="Enter confirma | Esc volta",
+            panel_items=[],
+        )
+        assert_true(
+            "data-header-label=\"Acoes do totem\"" not in hidden_actions_svg
+            and totem_action_options() == [],
+            "actions header and menu must be absent by default",
+        )
+        assert_raises(
+            lambda: totem_actions_menu_screen_svg(
+                active_step=1,
+                selected_index=0,
+                layout_rotation_deg=0,
+            ),
+            "actions menu must not render without its capability",
+        )
+        legacy_focus_display = VisualDisplay(root / "legacy-step-focus", enabled=False)
+        original_legacy_read_key = globals()["read_key"]
+        try:
+            globals()["read_key"] = lambda timeout_sec=None: "right"
+            try:
+                choose_option(
+                    legacy_focus_display,
+                    screen_id="legacy-step-focus",
+                    active_step=0,
+                    title="Orientacao da tela",
+                    subtitle="Escolha como o totem esta instalado.",
+                    options=[Option("only", "Paisagem", "Teste de foco legado.")],
+                    panel_items=[],
+                    initial_focus_area="steps",
+                )
+                legacy_step_jump_ok = False
+            except VisualWizardStepJump as exc:
+                legacy_step_jump_ok = exc.step == 1 and exc.focus_area == "steps"
+        finally:
+            globals()["read_key"] = original_legacy_read_key
+            legacy_focus_display.stop()
+        assert_true(
+            legacy_step_jump_ok,
+            "images without C26 actions must preserve step focus and right-arrow navigation",
+        )
+        os.environ[TOTEM_ACTIONS_AVAILABLE_ENV] = "1"
+        assert_true(
+            totem_actions_available()
+            and "data-header-label=\"Acoes do totem\"" in build_screen_svg(
+                active_step=1,
+                title="Wi-Fi",
+                subtitle="Selecione uma rede.",
+                footer="Enter confirma | Esc volta",
+                panel_items=[],
+            ),
+            "actions header must render when its exact capability is present",
+        )
         assert_true(
             text_field_display_hint(synthetic_ssid, hidden=False, show_plain_value=True) == synthetic_ssid,
             "Wi-Fi network field should show local typed value",
@@ -7318,6 +8215,11 @@ def run_self_test() -> None:
         reset_wifi_session_state()
         assert_true(adjacent_navigable_step(0, 1) == 1, "right on focused steps should move to connection")
         assert_true(adjacent_navigable_step(0, -1) == 3, "left on focused steps should wrap to review")
+        header_focus_area, header_focused_step = handle_step_focus_key("up", focused_step=0, active_step=0)
+        assert_true(
+            header_focus_area == "header" and header_focused_step == 0,
+            "up on the step bar should move focus to the header control",
+        )
         try:
             handle_step_focus_key("right", focused_step=0, active_step=0)
             instant_step_jump_ok = False
@@ -7352,6 +8254,300 @@ def run_self_test() -> None:
             )
         finally:
             globals()["read_key"] = original_action_read_key
+        header_focus_display = VisualDisplay(root / "header-focus", enabled=False)
+        original_header_read_key = globals()["read_key"]
+        try:
+            header_keys = iter(("up", "up", "down", "down", "escape"))
+            globals()["read_key"] = lambda timeout_sec=None: next(header_keys)
+            header_choice = choose_option(
+                header_focus_display,
+                screen_id="header-focus",
+                active_step=1,
+                title="Wi-Fi",
+                subtitle="Escolha uma rede.",
+                options=[Option("only", "Opcao local", "Teste de foco.")],
+                panel_items=[],
+                allow_back=True,
+            )
+        finally:
+            globals()["read_key"] = original_header_read_key
+            header_focus_display.stop()
+        assert_true(header_choice is None, "escape should return from content on the same step")
+        header_focus_screens = "".join(
+            path.read_text(encoding="utf-8")
+            for path in (root / "header-focus" / "screens").glob("*.svg")
+        )
+        assert_true(
+            'data-header-focus="true"' in header_focus_screens,
+            "header focus should be visibly rendered before returning to the step bar",
+        )
+        assert_true(
+            not product_reset_available({})
+            and product_reset_available({"TOTEM_PRODUCT_RESET_AVAILABLE": "1"})
+            and not product_reset_available({"TOTEM_PRODUCT_RESET_AVAILABLE": "true"})
+            and [option.key for option in totem_action_options(reset_available=False)] == ["restart", "poweroff"]
+            and [option.key for option in totem_action_options(reset_available=True)]
+            == ["restart", "poweroff", "product_reset"],
+            "product reset should depend only on its explicit capability",
+        )
+        assert_true(
+            totem_action_confirmation_screen_svg(
+                active_step=1,
+                action="restart",
+                selected_index=0,
+                layout_rotation_deg=0,
+            ).find("Cancelar")
+            < totem_action_confirmation_screen_svg(
+                active_step=1,
+                action="restart",
+                selected_index=0,
+                layout_rotation_deg=0,
+            ).find("Reinicia o totem agora."),
+            "confirmation should render Cancelar before the mutating action",
+        )
+        action_cancel_display = VisualDisplay(root / "action-cancel", enabled=False)
+        original_action_confirm_read_key = globals()["read_key"]
+        try:
+            globals()["read_key"] = lambda timeout_sec=None: "enter"
+            assert_true(
+                not run_totem_action_confirmation(
+                    action_cancel_display,
+                    active_step=1,
+                    action="restart",
+                    layout_rotation_deg=0,
+                ),
+                "a repeated Enter on the default Cancelar must not confirm an action",
+            )
+        finally:
+            globals()["read_key"] = original_action_confirm_read_key
+            action_cancel_display.stop()
+        assert_true(
+            not (root / "action-cancel" / ACTION_REQUEST_FILENAME).exists(),
+            "default cancellation must not create an action request",
+        )
+        header_escape_display = VisualDisplay(root / "header-action-escape", enabled=False)
+        original_header_escape_read_key = globals()["read_key"]
+        try:
+            globals()["read_key"] = lambda timeout_sec=None: "escape"
+            assert_true(
+                handle_header_focus_key(
+                    header_escape_display,
+                    "enter",
+                    active_step=2,
+                    layout_rotation_deg=90,
+                )
+                == "header",
+                "escape from the actions menu should return to the same header focus",
+            )
+        finally:
+            globals()["read_key"] = original_header_escape_read_key
+            header_escape_display.stop()
+        assert_true(
+            not (root / "header-action-escape" / ACTION_REQUEST_FILENAME).exists(),
+            "escape from the actions menu must not create an action request",
+        )
+        action_request_dir = require_tmp_dir(str(root / "action-request"))
+        action_request = write_totem_action_request(
+            action_request_dir,
+            "product_reset",
+            environ={"TOTEM_SETTINGS_SESSION_ID": "0123456789abcdef0123456789abcdef"},
+        )
+        action_request_path = action_request_dir / ACTION_REQUEST_FILENAME
+        assert_true(
+            set(action_request)
+            == {
+                "schema_version",
+                "request_id",
+                "settings_session_id",
+                "action",
+                "source",
+                "confirmed_at_utc",
+            }
+            and action_request["schema_version"] == ACTION_REQUEST_SCHEMA
+            and action_request["action"] == "product_reset"
+            and action_request["source"] == ACTION_REQUEST_SOURCE,
+            "action request should use the exact C26B schema",
+        )
+        assert_true(
+            uuid.UUID(action_request["request_id"]).version == 4
+            and action_request["settings_session_id"] == "0123456789abcdef0123456789abcdef"
+            and file_mode(action_request_path) == setup.PRIVATE_FILE_MODE
+            and action_request_path.stat().st_nlink == 1
+            and action_request_path.stat().st_size <= ACTION_REQUEST_MAX_BYTES,
+            "action request should be a small private regular file",
+        )
+        action_request_path.unlink()
+        linked_action_source = root / "linked-action-source.json"
+        linked_action_source.write_text("{}\n", encoding="utf-8")
+        os.symlink(linked_action_source, action_request_path)
+        assert_raises(
+            lambda: write_totem_action_request(
+                action_request_dir,
+                "restart",
+                environ={"TOTEM_SETTINGS_SESSION_ID": "0123456789abcdef0123456789abcdef"},
+            ),
+            "action request must reject a symlink target",
+        )
+        action_request_path.unlink()
+        os.link(linked_action_source, action_request_path)
+        assert_raises(
+            lambda: write_totem_action_request(
+                action_request_dir,
+                "restart",
+                environ={"TOTEM_SETTINGS_SESSION_ID": "0123456789abcdef0123456789abcdef"},
+            ),
+            "action request must reject a hardlink target",
+        )
+        action_request_path.unlink()
+        assert_true(ACTION_REQUEST_EXIT_CODE not in {0, 1, 130}, "action request exit code must be dedicated")
+        recovery_environ = {
+            PRODUCT_RESET_RECOVERY_MODE_ENV: "1",
+            TOTEM_ACTIONS_AVAILABLE_ENV: "1",
+            "TOTEM_PRODUCT_RESET_AVAILABLE": "1",
+            "TOTEM_SETTINGS_SESSION_ID": "0123456789abcdef0123456789abcdef",
+        }
+        assert_true(
+            product_reset_recovery_mode(recovery_environ)
+            and not product_reset_recovery_mode({PRODUCT_RESET_RECOVERY_MODE_ENV: " 1"})
+            and not product_reset_available(recovery_environ)
+            and totem_action_options(reset_available=True, environ=recovery_environ) == [],
+            "recovery mode must be exact and supersede every totem action capability",
+        )
+        recovery_dir = require_tmp_dir(str(root / "product-reset-recovery"))
+        recovery_display = VisualDisplay(recovery_dir, enabled=False)
+        recovery_network = {"wifi_link_ready": True, "connectivity_captive_portal": "not_detected"}
+        original_recovery_read_action = globals()["read_advertised_action"]
+        original_recovery_wifi = globals()["run_wifi_persistent"]
+        original_recovery_portal = globals()["resolve_captive_portal_requirement"]
+        try:
+            globals()["read_advertised_action"] = lambda *allowed_keys: "enter"
+
+            def fake_recovery_wifi(
+                display: VisualDisplay,
+                out_dir: pathlib.Path,
+                *,
+                layout_rotation_deg: int,
+                restricted: bool = False,
+            ) -> dict[str, Any]:
+                assert_true(display is recovery_display and out_dir == recovery_dir, "recovery must reuse the Wi-Fi runner")
+                assert_true(layout_rotation_deg == 90 and restricted, "recovery Wi-Fi runner must remain restricted")
+                return dict(recovery_network)
+
+            def fake_recovery_portal(
+                display: VisualDisplay,
+                network: dict[str, Any],
+                *,
+                layout_rotation_deg: int,
+                restricted: bool = False,
+            ) -> dict[str, Any]:
+                assert_true(
+                    display is recovery_display
+                    and network["wifi_link_ready"] is True
+                    and layout_rotation_deg == 90
+                    and restricted,
+                    "recovery must retain captive-portal validation in the restricted flow",
+                )
+                return network
+
+            globals()["run_wifi_persistent"] = fake_recovery_wifi
+            globals()["resolve_captive_portal_requirement"] = fake_recovery_portal
+            recovery_signal = run_product_reset_recovery(
+                recovery_display,
+                recovery_dir,
+                layout_rotation_deg=90,
+                environ=recovery_environ,
+            )
+        finally:
+            globals()["read_advertised_action"] = original_recovery_read_action
+            globals()["run_wifi_persistent"] = original_recovery_wifi
+            globals()["resolve_captive_portal_requirement"] = original_recovery_portal
+            recovery_display.stop()
+        recovery_signal_path = recovery_dir / PRODUCT_RESET_RECOVERY_SIGNAL_FILENAME
+        recovery_signal_text = recovery_signal_path.read_text(encoding="utf-8")
+        assert_true(
+            set(recovery_signal) == {"schema_version", "settings_session_id", "result", "recorded_at_utc"}
+            and recovery_signal["schema_version"] == PRODUCT_RESET_RECOVERY_SIGNAL_SCHEMA
+            and recovery_signal["settings_session_id"] == recovery_environ["TOTEM_SETTINGS_SESSION_ID"]
+            and recovery_signal["result"] == "network_ready"
+            and file_mode(recovery_signal_path) == setup.PRIVATE_FILE_MODE,
+            "recovery signal must be typed, session-bound, and private",
+        )
+        validate_product_reset_recovery_signal(json.loads(recovery_signal_text))
+        assert_true(
+            synthetic_ssid not in recovery_signal_text
+            and synthetic_password not in recovery_signal_text
+            and not any(
+                (recovery_dir / name).exists()
+                for name in (
+                    CANDIDATE_FILENAME,
+                    STATUS_FILENAME,
+                    SUMMARY_FILENAME,
+                    ORIENTATION_FILENAME,
+                    ACTION_REQUEST_FILENAME,
+                    PAIRING_DIRNAME,
+                )
+            ),
+            "recovery must publish no candidate, pairing private values, or action request",
+        )
+        recovery_screens = "".join(
+            path.read_text(encoding="utf-8") for path in (recovery_dir / "screens").glob("*.svg")
+        )
+        assert_true(
+            "Restauracao pendente" in recovery_screens
+            and "data-header-label=\"Acoes do totem\"" not in recovery_screens
+            and "1. Tela" not in recovery_screens,
+            "recovery context must expose only the restricted network path",
+        )
+        recovery_cancel_dir = require_tmp_dir(str(root / "product-reset-recovery-cancel"))
+        recovery_cancel_display = VisualDisplay(recovery_cancel_dir, enabled=False)
+        original_cancel_read_action = globals()["read_advertised_action"]
+        try:
+            globals()["read_advertised_action"] = lambda *allowed_keys: "escape"
+            try:
+                run_product_reset_recovery(
+                    recovery_cancel_display,
+                    recovery_cancel_dir,
+                    layout_rotation_deg=0,
+                    environ=recovery_environ,
+                )
+            except VisualWizardAbort:
+                recovery_cancelled = True
+            else:
+                recovery_cancelled = False
+        finally:
+            globals()["read_advertised_action"] = original_cancel_read_action
+            recovery_cancel_display.stop()
+        assert_true(
+            recovery_cancelled
+            and not (recovery_cancel_dir / PRODUCT_RESET_RECOVERY_SIGNAL_FILENAME).exists()
+            and not any(
+                (recovery_cancel_dir / name).exists()
+                for name in (CANDIDATE_FILENAME, STATUS_FILENAME, ACTION_REQUEST_FILENAME, PAIRING_DIRNAME)
+            ),
+            "cancelling recovery must leave product state and recovery handoff untouched",
+        )
+        recovery_exit_dir = require_tmp_dir(str(root / "product-reset-recovery-exit"))
+        original_run_visual_wizard = globals()["run_visual_wizard"]
+        try:
+            def fake_recovery_ready(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+                raise VisualWizardRecoveryReady()
+
+            globals()["run_visual_wizard"] = fake_recovery_ready
+            recovery_exit_code = main(
+                [
+                    "--out-dir",
+                    str(recovery_exit_dir),
+                    "--private-settings-context-path",
+                    str(root / "last-settings.json"),
+                ]
+            )
+        finally:
+            globals()["run_visual_wizard"] = original_run_visual_wizard
+        assert_true(
+            recovery_exit_code == PRODUCT_RESET_RECOVERY_EXIT_CODE
+            and recovery_exit_code not in {0, ACTION_REQUEST_EXIT_CODE, 130},
+            "recovery completion must use its dedicated shell exit code",
+        )
         original_choose_read_key = globals()["read_key"]
         dynamic_choice_display = VisualDisplay(root / "dynamic-network-choice", enabled=False)
         dynamic_context_states = iter(
@@ -9086,6 +10282,55 @@ def run_self_test() -> None:
         preview_dir = require_tmp_dir(str(root / "preview"))
         prepare_private_dir(preview_dir)
         generate_preview_screens(preview_dir)
+        for preview_name, expected_size in (("landscape", 'width="1024" height="768"'), ("portrait", 'width="768" height="1024"')):
+            action_menu_preview = next(
+                (preview_dir / "screens").glob(f"*-26-totem-actions-menu-{preview_name}.svg")
+            ).read_text(encoding="utf-8")
+            assert_true(
+                expected_size in action_menu_preview
+                and 'id="totem-actions-modal"' in action_menu_preview
+                and 'data-header-label="Acoes do totem"' in action_menu_preview
+                and "Restaurar para configuracao inicial" in action_menu_preview,
+                f"{preview_name} action menu should replay with the header control and capability action",
+            )
+            for action, confirm_label in (
+                ("restart", "Reiniciar"),
+                ("poweroff", "Desligar"),
+                ("product_reset", "Restaurar"),
+            ):
+                action_confirm_preview = next(
+                    (preview_dir / "screens").glob(
+                        f"*-26-totem-action-confirm-{action}-{preview_name}.svg"
+                    )
+                ).read_text(encoding="utf-8")
+                assert_true(
+                    expected_size in action_confirm_preview
+                    and 'data-modal-kind="confirmation"' in action_confirm_preview
+                    and "Cancelar" in action_confirm_preview
+                    and confirm_label in action_confirm_preview,
+                    f"{preview_name} {action} confirmation should replay with Cancelar selected by default",
+                )
+            recovery_preview = next(
+                (preview_dir / "screens").glob(f"*-27-product-reset-recovery-{preview_name}.svg")
+            ).read_text(encoding="utf-8")
+            assert_true(
+                expected_size in recovery_preview
+                and "Restauracao pendente" in recovery_preview
+                and "data-header-label=\"Acoes do totem\"" not in recovery_preview
+                and "1. Tela" not in recovery_preview
+                and "Ambiente" not in recovery_preview
+                and "Revisao" not in recovery_preview,
+                f"{preview_name} recovery context should remain Wi-Fi-only",
+            )
+        product_reset_preview = next(
+            (preview_dir / "screens").glob("*-26-totem-action-confirm-product_reset-portrait.svg")
+        ).read_text(encoding="utf-8")
+        assert_true(
+            "O vinculo, a configuracao, o conteudo baixado" in product_reset_preview
+            and "estado local serao apagados. Wi-Fi, orientacao da" in product_reset_preview
+            and "software e atualizacoes serao mantidos." in product_reset_preview,
+            "product reset preview should state its scope without technical detail",
+        )
         orientation_preview_path = next((preview_dir / "screens").glob("*-01-orientation.svg"))
         orientation_preview_text = orientation_preview_path.read_text(encoding="utf-8")
         assert_true("orientation-preview" in orientation_preview_text, "orientation step should include visual preview")
@@ -9265,6 +10510,14 @@ def run_self_test() -> None:
             assert_true(forbidden not in public_text, "public orientation/status should stay sanitized")
     finally:
         shutil.rmtree(root, ignore_errors=True)
+        if actions_env_was_set:
+            os.environ[TOTEM_ACTIONS_AVAILABLE_ENV] = str(actions_env_value)
+        else:
+            os.environ.pop(TOTEM_ACTIONS_AVAILABLE_ENV, None)
+        if recovery_env_was_set:
+            os.environ[PRODUCT_RESET_RECOVERY_MODE_ENV] = str(recovery_env_value)
+        else:
+            os.environ.pop(PRODUCT_RESET_RECOVERY_MODE_ENV, None)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -9357,23 +10610,30 @@ def main(argv: list[str]) -> int:
             private_settings_context_path=private_settings_context_path,
         )
         return 0
+    except VisualWizardRecoveryReady:
+        return PRODUCT_RESET_RECOVERY_EXIT_CODE
+    except VisualWizardActionRequested:
+        return ACTION_REQUEST_EXIT_CODE
     except VisualWizardAbort:
-        try:
-            write_cancelled_artifact(require_tmp_dir(args.out_dir))
-        except Exception:
-            pass
+        if not product_reset_recovery_mode():
+            try:
+                write_cancelled_artifact(require_tmp_dir(args.out_dir))
+            except Exception:
+                pass
         return 130
     except KeyboardInterrupt:
-        try:
-            write_cancelled_artifact(require_tmp_dir(args.out_dir))
-        except Exception:
-            pass
+        if not product_reset_recovery_mode():
+            try:
+                write_cancelled_artifact(require_tmp_dir(args.out_dir))
+            except Exception:
+                pass
         return 130
     except Exception:
-        try:
-            write_failed_artifact(require_tmp_dir(args.out_dir), "visual_wizard_failed")
-        except Exception:
-            pass
+        if not product_reset_recovery_mode():
+            try:
+                write_failed_artifact(require_tmp_dir(args.out_dir), "visual_wizard_failed")
+            except Exception:
+                pass
         print("error: setup visual indisponivel", file=sys.stderr)
         return 1
 

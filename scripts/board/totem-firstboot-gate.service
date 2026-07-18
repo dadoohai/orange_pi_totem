@@ -3,7 +3,7 @@ Description=Dadooh Image-Lab Firstboot Gate
 Documentation=man:systemd.service(5)
 DefaultDependencies=no
 After=local-fs.target systemd-remount-fs.service
-Before=dadooh-visual-splash.service kiosky-player.service totem-settings-trigger.service
+Before=dadooh-visual-splash.service kiosky-player.service totem-settings-trigger.service totem-update-agent.service totem-player-runtime-update-agent.service
 
 [Service]
 Type=oneshot

@@ -32,6 +32,9 @@ PLAYER_RUNTIME_CANARY_TARGET = "/data/media/c18-canary-h264.mp4"
 PLAYER_RUNTIME_UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-player-runtime-update-agent.service"
 PLAYER_RUNTIME_UPDATE_AGENT_TIMER_TARGET = "/etc/systemd/system/totem-player-runtime-update-agent.timer"
 PLAYER_RUNTIME_UPDATE_AGENT_TIMER_WANTS = "/etc/systemd/system/timers.target.wants/totem-player-runtime-update-agent.timer"
+FIRSTBOOT_GATE_SERVICE_TARGET = "/etc/systemd/system/totem-firstboot-gate.service"
+FIRSTBOOT_GATE_SERVICE_WANTS = "/etc/systemd/system/multi-user.target.wants/totem-firstboot-gate.service"
+PRODUCT_RESET_GC_SERVICE_TARGET = "/etc/systemd/system/totem-product-reset-gc.service"
 PLAYER_RUNTIME_PRODUCTION_AUTH_SCHEMA = "dadooh.c18.player_runtime.production_autopull_authorization.v1"
 PLAYER_RUNTIME_PRODUCTION_AUTH_REPO = "dadoohai/orange_pi_totem"
 PLAYER_RUNTIME_PRODUCTION_AUTH_ESSENTIAL_FIELDS = (
@@ -126,6 +129,14 @@ IMAGE_FIXED_PLAYER_SYSTEMD_FILES = [
     (
         "systemd/kiosky-player.service.d/20-dadooh-launcher.conf",
         "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf",
+    ),
+    (
+        "totem-firstboot-gate.service",
+        "/etc/systemd/system/totem-firstboot-gate.service",
+    ),
+    (
+        "totem-product-reset-gc.service",
+        "/etc/systemd/system/totem-product-reset-gc.service",
     ),
 ]
 
@@ -376,6 +387,7 @@ def write_totem_core_embed(
         wrappers_bin,
         "/etc/systemd/system",
         "/etc/systemd/system/timers.target.wants",
+        "/etc/systemd/system/multi-user.target.wants",
     )
     mkdir_directories: list[str] = []
     for directory in wanted_directories:
@@ -449,6 +461,8 @@ def write_totem_core_embed(
         if not source.is_file():
             raise RuntimeError(f"missing_fixed_player_systemd_file:{source_rel}")
         commands.extend(write_file_commands(source, target, "0644"))
+    commands.append(f"rm {FIRSTBOOT_GATE_SERVICE_WANTS}")
+    commands.append(f"symlink {FIRSTBOOT_GATE_SERVICE_WANTS} {FIRSTBOOT_GATE_SERVICE_TARGET}")
 
     health_file = work_dir / "totem-core-health.json"
     health_file.write_text(
@@ -458,6 +472,9 @@ def write_totem_core_embed(
                 "component": "totem-core",
                 "version": TOTEM_CORE_VERSION,
                 "embedded_in_image": True,
+                "capabilities": [
+                    "product-reset-v1",
+                ],
                 "self_tests": [
                     "python3 bin/totem_setup_visual_wizard.py --self-test",
                     "python3 bin/totem_wifi_nm_adapter.py --self-test",
@@ -468,9 +485,13 @@ def write_totem_core_embed(
                     "python3 bin/totem_config_contract_validate.py --self-test",
                     "python3 bin/totem_qr_pairing_client.py --self-test",
                     "python3 bin/totem_settings_production_apply_policy.py --self-test",
+                    "python3 bin/totem_settings_trigger.py --self-test",
+                    "python3 bin/totem_config_writer_real.py --self-test",
                     "bash -n bin/totem_open_settings_session.sh",
                     "bash -n bin/totem_visual_tty_guard.sh",
+                    "bash bin/totem_firstboot_gate.sh --self-test",
                     "bash -n bin/totem_firstboot_gate.sh",
+                    "bash bin/totem_open_settings_cleanup.sh --self-test",
                     "bash -n bin/totem_status_renderer.sh",
                     "restore-order-static-check",
                 ],
@@ -650,6 +671,22 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
     player_dropin = _dump_text(rootfs, "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf")
     player_runtime_auth_text = _dump_text(rootfs, PLAYER_RUNTIME_AUTH_TARGET)
     player_runtime_service = _dump_text(rootfs, PLAYER_RUNTIME_UPDATE_AGENT_SERVICE_TARGET)
+    firstboot_unit = _dump_text(rootfs, FIRSTBOOT_GATE_SERVICE_TARGET)
+    firstboot_wants_target = _symlink_target(rootfs, FIRSTBOOT_GATE_SERVICE_WANTS)
+    product_reset_gc_unit = _dump_text(rootfs, PRODUCT_RESET_GC_SERVICE_TARGET)
+    expected_product_reset_gc_unit = (
+        repo_root / "scripts" / "board" / "totem-product-reset-gc.service"
+    ).read_text(encoding="utf-8")
+    expected_player_dropin = (
+        repo_root
+        / "scripts"
+        / "board"
+        / "systemd"
+        / "kiosky-player.service.d"
+        / "20-dadooh-launcher.conf"
+    ).read_text(encoding="utf-8")
+    player_dropin_wants_gc = "Wants=totem-product-reset-gc.service" in player_dropin
+    health_text = _dump_text(rootfs, f"{release_root}/health/totem-core-health.json")
     policy_text = _dump_text(rootfs, UPDATE_POLICY_TARGET)
     try:
         update_policy = json.loads(policy_text)
@@ -659,7 +696,16 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
         player_runtime_auth = json.loads(player_runtime_auth_text)
     except json.JSONDecodeError:
         player_runtime_auth = {}
+    try:
+        embedded_health = json.loads(health_text)
+    except json.JSONDecodeError:
+        embedded_health = {}
     policy_stat = base.stat_file(rootfs, UPDATE_POLICY_TARGET)
+    product_reset_gc_unit_stat = base.stat_file(rootfs, PRODUCT_RESET_GC_SERVICE_TARGET)
+    player_dropin_stat = base.stat_file(
+        rootfs,
+        "/etc/systemd/system/kiosky-player.service.d/20-dadooh-launcher.conf",
+    )
     current_target = _symlink_target(rootfs, "/data/core/totem/current")
     timer_enabled = bool(base.stat_file(rootfs, UPDATE_AGENT_TIMER_WANTS).get("present", False))
     player_runtime_timer_enabled = bool(
@@ -676,6 +722,16 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
         "totem_core_state_records_source_commit": TOTEM_CORE_SOURCE_COMMIT in state,
         "totem_core_state_records_payload_sha256": TOTEM_CORE_PAYLOAD_SHA256 in state,
         "totem_core_release_health_present": _is_file(rootfs, f"{release_root}/health/totem-core-health.json"),
+        "totem_core_release_health_product_reset_capable": (
+            embedded_health.get("capabilities") == ["product-reset-v1"]
+        ),
+        "totem_core_release_health_has_c26_companion_tests": {
+            "python3 bin/totem_config_writer_real.py --self-test",
+            "python3 bin/totem_settings_trigger.py --self-test",
+            "bash bin/totem_firstboot_gate.sh --self-test",
+            "bash bin/totem_open_settings_cleanup.sh --self-test",
+        }
+        <= set(embedded_health.get("self_tests") or []),
         "totem_core_release_fragment_present": _is_file(rootfs, f"{release_root}/manifest-fragment/totem-core.json"),
         "totem_core_updatectl_capable": "_totem_core_health_check" in updatectl and "_make_world_traversable" in updatectl,
         "totem_core_splash_service_uses_wrapper": "/opt/totem/bin/totem_visual_splash.py" in splash_service,
@@ -691,6 +747,37 @@ def validate_totem_core_embed(rootfs: Path, *, profile: str = "homologation") ->
             and "--repo dadoohai/orange_pi_totem" in update_agent_service
             and "dadoohai/kiosky-player" not in update_agent_service
         ),
+        "firstboot_gate_unit_orders_before_both_ota_agents": (
+            "Before=" in firstboot_unit
+            and "totem-update-agent.service" in firstboot_unit
+            and "totem-player-runtime-update-agent.service" in firstboot_unit
+        ),
+        "firstboot_gate_enabled_symlink_present": _is_symlink(rootfs, FIRSTBOOT_GATE_SERVICE_WANTS),
+        "firstboot_gate_enabled_symlink_target_exact": (
+            firstboot_wants_target == FIRSTBOOT_GATE_SERVICE_TARGET
+        ),
+        "product_reset_gc_unit_deferred_after_player": (
+            "After=kiosky-player.service" in product_reset_gc_unit
+            and "ConditionPathExists=/data/state/totem-appliance/product-reset/gc-pending.json"
+            in product_reset_gc_unit
+            and "IOSchedulingClass=best-effort" in product_reset_gc_unit
+            and "IOSchedulingPriority=7" in product_reset_gc_unit
+            and "--confirm-product-reset-background-gc" in product_reset_gc_unit
+        ),
+        "product_reset_gc_unit_installed_exact": (
+            product_reset_gc_unit == expected_product_reset_gc_unit
+            and int(product_reset_gc_unit_stat.get("mode", 0)) == 0o644
+            and product_reset_gc_unit_stat.get("uid") == 0
+            and product_reset_gc_unit_stat.get("gid") == 0
+        ),
+        "product_reset_gc_unit_static": "[Install]" not in product_reset_gc_unit,
+        "product_reset_gc_player_dropin_installed_exact": (
+            player_dropin == expected_player_dropin
+            and int(player_dropin_stat.get("mode", 0)) == 0o644
+            and player_dropin_stat.get("uid") == 0
+            and player_dropin_stat.get("gid") == 0
+        ),
+        "product_reset_gc_pulled_by_player": player_dropin_wants_gc,
         "totem_core_update_timer_unit_present": _is_file(rootfs, UPDATE_AGENT_TIMER_TARGET),
         "totem_core_update_timer_matches_profile": timer_enabled is bool(profile_config["timer_enabled"]),
         "totem_core_update_policy_matches_profile": (

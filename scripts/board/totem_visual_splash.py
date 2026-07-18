@@ -43,6 +43,14 @@ MESSAGES = {
     "complete": ("Dadooh", "Configuracao salva"),
     "save_failed": ("Dadooh", ("Configuracao nao salva", "Voltando com seguranca")),
     "config_pending": ("Dadooh", ("Configuracao pendente", "Segure F10 por 5 segundos")),
+    "product_reset_pending": (
+        "Restauracao pendente",
+        (
+            "Mantenha o totem conectado.",
+            "Se nao continuar,",
+            "segure F10 por 5 segundos.",
+        ),
+    ),
     "shutdown": (
         "Desligamento seguro",
         (
@@ -54,7 +62,17 @@ MESSAGES = {
     ),
 }
 
-PREVIEW_MODES = ("boot", "player", "loading_content", "config_pending", "setup", "saving", "complete", "save_failed")
+PREVIEW_MODES = (
+    "boot",
+    "player",
+    "loading_content",
+    "config_pending",
+    "product_reset_pending",
+    "setup",
+    "saving",
+    "complete",
+    "save_failed",
+)
 C17_2_VISUAL_SYSTEM_VERSION = "c17.2-appliance-ui.v1"
 VISUAL = {
     "bg": (11, 18, 32),
@@ -78,10 +96,12 @@ SVG_VISUAL = {
 MODE_ACCENTS = {
     "complete": (34, 197, 94),
     "save_failed": (245, 158, 11),
+    "product_reset_pending": (59, 130, 246),
 }
 MODE_SVG_ACCENTS = {
     "complete": "#22c55e",
     "save_failed": "#f59e0b",
+    "product_reset_pending": "#3b82f6",
 }
 
 ORIENTATIONS = {
@@ -318,39 +338,70 @@ class FramebufferSplash:
         *,
         rotation_deg: int = 0,
         accent: tuple[int, int, int] = VISUAL["accent"],
+        expanded_layout: bool = False,
     ) -> None:
         ctx = self.render_context(rotation_deg)
         source_w = int(ctx["source_w"])
         source_h = int(ctx["source_h"])
+        message_lines = self.normalized_lines(message)
         self.fill(VISUAL["bg"])
         top_bar = max(10, source_h // 70)
         footer_h = max(64, source_h // 13)
-        panel_w = max(420, int(source_w * 0.64))
-        panel_h = max(300, int(source_h * 0.44))
-        panel_x = (source_w - panel_w) // 2
-        panel_y = max(72, (source_h - panel_h) // 2 - 8)
+        if expanded_layout:
+            panel_w = max(420, int(source_w * (0.80 if source_w <= 720 else 0.64)))
+            title_scale = max(3, min(4, source_w // 300))
+            title_cell_w = (self.font.width + 1) * title_scale
+            while title_scale > 2 and len(title) * title_cell_w > panel_w - 64:
+                title_scale -= 1
+                title_cell_w = (self.font.width + 1) * title_scale
+            message_scale = max(2, min(3, source_w // 420))
+            max_message_length = max((len(line) for line in message_lines), default=0)
+            while (
+                message_scale > 1
+                and max_message_length * (self.font.width + 1) * message_scale > panel_w - 64
+            ):
+                message_scale -= 1
+            title_h = self.font.height * title_scale
+            line_gap = max(8, message_scale * 8)
+            message_block_h = len(message_lines) * self.font.height * message_scale + max(
+                0, len(message_lines) - 1
+            ) * line_gap
+            content_gap = max(32, source_h // 22)
+            padding_y = max(42, source_h // 18)
+            content_h = title_h + content_gap + message_block_h
+            panel_h = max(300, int(source_h * 0.44), content_h + 2 * padding_y)
+            panel_h = min(panel_h, source_h - footer_h - 96)
+            panel_x = (source_w - panel_w) // 2
+            panel_y = max(72, (source_h - panel_h) // 2 - 8)
+            title_y = panel_y + max(padding_y, (panel_h - content_h) // 2)
+            message_y = title_y + title_h + content_gap
+            message_line_step = self.font.height * message_scale + line_gap
+        else:
+            panel_w = max(420, int(source_w * 0.64))
+            panel_h = max(300, int(source_h * 0.44))
+            panel_x = (source_w - panel_w) // 2
+            panel_y = max(72, (source_h - panel_h) // 2 - 8)
+            title_scale = max(3, min(4, source_w // 300))
+            message_scale = max(2, min(3, source_w // 420))
+            title_h = self.font.height * title_scale
+            message_line_step = (self.font.height + 8) * message_scale
+            message_block_h = max(message_line_step, len(message_lines) * message_line_step)
+            title_y = panel_y + max(52, panel_h // 6)
+            message_y = title_y + title_h + max(38, panel_h // 10)
+            max_message_y = panel_y + panel_h - message_block_h - max(42, panel_h // 10)
+            if message_y > max_message_y:
+                message_y = max(panel_y + title_h + 28, max_message_y)
         self.draw_logical_rect(0, 0, source_w, top_bar, accent, ctx)
         self.draw_logical_rect(0, source_h - footer_h, source_w, footer_h, VISUAL["footer"], ctx)
         self.draw_logical_rect(panel_x, panel_y, panel_w, panel_h, VISUAL["surface"], ctx)
         self.draw_logical_rect(panel_x, panel_y, max(8, source_w // 160), panel_h, accent, ctx)
-        title_scale = max(3, min(4, source_w // 300))
-        message_scale = max(2, min(3, source_w // 420))
         title_width = len(title) * (self.font.width + 1) * title_scale
-        title_h = self.font.height * title_scale
-        message_lines = self.normalized_lines(message)
-        line_height = (self.font.height + 8) * message_scale
-        message_block_h = max(line_height, len(message_lines) * line_height)
-        title_y = panel_y + max(52, panel_h // 6)
-        message_y = title_y + title_h + max(38, panel_h // 10)
-        max_message_y = panel_y + panel_h - message_block_h - max(42, panel_h // 10)
-        if message_y > max_message_y:
-            message_y = max(panel_y + title_h + 28, max_message_y)
         self.draw_text(max(32, (source_w - title_width) // 2), title_y, title, title_scale, VISUAL["text"], ctx)
         for index, line in enumerate(message_lines):
             line_width = len(line) * (self.font.width + 1) * message_scale
             self.draw_text(
                 max(32, (source_w - line_width) // 2),
-                message_y + index * line_height,
+                message_y + index * message_line_step,
                 line,
                 message_scale,
                 VISUAL["text_muted"],
@@ -417,18 +468,49 @@ def build_preview_svg(mode: str, *, rotation_deg: int = 0) -> str:
     source_w, source_h, layout_mode = source_size_for_rotation(rotation)
     message_lines = FramebufferSplash.normalized_lines(message)
     accent = MODE_SVG_ACCENTS.get(mode, SVG_VISUAL["accent"])
-    panel_w = int(source_w * 0.64)
-    panel_h = max(300, int(source_h * 0.44))
-    panel_x = (source_w - panel_w) // 2
-    panel_y = max(72, (source_h - panel_h) // 2 - 8)
     title_size = 48 if layout_mode == "landscape" else 42
     message_size = 30 if layout_mode == "landscape" else 26
-    title_y = panel_y + max(96, panel_h // 4)
-    line_y = title_y + max(64, panel_h // 6)
+    if mode == "product_reset_pending":
+        panel_w = int(source_w * (0.80 if source_w <= 720 else 0.64))
+        estimated_title_width = len(title) * title_size * 0.58
+        while title_size > 28 and estimated_title_width > panel_w - 64:
+            title_size -= 2
+            estimated_title_width = len(title) * title_size * 0.58
+        max_message_length = max((len(line) for line in message_lines), default=0)
+        estimated_message_width = max_message_length * message_size * 0.54
+        while message_size > 18 and estimated_message_width > panel_w - 64:
+            message_size -= 2
+            estimated_message_width = max_message_length * message_size * 0.54
+        footer_h = max(64, source_h // 13)
+        footer_y = source_h - footer_h
+        line_gap = max(12, message_size // 2)
+        message_block_h = len(message_lines) * message_size + max(0, len(message_lines) - 1) * line_gap
+        content_gap = max(32, source_h // 22)
+        padding_y = max(42, source_h // 18)
+        content_h = title_size + content_gap + message_block_h
+        panel_h = max(300, int(source_h * 0.44), content_h + 2 * padding_y)
+        panel_h = min(panel_h, source_h - footer_h - 96)
+        panel_x = (source_w - panel_w) // 2
+        panel_y = max(72, (source_h - panel_h) // 2 - 8)
+        title_y = panel_y + max(padding_y, (panel_h - content_h) // 2) + title_size
+        line_y = title_y + content_gap + message_size
+        line_step = message_size + line_gap
+        rendered_lines = message_lines
+    else:
+        panel_w = int(source_w * 0.64)
+        panel_h = max(300, int(source_h * 0.44))
+        panel_x = (source_w - panel_w) // 2
+        panel_y = max(72, (source_h - panel_h) // 2 - 8)
+        title_y = panel_y + max(96, panel_h // 4)
+        line_y = title_y + max(64, panel_h // 6)
+        line_step = 44
+        rendered_lines = message_lines[:3]
+        footer_h = 72
+        footer_y = source_h - 72
     line_parts = []
-    for index, line in enumerate(message_lines[:3]):
+    for index, line in enumerate(rendered_lines):
         line_parts.append(
-            f'<text x="{source_w // 2}" y="{line_y + index * 44}" '
+            f'<text x="{source_w // 2}" y="{line_y + index * line_step}" '
             f'font-family="Arial, DejaVu Sans, sans-serif" font-size="{message_size}" '
             f'text-anchor="middle" fill="{SVG_VISUAL["text_muted"]}">{escape_text(line)}</text>'
         )
@@ -436,7 +518,7 @@ def build_preview_svg(mode: str, *, rotation_deg: int = 0) -> str:
 <svg xmlns="http://www.w3.org/2000/svg" width="{source_w}" height="{source_h}" viewBox="0 0 {source_w} {source_h}" data-display-rotation-deg="{rotation}" data-layout-mode="{layout_mode}" role="img" aria-label="Dadooh splash preview {escape_text(mode)}">
   <rect width="{source_w}" height="{source_h}" fill="{SVG_VISUAL["bg"]}"/>
   <rect x="0" y="0" width="{source_w}" height="12" fill="{accent}"/>
-  <rect x="0" y="{source_h - 72}" width="{source_w}" height="72" fill="{SVG_VISUAL["footer"]}"/>
+  <rect x="0" y="{footer_y}" width="{source_w}" height="{footer_h}" fill="{SVG_VISUAL["footer"]}"/>
   <rect x="{panel_x}" y="{panel_y}" width="{panel_w}" height="{panel_h}" rx="8" fill="{SVG_VISUAL["surface"]}" stroke="{SVG_VISUAL["border"]}"/>
   <rect x="{panel_x}" y="{panel_y}" width="9" height="{panel_h}" rx="4" fill="{accent}"/>
   <text x="{source_w // 2}" y="{title_y}" font-family="Arial, DejaVu Sans, sans-serif" font-size="{title_size}" font-weight="700" text-anchor="middle" fill="{SVG_VISUAL["text"]}">{escape_text(title)}</text>
@@ -504,7 +586,13 @@ def render_mode(
         wait_for_framebuffer(wait_framebuffer_sec)
         renderer = FramebufferSplash(font_path)
         try:
-            renderer.render(title, message, rotation_deg=rotation, accent=MODE_ACCENTS.get(mode, VISUAL["accent"]))
+            renderer.render(
+                title,
+                message,
+                rotation_deg=rotation,
+                accent=MODE_ACCENTS.get(mode, VISUAL["accent"]),
+                expanded_layout=mode == "product_reset_pending",
+            )
         finally:
             renderer.close()
         payload["rendered"] = True
@@ -537,17 +625,39 @@ def run_self_test() -> None:
         assert payload["network_identifiers_published"] is False
     assert "reboot" in MESSAGES
     assert "shutdown" in MESSAGES
-    for mode in ("boot", "player", "loading_content", "setup", "saving", "complete", "save_failed", "config_pending"):
+    for mode in (
+        "boot",
+        "player",
+        "loading_content",
+        "setup",
+        "saving",
+        "complete",
+        "save_failed",
+        "config_pending",
+        "product_reset_pending",
+    ):
         assert mode in MESSAGES
     assert "Segure F10 por 5 segundos" in " ".join(FramebufferSplash.normalized_lines(MESSAGES["config_pending"][1]))
     assert MODE_SVG_ACCENTS["complete"] in build_preview_svg("complete")
     assert MODE_SVG_ACCENTS["save_failed"] in build_preview_svg("save_failed")
+    reset_message = " ".join(FramebufferSplash.normalized_lines(MESSAGES["product_reset_pending"][1]))
+    assert MESSAGES["product_reset_pending"][0] == "Restauracao pendente"
+    assert reset_message == "Mantenha o totem conectado. Se nao continuar, segure F10 por 5 segundos."
+    assert MODE_SVG_ACCENTS["product_reset_pending"] in build_preview_svg("product_reset_pending")
+    for rotation, layout_mode in ((0, "landscape"), (90, "portrait")):
+        preview_svg = build_preview_svg("product_reset_pending", rotation_deg=rotation)
+        assert f'data-layout-mode="{layout_mode}"' in preview_svg
+        assert "Restauracao pendente" in preview_svg
+        assert "Mantenha o totem conectado." in preview_svg
+        assert "Se nao continuar," in preview_svg
+        assert "segure F10 por 5 segundos." in preview_svg
     assert "remova e reconecte" in " ".join(FramebufferSplash.normalized_lines(MESSAGES["shutdown"][1]))
     preview_dir = require_tmp_dir("/tmp/dadooh-c10-5-splash-self-test/preview")
     preview_payload = write_preview_screens(preview_dir, rotation_deg=90)
     assert preview_payload["preview_screens_generated"] == len(PREVIEW_MODES)
     assert (preview_dir / "screens" / "01-boot.svg").exists()
     assert any((preview_dir / "screens").glob("*-config_pending.svg"))
+    assert any((preview_dir / "screens").glob("*-product_reset_pending.svg"))
     preview_text = (preview_dir / "splash-preview-status.json").read_text(encoding="utf-8")
     for forbidden in ("api_key", "SSID", "password", "192.0.2.1", "aa:bb:cc:dd:ee:ff"):
         assert forbidden not in preview_text

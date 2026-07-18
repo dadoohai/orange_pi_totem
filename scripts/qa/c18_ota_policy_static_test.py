@@ -2370,6 +2370,7 @@ exec "$C18_REAL_PYTHON3" "$@"
         expected_public_commands = {
             "status",
             "self-test",
+            "check-image-contract",
             "check-github-latest",
             "list-github",
             "apply-github-latest",

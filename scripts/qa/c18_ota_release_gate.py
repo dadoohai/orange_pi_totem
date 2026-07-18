@@ -66,6 +66,7 @@ PY_COMPILE_TARGETS = (
     "scripts/qa/c18_player_runtime_static_test.py",
     "scripts/qa/c22_player_fault_campaign_test.py",
     "scripts/qa/c22_rapid_media_fault_trial_test.py",
+    "scripts/qa/c26_local_recovery_static_test.py",
     "scripts/qa/c18_player_runtime_release_gate.py",
     "scripts/qa/c18_player_runtime_production_autopull_authorization_build.py",
     "scripts/qa/c18_player_runtime_production_autopull_authorization_gate.py",
@@ -119,6 +120,7 @@ PY_COMPILE_TARGETS = (
 TEST_COMMANDS = (
     ("totem_config_contract_self_test", ["python3", "scripts/board/totem_config_contract_validate.py", "--self-test"]),
     ("totem_config_writer_real_self_test", ["python3", "scripts/board/totem_config_writer_real.py", "--self-test"]),
+    ("c26_local_recovery_contract", ["python3", "scripts/qa/c26_local_recovery_static_test.py"]),
     ("totem_visual_setup_writer_handoff_self_test", ["python3", "scripts/board/totem_visual_setup_writer_handoff.py", "--self-test"]),
     ("totem_status_render_preview_self_test", ["python3", "scripts/board/totem_status_render_preview.py", "--self-test"]),
     ("totem_status_aggregate_self_test", ["python3", "scripts/board/totem_status_aggregate.py", "--self-test"]),
@@ -213,6 +215,7 @@ TEST_TIMEOUTS = {
     # The static suite includes the 24-vector H2 self-test and currently takes
     # about 200s on the reference WSL host. Preserve the checks with headroom.
     "c18_ota_policy_static": 360,
+    "c26_local_recovery_contract": 120,
 }
 BASH_SYNTAX_TARGETS = (
     "scripts/qa/c20_board_settings_stop_probe.sh",

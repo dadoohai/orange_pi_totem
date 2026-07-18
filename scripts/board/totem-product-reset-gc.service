@@ -1,0 +1,15 @@
+[Unit]
+Description=Dadooh Deferred Product Reset Cleanup
+Documentation=man:systemd.service(5)
+After=kiosky-player.service
+ConditionPathExists=/data/state/totem-appliance/product-reset/gc-pending.json
+
+[Service]
+Type=oneshot
+TimeoutStartSec=0
+Nice=19
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+ExecStart=/usr/bin/python3 /opt/totem/bin/totem_config_writer_real.py --product-reset-gc --product-reset-gc-max 1 --enable-real-write --confirm-product-reset-background-gc
+StandardOutput=null
+StandardError=null
