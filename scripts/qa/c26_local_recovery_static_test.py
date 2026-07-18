@@ -447,8 +447,10 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
             "cancel_terminal_action_reconcile",
         )
         self.assertIn("/usr/bin/systemd-run", reconcile)
+        self.assertIn("--property=DefaultDependencies=no", reconcile)
         self.assertIn("--on-active=125s", reconcile)
         self.assertIn("--on-unit-active=30s", reconcile)
+        self.assertIn("--timer-property=DefaultDependencies=no", reconcile)
         self.assertIn("--expire-terminal-action", reconcile)
         self.assertIn("--terminal-action-reconcile-unit", reconcile)
         self.assertIn("/opt/totem/bin/totem_open_settings_cleanup.sh", reconcile)
@@ -471,7 +473,16 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
         stop_start = cleanup.index("stop_terminal_action_reconcile() {", complete_start)
         complete_check = cleanup[complete_start:stop_start]
         self.assertIn('EXPIRE_TERMINAL_ACTION" = "true', complete_check)
-        self.assertIn('PLAYER_RESTORE_START_RC" = "0', complete_check)
+        self.assertIn('[ "$PLAYER_RESTORE_START_RC" = "0" ]', complete_check)
+        self.assertNotIn("not_attempted", complete_check)
+        restore = function_body(cleanup, "restore_product_state", "enqueue_product_reset_gc")
+        self.assertLess(
+            restore.index("systemctl is-active --quiet kiosky-player.service"),
+            restore.index("systemctl is-enabled kiosky-player.service"),
+        )
+        self.assertIn('PLAYER_RESTORE_START_MODE="already-active"', restore)
+        self.assertIn('PLAYER_RESTORE_START_MODE="service-not-enabled"', restore)
+        self.assertIn('PLAYER_RESTORE_START_RC="1"', restore)
         normal_cleanup = cleanup[cleanup.index('rm -f "$REQUEST_DIR/request.json"') :]
         restore_index = normal_cleanup.index("restore_product_state")
         status_index = normal_cleanup.index("write_status false")
@@ -549,6 +560,54 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
                 0,
                 "a stale accepted action must restore the normal cleanup path",
             )
+
+            restore_probe = (
+                restore
+                + "\n"
+                + complete_check
+                + r'''
+systemctl() {
+  case "$1:$FAKE_PLAYER_STATE" in
+    is-active:active) return 0 ;;
+    is-active:*) return 3 ;;
+    is-enabled:enabled) return 0 ;;
+    is-enabled:*) return 1 ;;
+    *) return 1 ;;
+  esac
+}
+show_transition() { :; }
+PLAYER_RESTORE_ATTEMPTED=false
+PLAYER_RESTORE_START_MODE=none
+PLAYER_RESTORE_START_RC=not_attempted
+EXPIRE_TERMINAL_ACTION=true
+TERMINAL_ACTION_RECONCILE_UNIT=totem-terminal-action-reconcile-11111111222243338444555555555555
+REQUEST_DIR="$TEST_ROOT"
+LOCK_DIR="$TEST_ROOT/missing-lock"
+TERMINAL_ACTION_MARKER="$TEST_ROOT/missing-marker"
+restore_product_state || true
+printf '%s|%s\n' "$PLAYER_RESTORE_START_MODE" "$PLAYER_RESTORE_START_RC"
+terminal_action_reconcile_complete
+'''
+            )
+
+            def run_restore_probe(state: str) -> subprocess.CompletedProcess[str]:
+                probe_env = dict(os.environ)
+                probe_env.update({"FAKE_PLAYER_STATE": state, "TEST_ROOT": str(root)})
+                return subprocess.run(
+                    ["bash", "-c", restore_probe],
+                    env=probe_env,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                )
+
+            active = run_restore_probe("active")
+            self.assertEqual(active.returncode, 0)
+            self.assertIn("already-active|0", active.stdout)
+            disabled = run_restore_probe("disabled")
+            self.assertNotEqual(disabled.returncode, 0)
+            self.assertIn("service-not-enabled|1", disabled.stdout)
 
     def test_persistent_reset_can_recreate_its_runtime_request(self) -> None:
         trigger = TRIGGER_SCRIPT.read_text(encoding="utf-8")

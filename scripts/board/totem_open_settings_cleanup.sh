@@ -289,7 +289,7 @@ terminal_action_reconcile_complete() {
   [ ! -e "$LOCK_DIR" ] && [ ! -L "$LOCK_DIR" ] || return 1
   [ ! -e "$REQUEST_DIR/request.json" ] && [ ! -L "$REQUEST_DIR/request.json" ] || return 1
   [ ! -e "$TERMINAL_ACTION_MARKER" ] && [ ! -L "$TERMINAL_ACTION_MARKER" ] || return 1
-  [ "$PLAYER_RESTORE_START_RC" = "not_attempted" ] || [ "$PLAYER_RESTORE_START_RC" = "0" ]
+  [ "$PLAYER_RESTORE_START_RC" = "0" ]
 }
 
 stop_terminal_action_reconcile() {
@@ -418,23 +418,28 @@ show_transition() {
 }
 
 restore_product_state() {
-  if systemctl is-enabled kiosky-player.service >/dev/null 2>&1; then
-    if systemctl is-active --quiet kiosky-player.service; then
-      return 0
-    fi
-    if [ -f /data/config/config.json ]; then
-      show_transition player || true
-    else
-      show_transition config_pending || true
-    fi
-    PLAYER_RESTORE_ATTEMPTED="true"
-    PLAYER_RESTORE_START_MODE="no-block"
-    if /usr/bin/timeout -k 1s 5s systemctl start --no-block kiosky-player.service >/dev/null 2>&1; then
-      PLAYER_RESTORE_START_RC="0"
-    else
-      PLAYER_RESTORE_START_RC="$?"
-      return "$PLAYER_RESTORE_START_RC"
-    fi
+  if systemctl is-active --quiet kiosky-player.service; then
+    PLAYER_RESTORE_START_MODE="already-active"
+    PLAYER_RESTORE_START_RC="0"
+    return 0
+  fi
+  if ! systemctl is-enabled kiosky-player.service >/dev/null 2>&1; then
+    PLAYER_RESTORE_START_MODE="service-not-enabled"
+    PLAYER_RESTORE_START_RC="1"
+    return 1
+  fi
+  if [ -f /data/config/config.json ]; then
+    show_transition player || true
+  else
+    show_transition config_pending || true
+  fi
+  PLAYER_RESTORE_ATTEMPTED="true"
+  PLAYER_RESTORE_START_MODE="no-block"
+  if /usr/bin/timeout -k 1s 5s systemctl start --no-block kiosky-player.service >/dev/null 2>&1; then
+    PLAYER_RESTORE_START_RC="0"
+  else
+    PLAYER_RESTORE_START_RC="$?"
+    return "$PLAYER_RESTORE_START_RC"
   fi
 }
 

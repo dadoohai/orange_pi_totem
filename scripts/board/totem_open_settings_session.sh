@@ -1390,9 +1390,11 @@ schedule_terminal_action_reconcile() {
     --quiet \
     --collect \
     --unit="$TERMINAL_ACTION_RECONCILE_UNIT" \
+    --property=DefaultDependencies=no \
     --on-active=125s \
     --on-unit-active=30s \
     --timer-property=AccuracySec=1s \
+    --timer-property=DefaultDependencies=no \
     /opt/totem/bin/totem_open_settings_cleanup.sh \
       --reason terminal-action-timeout \
       --request-dir "$REQUEST_DIR" \

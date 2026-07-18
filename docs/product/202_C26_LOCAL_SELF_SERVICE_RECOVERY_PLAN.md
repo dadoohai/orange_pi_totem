@@ -80,6 +80,10 @@ reconciliador forcara a restauracao do player e dos locks depois de 125
 segundos. Se outra sessao ou o OTA estiver ativo nesse instante, ele repete a
 cada 30 segundos e desarma somente depois de concluir a limpeza; marcador
 preparado, invalido ou expirado segue o mesmo caminho seguro.
+Timer e servico reconciliador usam `DefaultDependencies=no` para sobreviver a
+uma transacao de shutdown iniciada mas nao concluida. O reconciliador so se
+desarma quando o player ja esta ativo ou seu start foi aceito; servico
+desabilitado ou start falho mantem as novas tentativas.
 
 ## O que a restauracao resolve
 
