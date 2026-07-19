@@ -213,6 +213,7 @@ f7bf7ac3e9503f5df9454223758cde8dedffdda016ab8640f7b00e1370d62091  ./compatibilit
 02072a641c936fd55d8867c5f679073494e7ad568f751c254675cd74d036d4a9  ./gates/c26.17-final-sandbox-isolated/totem-core-sandbox.json
 5518f801ba0dea0a1ecdd00a410e4bc85cd915d5604035ecdd6a6bb6e89a0f05  ./gates/c26.17-final-sandbox/ASSESSMENT.md
 558b4bfbdb5a192f89b3815ad0abb4c0d8aa35f3d252aa202e272400b78a6cb2  ./gates/c26.17-final-sandbox/totem-core-sandbox.json
+237bc69cf0a3ec85ddf3008c4607566cf4dc57fa9ad37ba047d59356ae62ca00  ./gates/post-publication-release-gate.json
 30ebf832fa4401bfd70af755ee802ffd3d8dc711eae31cf2daa24c900fc4f0ed  ./gates/release-gate.json
 86a000fb1393b5b5e6990d1d9d322f0e4e8d544ceb93f28b5f394d0826c67b31  ./gates/reset-preservation-regression.log
 3507d1d16a6cd94ca712b28993beed733d38a4deb0761617109fcb757178eed9  ./token-liveness/new-token-final.json
