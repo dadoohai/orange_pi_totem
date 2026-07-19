@@ -86,6 +86,8 @@ Target:
     current, C26.16 previous, the player active and the system healthy. The
     hardened evidence gate correlated the timer and service timestamps and
     passed.
+19. With that hardening committed, the full release gate passed 85/85 again
+    on clean HEAD `f4e5233`, with no failed step.
 
 ## Evidence layout
 
