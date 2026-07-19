@@ -17,19 +17,19 @@ from typing import Any, Callable
 import derive_c15_2_1_homolog_image as base
 
 
-TOTEM_CORE_VERSION = "c26.7-local-recovery-20260718-01464f8-actions"
-TOTEM_CORE_RELEASE_TAG = "totem-core-c26.7-local-recovery-20260718-01464f8-actions"
+TOTEM_CORE_VERSION = "c26.9-local-recovery-20260718-a9ffd4c-composed-actions"
+TOTEM_CORE_RELEASE_TAG = "totem-core-c26.9-local-recovery-20260718-a9ffd4c-composed-actions"
 TOTEM_CORE_CHANNEL = "homologation"
-TOTEM_CORE_PAYLOAD_SHA256 = "1369a5c7d04486f2d37fb11a6205ace25ae1efe2baf6bae3bd7d348ec82e5e5f"
-TOTEM_CORE_CREATED_AT_UTC = "2026-07-18T22:27:13Z"
-TOTEM_CORE_SOURCE_COMMIT = "01464f8f82a6ea758946fc7eeca552a610db91f3"
+TOTEM_CORE_PAYLOAD_SHA256 = "bfca7aeb90c2b5e9c35ce3c14f540ef631a8a1fab0b1860625d90f777c4e26fb"
+TOTEM_CORE_CREATED_AT_UTC = "2026-07-18T23:59:01Z"
+TOTEM_CORE_SOURCE_COMMIT = "a9ffd4c6c6c3e42d155ea248d009786ca25a6675"
 TOTEM_CORE_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")
-TOTEM_CORE_PREVIOUS_VERSION = "c26.5-local-recovery-20260718-f1d0da9-actions"
-TOTEM_CORE_PREVIOUS_RELEASE_TAG = "totem-core-c26.5-local-recovery-20260718-f1d0da9-actions"
+TOTEM_CORE_PREVIOUS_VERSION = "c26.8-local-recovery-20260718-08d9412-transport-actions"
+TOTEM_CORE_PREVIOUS_RELEASE_TAG = "totem-core-c26.8-local-recovery-20260718-08d9412-transport-actions"
 TOTEM_CORE_PREVIOUS_CHANNEL = "homologation"
-TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256 = "b8864cc913f6e7ca4562a0e3edfe9eb0ba55a6aef5019a47a0535397ba26f4df"
-TOTEM_CORE_PREVIOUS_CREATED_AT_UTC = "2026-07-18T19:30:40Z"
-TOTEM_CORE_PREVIOUS_SOURCE_COMMIT = "f1d0da92eff5f0aa94036b0ae5a8a85e632450dc"
+TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256 = "7515375cf2245e0fedc297284a034bd955c2acb10ad3ae36d5c3bde87f089542"
+TOTEM_CORE_PREVIOUS_CREATED_AT_UTC = "2026-07-18T23:53:13Z"
+TOTEM_CORE_PREVIOUS_SOURCE_COMMIT = "08d9412780c811ff72efa7718636366a64bf82f1"
 TOTEM_CORE_PREVIOUS_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")
 UPDATE_POLICY_TARGET = "/data/updates/policy.json"
 UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-update-agent.service"
@@ -125,7 +125,7 @@ CORE_FILES = [
     "totem_setup_minimal_server.py",
     "totem_setup_local_wizard.py",
 ]
-TOTEM_CORE_PREVIOUS_EXCLUDED_FILES = frozenset({"totem_api_url_contract.py"})
+TOTEM_CORE_PREVIOUS_EXCLUDED_FILES = frozenset()
 
 IMAGE_FIXED_PLAYER_FILES = [
     "kiosky_service_launcher.sh",
