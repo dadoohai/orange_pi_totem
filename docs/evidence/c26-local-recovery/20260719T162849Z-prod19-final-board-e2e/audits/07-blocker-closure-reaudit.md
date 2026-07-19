@@ -27,4 +27,3 @@ GO. No technical or documentary blocker remained.
 The campaign's prior `passed=false` was accepted only as the intentional
 pre-verdict handshake. This report authorizes the administrative closeout to
 record the completed verdict.
-

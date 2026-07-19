@@ -4,8 +4,8 @@ e21a8fdca0bfc6aba7e5bd46b4701cca70b91f9898394232701864ea164b7b3a  ./audits/01-pr
 c65671970a8e0f034aa75d7f4a0d593337e088b7e9e2e268057ae4e9ca6cc7cc  ./audits/03-stable-alignment-independent-audit.md
 d351866bb9860e1ad030b93a742a010192a7400f11699bed1bcc96b0c0289f30  ./audits/04-pre-freeze-compatibility-audit.md
 92a3f976a03ca2d410acab8c413fe8221ad63ebd2ff64df50550dc3dfbe9ad47  ./audits/05-post-publication-independent-audit-round-1.md
-1b51147588276feeca3377e1e6232b3bf6f25258c22d39e36e10e57c838622ed  ./audits/06-final-independent-audit.md
-d4f704cf84cae9ec5c2d8000bd26f80233ad55778c267f62ffb2e68557939af7  ./audits/07-blocker-closure-reaudit.md
+2e63049a3d3795a77586a022a246cd543c0be5cc3ebb1c9d0cb14802597b1b95  ./audits/06-final-independent-audit.md
+f4f33155165736e99e82b2c9e5749d91984f325401ff0790801a4cdb701e14d6  ./audits/07-blocker-closure-reaudit.md
 559203fa5c415e78cfe15636fd0fe32bd8e223b4d61f92e38af6209d47909c5c  ./backend/deployed-source-provenance.json
 f52e52800c5721bfa89237f3781901c4c97b42187dbd8c29949ca226057ae9ff  ./backend/revocation-operation.json
 67dd5375f7cc32769ff4a83f09d62042467b945cb46a4c7a74e5c34896bb58dc  ./backend/self-revocation-unit-test.log

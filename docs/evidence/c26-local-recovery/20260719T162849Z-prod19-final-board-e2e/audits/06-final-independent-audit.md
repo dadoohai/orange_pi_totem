@@ -36,4 +36,3 @@ auto-pull contract. No technical blocker remained.
   full-system reinstall or broader rollout controls by inference;
 - the campaign images were not OCR-scanned again in this final read-only pass;
   prior visual/evidence reviews found no exposed credential.
-
