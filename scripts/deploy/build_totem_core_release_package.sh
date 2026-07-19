@@ -38,6 +38,7 @@ STABLE_EXPECT_IMAGE_SHA256="${STABLE_EXPECT_IMAGE_SHA256:-}"
 STABLE_EXPECT_IMAGE_MARKER_SHA256="${STABLE_EXPECT_IMAGE_MARKER_SHA256:-}"
 MODE="build-package"
 ALLOW_DIRTY=0
+ENABLE_TOTEM_ACTIONS=0
 VERSION_OVERRIDE="${VERSION:-}"
 STABLE_SERVER_SIDE_TRUSTED_KEY_PEMS=()
 STABLE_POWERLOSS_EVIDENCE_DIRS=()
@@ -48,6 +49,7 @@ CORE_FILES=(
   totem_visual_splash.py
   totem_status_aggregate.py
   totem_status_render_preview.py
+  totem_api_url_contract.py
   totem_config_contract_validate.py
   totem_qr_pairing_client.py
   totem_settings_production_apply_policy.py
@@ -68,6 +70,7 @@ for arg in "$@"; do
     --prepare-only) MODE="prepare-only" ;;
     --build-package) MODE="build-package" ;;
     --allow-dirty) ALLOW_DIRTY=1 ;;
+    --enable-totem-actions) ENABLE_TOTEM_ACTIONS=1 ;;
     --version=*) VERSION_OVERRIDE="${arg#*=}" ;;
     --repo-root=*) REPO_ROOT="${arg#*=}" ;;
     --out-base=*) OUT_BASE="${arg#*=}" ;;
@@ -126,6 +129,11 @@ if [[ -z "$VERSION_OVERRIDE" ]]; then
   VERSION="c17.5-core-mvp-$(date -u +%Y%m%d-%H%M%S)-${SOURCE_COMMIT_SHORT}"
 else
   VERSION="$VERSION_OVERRIDE"
+fi
+if [[ "$ENABLE_TOTEM_ACTIONS" -eq 1 ]]; then
+  [[ "$VERSION" == *-actions ]] || VERSION="${VERSION}-actions"
+elif [[ "$VERSION" == *-actions ]]; then
+  die "version suffix -actions is reserved for --enable-totem-actions packages"
 fi
 
 if ! [[ "$VERSION" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]; then
@@ -186,6 +194,7 @@ fi
 log "dirty           = $DIRTY"
 log "out_dir         = $OUT_DIR"
 log "mode            = $MODE"
+log "totem_actions   = $ENABLE_TOTEM_ACTIONS"
 
 if [[ "$MODE" == "prepare-only" ]]; then
   log "prepare_only=true"
@@ -204,10 +213,19 @@ for file in "${CORE_FILES[@]}"; do
   install -m 0755 "$REPO_ROOT/scripts/board/$file" "$STAGE_DIR/bin/$file"
 done
 
+HEALTH_CAPABILITIES_JSON='    "product-reset-v1"'
+if [[ "$ENABLE_TOTEM_ACTIONS" -eq 1 ]]; then
+  HEALTH_CAPABILITIES_JSON+=',
+    "totem-actions-v1"'
+fi
+
 cat > "$STAGE_DIR/health/totem-core-health.json" <<JSON
 {
   "schema": "dadooh.totem.core.health.v1",
   "component": "totem-core",
+  "capabilities": [
+${HEALTH_CAPABILITIES_JSON}
+  ],
   "self_tests": [
     "python3 bin/totem_setup_visual_wizard.py --self-test",
     "python3 bin/totem_wifi_nm_adapter.py --self-test",
@@ -215,12 +233,17 @@ cat > "$STAGE_DIR/health/totem-core-health.json" <<JSON
     "python3 bin/totem_status_render_preview.py --self-test",
     "python3 bin/totem_status_aggregate.py --self-test",
     "bash bin/totem_status_renderer.sh --self-test",
+    "python3 bin/totem_api_url_contract.py --self-test",
     "python3 bin/totem_config_contract_validate.py --self-test",
     "python3 bin/totem_qr_pairing_client.py --self-test",
     "python3 bin/totem_settings_production_apply_policy.py --self-test",
+    "python3 bin/totem_settings_trigger.py --self-test",
+    "python3 bin/totem_config_writer_real.py --self-test",
     "bash -n bin/totem_open_settings_session.sh",
     "bash -n bin/totem_visual_tty_guard.sh",
+    "bash bin/totem_firstboot_gate.sh --self-test",
     "bash -n bin/totem_firstboot_gate.sh",
+    "bash bin/totem_open_settings_cleanup.sh --self-test",
     "bash -n bin/totem_status_renderer.sh",
     "restore-order-static-check"
   ]
@@ -316,7 +339,7 @@ manifest = {
             "c18-rollback-reapply-v1",
             "c18-safe-payload-v1",
             "c18-track-v1"
-        ]
+        ] + (["c26-product-reset-gc-static-v1"] if bool(${ENABLE_TOTEM_ACTIONS}) else [])
     },
     "updates": [
         "wizard",
@@ -325,7 +348,8 @@ manifest = {
         "settings-session",
         "wifi-adapter",
         "config-contract",
-        "firstboot"
+        "firstboot",
+        "product-reset-engine"
     ],
     "health_checks": [
         "wizard_self_test",
@@ -335,6 +359,7 @@ manifest = {
         "status_aggregate_self_test",
         "status_renderer_self_test",
         "config_contract_self_test",
+        "config_writer_self_test",
         "bash_syntax",
         "restore_order_static"
     ],

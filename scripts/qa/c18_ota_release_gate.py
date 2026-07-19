@@ -259,6 +259,7 @@ TOTEM_CORE_ALLOWED_BIN_FILES = (
     "totem_visual_splash.py",
     "totem_status_aggregate.py",
     "totem_status_render_preview.py",
+    "totem_api_url_contract.py",
     "totem_config_contract_validate.py",
     "totem_qr_pairing_client.py",
     "totem_settings_production_apply_policy.py",

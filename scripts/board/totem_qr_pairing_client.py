@@ -10,20 +10,34 @@ credentials are written only to a restricted private file under /tmp.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime as dt
 import hashlib
 import html
+import io
 import json
 import os
 import pathlib
 import secrets
+import socket
 import stat
 import string
 import sys
 import tempfile
 import uuid
-from typing import Any
+from typing import Any, Callable
+from urllib import error as urllib_error
 from urllib import parse as urllib_parse
+from urllib import request as urllib_request
+
+from totem_api_url_contract import (
+    MAX_PRODUCT_RESET_CREDENTIAL_BYTES,
+    ApiKeyContractError,
+    ApiUrlContractError,
+    api_key_is_placeholder,
+    validate_api_key_format,
+    validate_https_api_url,
+)
 
 
 SESSION_SCHEMA = "dadooh.c21.totem_qr_pairing.session.v1"
@@ -50,10 +64,32 @@ PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
 QR_MAX_PAYLOAD_BYTES = 200
 QR_QUIET_ZONE_MODULES = 4
+PRODUCT_RESET_PENDING_CREDENTIAL_PATH = pathlib.Path(
+    "/data/state/totem-appliance/product-reset/pending-credential.json"
+)
+PRODUCT_RESET_MAX_CREDENTIAL_BYTES = MAX_PRODUCT_RESET_CREDENTIAL_BYTES
+PRODUCT_RESET_MAX_RESPONSE_BYTES = 16 * 1024
+PRODUCT_RESET_DEFAULT_TIMEOUT_SEC = 8.0
+PRODUCT_RESET_MAX_TIMEOUT_SEC = 30.0
+PRODUCT_RESET_SELF_REVOCATION_PATH = "/totem-auth/self-revocations"
+PRODUCT_RESET_CONFIRMED_RESULTS = ("revoked", "not_device_activation")
+PRODUCT_RESET_EXIT_CONFIRMED = 0
+PRODUCT_RESET_EXIT_RETRYABLE = 10
+PRODUCT_RESET_EXIT_TERMINAL = 20
+PRODUCT_RESET_EXIT_CONTRACT = 2
+PRODUCT_RESET_RETRYABLE_HTTP_STATUSES = frozenset({408, 425, 429})
 
 
 class PairingError(RuntimeError):
     """Public-safe pairing error."""
+
+
+class ProductResetRetryableError(RuntimeError):
+    """Network or backend condition safe to retry with the same operation."""
+
+
+class ProductResetTerminalError(RuntimeError):
+    """Backend response that makes the local self-revocation attempt terminal."""
 
 
 def utc_now() -> dt.datetime:
@@ -76,29 +112,323 @@ def validate_uuid(value: str, field: str) -> str:
 
 
 def validate_api_url(value: str) -> str:
-    raw = str(value or "").strip()
-    parsed = urllib_parse.urlsplit(raw)
-    if parsed.scheme != "https" or not parsed.netloc:
-        raise PairingError("api_url_invalid")
-    return raw
+    try:
+        return validate_https_api_url(value)
+    except ApiUrlContractError as exc:
+        raise PairingError("api_url_invalid") from exc
 
 
 def validate_authorize_base_url(value: str) -> str:
-    raw = str(value or "").strip()
-    parsed = urllib_parse.urlsplit(raw)
-    if parsed.scheme != "https" or not parsed.netloc:
-        raise PairingError("authorize_url_invalid")
-    return raw
+    try:
+        return validate_https_api_url(value)
+    except ApiUrlContractError as exc:
+        raise PairingError("authorize_url_invalid") from exc
 
 
 def validate_api_key(value: str) -> str:
-    raw = str(value or "").strip()
-    if len(raw) < 16:
-        raise PairingError("api_key_too_short")
-    lowered = raw.lower()
-    if "placeholder" in lowered or "preencher" in lowered:
+    try:
+        raw = validate_api_key_format(value)
+    except ApiKeyContractError as exc:
+        raise PairingError("api_key_invalid") from exc
+    if api_key_is_placeholder(raw):
         raise PairingError("api_key_placeholder")
     return raw
+
+
+def validate_canonical_uuid(value: str, field: str) -> str:
+    raw = str(value or "").strip()
+    try:
+        parsed = uuid.UUID(raw)
+    except ValueError as exc:
+        raise PairingError(f"{field}_invalid") from exc
+    if str(parsed) != raw:
+        raise PairingError(f"{field}_not_canonical")
+    return raw
+
+
+def validate_canonical_uuid4(value: str, field: str) -> str:
+    raw = validate_canonical_uuid(value, field)
+    if uuid.UUID(raw).version != 4:
+        raise PairingError(f"{field}_not_uuid4")
+    return raw
+
+
+def validate_product_reset_timeout(value: float) -> float:
+    try:
+        timeout = float(value)
+    except (TypeError, ValueError) as exc:
+        raise PairingError("timeout_invalid") from exc
+    if not (1.0 <= timeout <= PRODUCT_RESET_MAX_TIMEOUT_SEC):
+        raise PairingError("timeout_invalid")
+    return timeout
+
+
+def validate_device_fingerprint(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        raise PairingError("device_fingerprint_invalid")
+    if len(raw.encode("utf-8")) > 200:
+        raise PairingError("device_fingerprint_too_long")
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in raw):
+        raise PairingError("device_fingerprint_invalid")
+    return raw
+
+
+def validate_product_reset_api_url(value: str) -> str:
+    try:
+        return validate_https_api_url(value)
+    except ApiUrlContractError as exc:
+        raise PairingError("api_url_invalid") from exc
+
+
+def product_reset_self_revocation_endpoint(api_url: str) -> str:
+    parsed = urllib_parse.urlsplit(validate_product_reset_api_url(api_url))
+    return urllib_parse.urlunsplit((parsed.scheme, parsed.netloc, PRODUCT_RESET_SELF_REVOCATION_PATH, "", ""))
+
+
+def product_reset_path_is_allowed(path: pathlib.Path) -> bool:
+    if path == PRODUCT_RESET_PENDING_CREDENTIAL_PATH:
+        return True
+    return path.parts[:2] == ("/", "tmp") and path != pathlib.Path("/tmp")
+
+
+def reject_product_reset_symlink_components(path: pathlib.Path) -> None:
+    current = pathlib.Path(path.root)
+    for part in path.parts[1:]:
+        current = current / part
+        try:
+            st = current.lstat()
+        except FileNotFoundError as exc:
+            raise PairingError("pending_credential_missing") from exc
+        except OSError as exc:
+            raise PairingError("pending_credential_path_invalid") from exc
+        if stat.S_ISLNK(st.st_mode):
+            raise PairingError("pending_credential_symlink")
+
+
+def validate_product_reset_pending_credential_path(raw_path: str) -> pathlib.Path:
+    path = pathlib.Path(str(raw_path or ""))
+    if not path.is_absolute():
+        raise PairingError("pending_credential_path_invalid")
+    if ".." in path.parts:
+        raise PairingError("pending_credential_path_invalid")
+    if not product_reset_path_is_allowed(path):
+        raise PairingError("pending_credential_path_invalid")
+    reject_product_reset_symlink_components(path)
+    try:
+        resolved = path.resolve(strict=True)
+    except (FileNotFoundError, RuntimeError, OSError) as exc:
+        raise PairingError("pending_credential_missing") from exc
+    if resolved != path:
+        raise PairingError("pending_credential_path_invalid")
+    if path == PRODUCT_RESET_PENDING_CREDENTIAL_PATH:
+        parent = path.parent.stat(follow_symlinks=False)
+        if (
+            not stat.S_ISDIR(parent.st_mode)
+            or parent.st_uid != 0
+            or stat.S_IMODE(parent.st_mode) != PRIVATE_DIR_MODE
+        ):
+            raise PairingError("pending_credential_parent_untrusted")
+    return path
+
+
+def validate_product_reset_private_file_stat(st: os.stat_result) -> None:
+    if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1:
+        raise PairingError("pending_credential_not_file")
+    mode = stat.S_IMODE(st.st_mode)
+    if mode != PRIVATE_FILE_MODE:
+        raise PairingError("pending_credential_mode_invalid")
+    if st.st_uid not in {0, os.geteuid()}:
+        raise PairingError("pending_credential_owner_invalid")
+    if st.st_size <= 0:
+        raise PairingError("pending_credential_empty")
+    if st.st_size > PRODUCT_RESET_MAX_CREDENTIAL_BYTES:
+        raise PairingError("pending_credential_too_large")
+
+
+def read_product_reset_pending_credential_bytes(path: pathlib.Path) -> bytes:
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        fd = os.open(str(path), flags)
+    except FileNotFoundError as exc:
+        raise PairingError("pending_credential_missing") from exc
+    except OSError as exc:
+        raise PairingError("pending_credential_open_failed") from exc
+    try:
+        validate_product_reset_private_file_stat(os.fstat(fd))
+        raw = os.read(fd, PRODUCT_RESET_MAX_CREDENTIAL_BYTES + 1)
+    finally:
+        os.close(fd)
+    if len(raw) > PRODUCT_RESET_MAX_CREDENTIAL_BYTES:
+        raise PairingError("pending_credential_too_large")
+    return raw
+
+
+def product_reset_required_string(data: dict[str, Any], field: str) -> str:
+    value = data.get(field)
+    if not isinstance(value, str):
+        raise PairingError("pending_credential_malformed")
+    return value
+
+
+def product_reset_optional_string(data: dict[str, Any], field: str) -> str:
+    value = data.get(field)
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise PairingError("pending_credential_malformed")
+    return value
+
+
+def load_product_reset_pending_credential(raw_path: str) -> dict[str, str]:
+    path = validate_product_reset_pending_credential_path(raw_path)
+    raw = read_product_reset_pending_credential_bytes(path)
+    try:
+        parsed = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PairingError("pending_credential_malformed") from exc
+    if not isinstance(parsed, dict):
+        raise PairingError("pending_credential_malformed")
+
+    operation_id = validate_canonical_uuid4(product_reset_required_string(parsed, "operation_id"), "operation_id")
+    api_url = validate_product_reset_api_url(product_reset_required_string(parsed, "api_url"))
+    api_key = validate_api_key(product_reset_required_string(parsed, "api_key"))
+    device_fingerprint = validate_device_fingerprint(product_reset_required_string(parsed, "device_fingerprint"))
+    credential = {
+        "operation_id": operation_id,
+        "api_url": api_url,
+        "api_key": api_key,
+        "device_fingerprint": device_fingerprint,
+    }
+    api_token_id = product_reset_optional_string(parsed, "api_token_id").strip()
+    if api_token_id:
+        credential["api_token_id"] = validate_canonical_uuid(api_token_id, "api_token_id")
+    return credential
+
+
+class ProductResetNoRedirectHandler(urllib_request.HTTPRedirectHandler):
+    def redirect_request(self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> None:
+        return None
+
+
+def product_reset_read_bounded_response(handle: Any, max_response_bytes: int) -> bytes:
+    raw = handle.read(max_response_bytes + 1)
+    if len(raw) > max_response_bytes:
+        raise ProductResetTerminalError("response_too_large")
+    return raw
+
+
+def product_reset_urllib_transport(
+    url: str,
+    *,
+    method: str,
+    headers: dict[str, str],
+    body: bytes,
+    timeout_sec: float,
+    max_response_bytes: int,
+) -> tuple[int, bytes]:
+    req = urllib_request.Request(url, data=body, headers=headers, method=method)
+    opener = urllib_request.build_opener(ProductResetNoRedirectHandler)
+    try:
+        with opener.open(req, timeout=validate_product_reset_timeout(timeout_sec)) as resp:
+            return int(resp.status), product_reset_read_bounded_response(resp, max_response_bytes)
+    except urllib_error.HTTPError as exc:
+        raw = exc.read(max_response_bytes + 1)
+        if len(raw) > max_response_bytes:
+            raw = raw[:max_response_bytes]
+        return int(exc.code), raw
+    except (TimeoutError, socket.timeout, urllib_error.URLError, OSError) as exc:
+        raise ProductResetRetryableError("network") from exc
+
+
+def decode_product_reset_response_body(raw: bytes) -> dict[str, Any]:
+    try:
+        parsed = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ProductResetTerminalError("response_malformed") from exc
+    if not isinstance(parsed, dict):
+        raise ProductResetTerminalError("response_malformed")
+    return parsed
+
+
+def product_reset_http_is_retryable(status: int) -> bool:
+    return status in PRODUCT_RESET_RETRYABLE_HTTP_STATUSES or 500 <= status <= 599
+
+
+def product_reset_self_revoke(
+    pending_credential: str,
+    *,
+    timeout_sec: float,
+    transport: Callable[..., tuple[int, bytes]] = product_reset_urllib_transport,
+) -> dict[str, str]:
+    credential = load_product_reset_pending_credential(pending_credential)
+    endpoint = product_reset_self_revocation_endpoint(credential["api_url"])
+    payload: dict[str, str] = {
+        "operation_id": credential["operation_id"],
+        "device_fingerprint": credential["device_fingerprint"],
+    }
+    if credential.get("api_token_id"):
+        payload["api_token_id"] = credential["api_token_id"]
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "x-api-key": credential["api_key"],
+    }
+    body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    try:
+        status, raw_response = transport(
+            endpoint,
+            method="POST",
+            headers=headers,
+            body=body,
+            timeout_sec=validate_product_reset_timeout(timeout_sec),
+            max_response_bytes=PRODUCT_RESET_MAX_RESPONSE_BYTES,
+        )
+    except ProductResetRetryableError:
+        return {"status": "retryable", "reason": "network"}
+    except ProductResetTerminalError as exc:
+        return {"status": "retryable", "reason": str(exc)}
+
+    if product_reset_http_is_retryable(status):
+        return {"status": "retryable", "reason": "http"}
+    if not (200 <= status <= 299):
+        return {"status": "terminal", "reason": "http"}
+
+    try:
+        response = decode_product_reset_response_body(raw_response)
+        response_operation_id = str(response.get("operation_id") or "").strip()
+        if response_operation_id != credential["operation_id"]:
+            return {"status": "retryable", "reason": "operation_id_mismatch"}
+        result = str(response.get("status") or "").strip()
+        if result not in PRODUCT_RESET_CONFIRMED_RESULTS:
+            return {"status": "retryable", "reason": "status_malformed"}
+        revoked = response.get("revoked")
+        if not isinstance(revoked, bool) or revoked != (result == "revoked"):
+            return {"status": "retryable", "reason": "revoked_malformed"}
+    except ProductResetTerminalError as exc:
+        return {"status": "retryable", "reason": str(exc)}
+
+    return {"status": "confirmed", "result": result, "operation_id": credential["operation_id"]}
+
+
+def product_reset_outcome_line(outcome: dict[str, str]) -> str:
+    status = outcome.get("status", "terminal")
+    if status == "confirmed":
+        return f"product_reset_revocation=confirmed result={outcome.get('result', '')}"
+    if status == "retryable":
+        return "product_reset_revocation=retryable"
+    return "product_reset_revocation=terminal"
+
+
+def product_reset_exit_code(outcome: dict[str, str]) -> int:
+    status = outcome.get("status")
+    if status == "confirmed":
+        return PRODUCT_RESET_EXIT_CONFIRMED
+    if status == "retryable":
+        return PRODUCT_RESET_EXIT_RETRYABLE
+    return PRODUCT_RESET_EXIT_TERMINAL
 
 
 def generate_code() -> str:
@@ -337,6 +667,316 @@ def assert_no_public_secret_leak(out_dir: pathlib.Path, forbidden: list[str]) ->
                 raise AssertionError(f"secret leaked in {path.name}: {value[:8]}")
 
 
+class FakeProductResetTransport:
+    def __init__(self, responses: list[Any]):
+        self.responses = list(responses)
+        self.requests: list[dict[str, Any]] = []
+
+    def __call__(
+        self,
+        url: str,
+        *,
+        method: str,
+        headers: dict[str, str],
+        body: bytes,
+        timeout_sec: float,
+        max_response_bytes: int,
+    ) -> tuple[int, bytes]:
+        self.requests.append(
+            {
+                "url": url,
+                "method": method,
+                "headers": dict(headers),
+                "body": body,
+                "timeout_sec": timeout_sec,
+                "max_response_bytes": max_response_bytes,
+            }
+        )
+        if not self.responses:
+            raise AssertionError("fake product-reset transport exhausted")
+        response = self.responses.pop(0)
+        if isinstance(response, BaseException):
+            raise response
+        status, payload = response
+        if isinstance(payload, bytes):
+            raw = payload
+        elif isinstance(payload, str):
+            raw = payload.encode("utf-8")
+        else:
+            raw = json.dumps(payload, sort_keys=True).encode("utf-8")
+        return int(status), raw
+
+
+def write_product_reset_test_credential(
+    path: pathlib.Path,
+    *,
+    operation_id: str = "123e4567-e89b-42d3-a456-426614174000",
+    api_url: str = "https://api.example.com/search",
+    api_key: str = "C26A_VALID_SECRET_1234567890",
+    device_fingerprint: str = "self-test-device-fingerprint",
+    api_token_id: str = "223e4567-e89b-42d3-a456-426614174001",
+) -> dict[str, str]:
+    payload = {
+        "operation_id": operation_id,
+        "api_url": api_url,
+        "api_key": api_key,
+        "device_fingerprint": device_fingerprint,
+    }
+    if api_token_id:
+        payload["api_token_id"] = api_token_id
+    atomic_write_json(path, payload, PRIVATE_FILE_MODE)
+    return payload
+
+
+def assert_pairing_error(callable_under_test: Callable[[], Any], message: str) -> None:
+    try:
+        callable_under_test()
+        raise AssertionError(message)
+    except PairingError:
+        pass
+
+
+def assert_product_reset_outcome(
+    credential_path: pathlib.Path,
+    response: Any,
+    expected_status: str,
+    *,
+    expected_result: str | None = None,
+) -> dict[str, str]:
+    transport = FakeProductResetTransport([response])
+    outcome = product_reset_self_revoke(str(credential_path), timeout_sec=2.0, transport=transport)
+    assert outcome["status"] == expected_status
+    if expected_result is not None:
+        assert outcome["result"] == expected_result
+    return outcome
+
+
+def run_product_reset_self_revoke_self_test(root: pathlib.Path) -> None:
+    reset_dir = require_tmp_out_dir(str(root / "product-reset-self-revoke"))
+    credential_path = reset_dir / "pending-credential.json"
+    credential = write_product_reset_test_credential(credential_path)
+    before = credential_path.read_bytes()
+
+    transport = FakeProductResetTransport(
+        [(200, {"operation_id": credential["operation_id"], "status": "revoked", "revoked": True})]
+    )
+    outcome = product_reset_self_revoke(str(credential_path), timeout_sec=2.0, transport=transport)
+    assert outcome["status"] == "confirmed"
+    assert outcome["result"] == "revoked"
+    assert credential_path.read_bytes() == before
+    assert transport.requests
+    request = transport.requests[0]
+    assert request["url"] == "https://api.example.com/totem-auth/self-revocations"
+    assert request["method"] == "POST"
+    assert request["headers"]["x-api-key"] == credential["api_key"]
+    assert request["headers"]["Accept"] == "application/json"
+    assert request["headers"]["Content-Type"] == "application/json"
+    sent_payload = json.loads(request["body"].decode("utf-8"))
+    assert sent_payload == {
+        "api_token_id": credential["api_token_id"],
+        "device_fingerprint": credential["device_fingerprint"],
+        "operation_id": credential["operation_id"],
+    }
+    assert "api_key" not in sent_payload
+    assert "api_url" not in sent_payload
+
+    assert_product_reset_outcome(
+        credential_path,
+        (200, {"operation_id": credential["operation_id"], "status": "not_device_activation", "revoked": False}),
+        "confirmed",
+        expected_result="not_device_activation",
+    )
+
+    lost_response = FakeProductResetTransport([ProductResetRetryableError("timeout")])
+    lost_outcome = product_reset_self_revoke(str(credential_path), timeout_sec=2.0, transport=lost_response)
+    replay = FakeProductResetTransport(
+        [(200, {"operation_id": credential["operation_id"], "status": "revoked", "revoked": True})]
+    )
+    replay_outcome = product_reset_self_revoke(str(credential_path), timeout_sec=2.0, transport=replay)
+    assert lost_outcome["status"] == "retryable"
+    assert replay_outcome["status"] == "confirmed"
+    lost_operation_id = json.loads(lost_response.requests[0]["body"].decode("utf-8"))["operation_id"]
+    replay_operation_id = json.loads(replay.requests[0]["body"].decode("utf-8"))["operation_id"]
+    assert lost_operation_id == credential["operation_id"] == replay_operation_id
+
+    for status in (408, 425, 429, 500, 503):
+        assert_product_reset_outcome(credential_path, (status, {}), "retryable")
+    network = FakeProductResetTransport([ProductResetRetryableError("network")])
+    assert product_reset_self_revoke(str(credential_path), timeout_sec=2.0, transport=network)["status"] == "retryable"
+
+    for status in (400, 401, 403, 404, 409, 422, 302):
+        assert_product_reset_outcome(credential_path, (status, {}), "terminal")
+    assert_product_reset_outcome(credential_path, (200, b"{"), "retryable")
+    assert_product_reset_outcome(
+        credential_path,
+        (200, {"operation_id": "323e4567-e89b-42d3-a456-426614174002", "status": "revoked", "revoked": True}),
+        "retryable",
+    )
+    assert_product_reset_outcome(
+        credential_path,
+        (200, {"operation_id": credential["operation_id"], "status": "pending", "revoked": False}),
+        "retryable",
+    )
+    assert_product_reset_outcome(
+        credential_path,
+        (200, {"operation_id": credential["operation_id"], "status": "revoked", "revoked": False}),
+        "retryable",
+    )
+    oversized = FakeProductResetTransport([ProductResetTerminalError("response_too_large")])
+    assert product_reset_self_revoke(
+        str(credential_path), timeout_sec=2.0, transport=oversized
+    )["status"] == "retryable"
+
+    loaded = load_product_reset_pending_credential(str(credential_path))
+    assert loaded["operation_id"] == credential["operation_id"]
+    max_fingerprint_path = reset_dir / "max-fingerprint.json"
+    write_product_reset_test_credential(max_fingerprint_path, device_fingerprint="x" * 200)
+    assert load_product_reset_pending_credential(str(max_fingerprint_path))["device_fingerprint"] == "x" * 200
+    long_fingerprint_path = reset_dir / "long-fingerprint.json"
+    write_product_reset_test_credential(long_fingerprint_path, device_fingerprint="x" * 201)
+    assert_pairing_error(
+        lambda: load_product_reset_pending_credential(str(long_fingerprint_path)),
+        "overlong device_fingerprint accepted",
+    )
+    assert_pairing_error(
+        lambda: validate_product_reset_pending_credential_path("/home/builder/not-allowed-pending-credential.json"),
+        "pending credential outside allowed paths accepted",
+    )
+    for malformed_api_url in (
+        "http://api.example.com/search",
+        "https://api.example.com:",
+        "https://user:pass@api.example.com/search",
+        "https://api.example.com/search#fragment",
+        " https://api.example.com/search",
+        "https://api.example.com/\nsearch",
+        "https://api.example.com/" + ("x" * 2048),
+        "https://@api.example.com/search",
+        "https://api.example.com/search#",
+        "https://[2001:db8::1",
+        "https://%/search",
+        "https://a..example.com/search",
+        "https://" + ("a" * 64) + ".example.com/search",
+        "https://api.example.com\\bad/search",
+        "https://api.example.com/\ud800",
+    ):
+        assert_pairing_error(
+            lambda value=malformed_api_url: validate_product_reset_api_url(value),
+            f"structurally invalid product-reset api_url accepted: {malformed_api_url[:80]!r}",
+        )
+
+    for malformed_api_key in (
+        "A" * 15,
+        "A" * 4097,
+        "é" * 1500,
+        "😀" * 16,
+        ("A" * 16) + "\n",
+    ):
+        assert_pairing_error(
+            lambda value=malformed_api_key: validate_api_key(value),
+            "non-transportable api_key accepted",
+        )
+
+    bad_mode_path = reset_dir / "bad-mode.json"
+    bad_mode_path.write_text(json.dumps(credential), encoding="utf-8")
+    os.chmod(bad_mode_path, 0o644)
+    assert_pairing_error(
+        lambda: load_product_reset_pending_credential(str(bad_mode_path)),
+        "permissive pending credential mode accepted",
+    )
+
+    malformed_path = reset_dir / "malformed.json"
+    malformed_path.write_text("{", encoding="utf-8")
+    os.chmod(malformed_path, PRIVATE_FILE_MODE)
+    assert_pairing_error(
+        lambda: load_product_reset_pending_credential(str(malformed_path)),
+        "malformed pending credential accepted",
+    )
+
+    malformed_field_path = reset_dir / "malformed-field.json"
+    malformed_field = dict(credential)
+    malformed_field["api_key"] = 12345678901234567890
+    atomic_write_json(malformed_field_path, malformed_field, PRIVATE_FILE_MODE)
+    assert_pairing_error(
+        lambda: load_product_reset_pending_credential(str(malformed_field_path)),
+        "non-string pending credential field accepted",
+    )
+
+    oversized_path = reset_dir / "oversized.json"
+    oversized_path.write_bytes(b"x" * (PRODUCT_RESET_MAX_CREDENTIAL_BYTES + 1))
+    os.chmod(oversized_path, PRIVATE_FILE_MODE)
+    assert_pairing_error(
+        lambda: load_product_reset_pending_credential(str(oversized_path)),
+        "oversized pending credential accepted",
+    )
+
+    invalid_token_path = reset_dir / "invalid-token.json"
+    invalid_token = dict(credential)
+    invalid_token["api_token_id"] = "token-self-test"
+    atomic_write_json(invalid_token_path, invalid_token, PRIVATE_FILE_MODE)
+    assert_pairing_error(
+        lambda: load_product_reset_pending_credential(str(invalid_token_path)),
+        "non-canonical api_token_id accepted",
+    )
+
+    target_path = reset_dir / "target.json"
+    link_path = reset_dir / "link.json"
+    write_product_reset_test_credential(target_path)
+    os.symlink(target_path, link_path)
+    assert_pairing_error(
+        lambda: load_product_reset_pending_credential(str(link_path)),
+        "symlink pending credential accepted",
+    )
+
+    args = argparse.Namespace(pending_credential=str(credential_path), timeout_sec=2.0)
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    cli_transport = FakeProductResetTransport(
+        [(200, {"operation_id": credential["operation_id"], "status": "revoked", "revoked": True})]
+    )
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        exit_code = run_product_reset_self_revoke_cli(args, transport=cli_transport)
+    assert exit_code == PRODUCT_RESET_EXIT_CONFIRMED
+    assert stdout.getvalue() == "product_reset_revocation=confirmed result=revoked\n"
+    assert stderr.getvalue() == ""
+
+    retry_stdout = io.StringIO()
+    with contextlib.redirect_stdout(retry_stdout):
+        retry_code = run_product_reset_self_revoke_cli(
+            args,
+            transport=FakeProductResetTransport([(408, {})]),
+        )
+    assert retry_code == PRODUCT_RESET_EXIT_RETRYABLE
+    assert retry_stdout.getvalue() == "product_reset_revocation=retryable\n"
+
+    terminal_stdout = io.StringIO()
+    with contextlib.redirect_stdout(terminal_stdout):
+        terminal_code = run_product_reset_self_revoke_cli(
+            args,
+            transport=FakeProductResetTransport([(401, {})]),
+        )
+    assert terminal_code == PRODUCT_RESET_EXIT_TERMINAL
+    assert terminal_stdout.getvalue() == "product_reset_revocation=terminal\n"
+
+    contract_stdout = io.StringIO()
+    contract_args = argparse.Namespace(pending_credential=str(bad_mode_path), timeout_sec=2.0)
+    with contextlib.redirect_stdout(contract_stdout):
+        contract_code = run_product_reset_self_revoke_cli(
+            contract_args,
+            transport=FakeProductResetTransport([(200, {})]),
+        )
+    assert contract_code == PRODUCT_RESET_EXIT_CONTRACT
+    assert contract_stdout.getvalue() == ""
+
+    emitted = stdout.getvalue() + retry_stdout.getvalue() + terminal_stdout.getvalue() + stderr.getvalue()
+    for forbidden in (
+        credential["api_key"],
+        credential["api_url"],
+        credential["api_token_id"],
+        credential["device_fingerprint"],
+    ):
+        assert forbidden not in emitted
+
+
 def run_self_test() -> None:
     with tempfile.TemporaryDirectory(prefix="dadooh-c21-pairing-self-test-") as raw:
         out_dir = require_tmp_out_dir(raw)
@@ -409,10 +1049,41 @@ def run_self_test() -> None:
         except PairingError:
             pass
 
+        run_product_reset_self_revoke_self_test(pathlib.Path(raw))
 
-def parse_args() -> argparse.Namespace:
+
+def run_product_reset_self_revoke_cli(
+    args: argparse.Namespace,
+    *,
+    transport: Callable[..., tuple[int, bytes]] = product_reset_urllib_transport,
+) -> int:
+    try:
+        outcome = product_reset_self_revoke(
+            args.pending_credential,
+            timeout_sec=args.timeout_sec,
+            transport=transport,
+        )
+    except PairingError:
+        return PRODUCT_RESET_EXIT_CONTRACT
+    print(product_reset_outcome_line(outcome))
+    return product_reset_exit_code(outcome)
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="C21 totem QR pairing mock client")
     parser.add_argument("--self-test", action="store_true", help="Run offline self-test.")
+    parser.add_argument("--product-reset-self-revoke", action="store_true", help="POST pending product-reset self-revocation.")
+    parser.add_argument(
+        "--pending-credential",
+        default=str(PRODUCT_RESET_PENDING_CREDENTIAL_PATH),
+        help=f"Pending product-reset credential. Default: {PRODUCT_RESET_PENDING_CREDENTIAL_PATH}",
+    )
+    parser.add_argument(
+        "--timeout-sec",
+        type=float,
+        default=PRODUCT_RESET_DEFAULT_TIMEOUT_SEC,
+        help=f"Product-reset HTTPS timeout, 1-{int(PRODUCT_RESET_MAX_TIMEOUT_SEC)} seconds.",
+    )
     parser.add_argument("--out-dir", default=DEFAULT_OUT_DIR, help=f"Dedicated output directory under /tmp. Default: {DEFAULT_OUT_DIR}")
     parser.add_argument("--state", choices=PAIRING_STATES, default="authorized", help="Mock backend state.")
     parser.add_argument("--pairing-code", default="", help="Optional fixed 8-char pairing code for tests.")
@@ -423,15 +1094,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--station-id", default=DEFAULT_STATION_ID, help="Optional authorized station UUID.")
     parser.add_argument("--expires-in-sec", type=int, default=600, help="Mock pairing session TTL.")
     parser.add_argument("--json", action="store_true", help="Print JSON result.")
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
     if args.self_test:
         run_self_test()
         print("totem_qr_pairing_client_self_test=passed")
         return 0
+    if args.product_reset_self_revoke:
+        return run_product_reset_self_revoke_cli(args)
 
     out_dir = require_tmp_out_dir(args.out_dir)
     code = validate_code(args.pairing_code) if args.pairing_code else generate_code()

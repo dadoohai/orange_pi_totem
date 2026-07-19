@@ -21,6 +21,14 @@ import tempfile
 from typing import Any
 from urllib.parse import urlparse
 
+from totem_api_url_contract import (
+    ApiKeyContractError,
+    ApiUrlContractError,
+    api_key_is_placeholder,
+    validate_api_key_format,
+    validate_https_api_url,
+)
+
 
 SCHEMA_VERSION = "dadooh-c5-config-contract-validate.v1"
 DEFAULT_OUT_DIR = "/tmp/dadooh-c5-config-contract-validate"
@@ -53,6 +61,7 @@ REQUIRED_CONFIG_FIELDS: dict[str, type | tuple[type, ...]] = {
 
 OPTIONAL_CONFIG_FIELDS: dict[str, type | tuple[type, ...]] = {
     "station_id": str,
+    "api_token_id": str,
 }
 
 PATH_RULES: dict[str, tuple[str, ...]] = {
@@ -69,6 +78,9 @@ OPTIONAL_PATH_RULES: dict[str, tuple[str, ...]] = {
 }
 
 ENVIRONMENT_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]+$")
+CANONICAL_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+)
 PLACEHOLDER_LABEL_RE = re.compile(r"(?:mock|test|example|placeholder|replace)", re.IGNORECASE)
 PROHIBITED_ID_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("url", re.compile(r"https?://", re.IGNORECASE)),
@@ -331,7 +343,7 @@ def detect_api_key_placeholder(raw_value: Any) -> bool:
         return False
     if raw_value == MOCK_API_KEY:
         return True
-    return bool(PLACEHOLDER_LABEL_RE.search(raw_value))
+    return api_key_is_placeholder(raw_value)
 
 
 def append_invalid(invalid_fields: list[dict[str, str]], field: str, reason: str) -> None:
@@ -462,6 +474,15 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
 
     api_key = config.get("api_key")
     api_key_present = isinstance(api_key, str) and bool(api_key.strip())
+    if isinstance(api_key, str) and api_key:
+        try:
+            validate_api_key_format(api_key)
+        except ApiKeyContractError:
+            append_invalid(
+                invalid_fields,
+                "api_key",
+                "must be an ASCII API key between 16 and 4096 bytes",
+            )
     api_key_placeholder = detect_api_key_placeholder(api_key)
     status["api_key_present"] = api_key_present
     status["api_key_placeholder_detected"] = api_key_placeholder
@@ -475,8 +496,19 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
         )
 
     api_url = config.get("api_url")
+    api_url_is_structurally_valid = False
     if isinstance(api_url, str):
-        if api_url == MOCK_API_URL:
+        try:
+            validate_https_api_url(api_url)
+            api_url_is_structurally_valid = True
+        except ApiUrlContractError:
+            api_url_is_structurally_valid = False
+            append_invalid(
+                invalid_fields,
+                "api_url",
+                "must be a valid HTTPS URL without credentials or fragment",
+            )
+        if api_url_is_structurally_valid and api_url == MOCK_API_URL:
             placeholder_findings.append(
                 {
                     "field": "api_url",
@@ -484,7 +516,7 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
                     "action": "allowed" if mode == "allow-mock" else "blocked",
                 }
             )
-        elif api_url_uses_invalid_domain(api_url):
+        elif api_url_is_structurally_valid and api_url_uses_invalid_domain(api_url):
             placeholder_findings.append(
                 {
                     "field": "api_url",
@@ -505,6 +537,11 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
     if station_invalid is not None:
         invalid_fields.append(station_invalid)
 
+    if "api_token_id" in config:
+        api_token_id = config.get("api_token_id")
+        if not isinstance(api_token_id, str) or CANONICAL_UUID_RE.fullmatch(api_token_id) is None:
+            append_invalid(invalid_fields, "api_token_id", "must be a canonical UUID")
+
     if environment_status["placeholder_detected"]:
         placeholder_findings.append(
             {
@@ -518,7 +555,7 @@ def validate_candidate_config(config: dict[str, Any], mode: str) -> dict[str, An
             append_invalid(invalid_fields, "api_key", "required in real-dry-run")
         if api_key_placeholder:
             append_invalid(invalid_fields, "api_key", "placeholder blocked in real-dry-run")
-        if isinstance(api_url, str):
+        if isinstance(api_url, str) and api_url_is_structurally_valid:
             if api_url == MOCK_API_URL:
                 append_invalid(invalid_fields, "api_url", "known mock URL blocked in real-dry-run")
             if api_url_uses_invalid_domain(api_url):
@@ -656,6 +693,21 @@ def run_self_test() -> None:
         empty_api_key["api_key"] = ""
         assert_invalid(empty_api_key, "real-dry-run", "empty api_key should fail real-dry-run")
 
+        for malformed_api_key in (
+            "A" * 15,
+            "A" * 4097,
+            "é" * 1500,
+            "😀" * 16,
+            ("A" * 16) + "\n",
+        ):
+            malformed = dict(mock_candidate)
+            malformed["api_key"] = malformed_api_key
+            assert_invalid(
+                malformed,
+                "allow-mock",
+                "non-transportable api_key should fail cleanly",
+            )
+
         mock_api_key = dict(mock_candidate)
         mock_api_key["api_url"] = "https://api.example.com/search"
         mock_api_key["environment_id"] = "ENVIRONMENT_ID_REALISH"
@@ -667,6 +719,31 @@ def run_self_test() -> None:
         invalid_url["environment_id"] = "ENVIRONMENT_ID_REALISH"
         invalid_url["station_id"] = "STATION_ID_REALISH"
         assert_invalid(invalid_url, "real-dry-run", ".invalid api_url should fail real-dry-run")
+
+        for malformed_api_url in (
+            "http://api.example.com/search",
+            "https://api.example.com:",
+            "https://user:pass@api.example.com/search",
+            "https://api.example.com/search#fragment",
+            " https://api.example.com/search",
+            "https://api.example.com/\nsearch",
+            "https://api.example.com/" + ("x" * 2048),
+            "https://@api.example.com/search",
+            "https://api.example.com/search#",
+            "https://[2001:db8::1",
+            "https://%/search",
+            "https://a..example.com/search",
+            "https://" + ("a" * 64) + ".example.com/search",
+            "https://api.example.com\\bad/search",
+            "https://api.example.com/\ud800",
+        ):
+            malformed = dict(mock_candidate)
+            malformed["api_url"] = malformed_api_url
+            assert_invalid(
+                malformed,
+                "allow-mock",
+                f"structurally invalid api_url accepted: {malformed_api_url[:80]!r}",
+            )
 
         station_absent = dict(mock_candidate)
         station_absent["api_url"] = "https://api.sandbox.localhost/search"

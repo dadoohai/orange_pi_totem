@@ -28,6 +28,8 @@ PAIRING_PRIVATE_VALUES_USED="false"
 OPENVT_PID=""
 SIGNAL_STOP="false"
 SIGNAL_STOP_REASON="none"
+PRODUCT_RESET_STATE_DIR="${TOTEM_PRODUCT_RESET_STATE_DIR:-/data/state/totem-appliance/product-reset}"
+PRODUCT_RESET_GUARD_ADOPTED="false"
 
 usage() {
   cat <<'USAGE'
@@ -278,10 +280,20 @@ TTY_GUARD="$SCRIPT_DIR/totem_visual_tty_guard.sh"
 AGGREGATE="$SCRIPT_DIR/totem_status_aggregate.py"
 HANDOFF="$SCRIPT_DIR/totem_visual_setup_writer_handoff.py"
 WRITER="$SCRIPT_DIR/totem_config_writer_real.py"
+QR_CLIENT="$SCRIPT_DIR/totem_qr_pairing_client.py"
 CONTRACT="$SCRIPT_DIR/totem_config_contract_validate.py"
 TTY_DEVICE="/dev/tty$REMOTE_TTY"
 FINAL_STATUS="$OUT_DIR/session-status.json"
 REQUEST_FILE="$REQUEST_DIR/request.json"
+TERMINAL_ACTION_MARKER="$REQUEST_DIR/terminal-action.json"
+ACTION_REQUEST_FILE="$WIZARD_OUT_DIR/totem-action-request.json"
+ACTION_REQUEST_CONSUMED_FILE="$WIZARD_OUT_DIR/totem-action-request.consumed.json"
+PRODUCT_RESET_RECOVERY_SIGNAL_FILE="$WIZARD_OUT_DIR/product-reset-recovery-network-ready.json"
+PRODUCT_RESET_RECOVERY_SIGNAL_CONSUMED_FILE="$WIZARD_OUT_DIR/product-reset-recovery-network-ready.consumed.json"
+TERMINAL_ACTION_PENDING="false"
+PRODUCT_RESET_AVAILABLE="0"
+PRODUCT_RESET_RECOVERY_MODE="0"
+TOTEM_ACTIONS_AVAILABLE="0"
 GETTY_UNITS=("getty@tty1.service" "getty@tty${REMOTE_TTY}.service")
 WIZARD_RC="not_run"
 HANDOFF_RC="not_run"
@@ -336,6 +348,12 @@ c17_4_trace() {
 for path in "$VISUAL" "$SPLASH" "$AGGREGATE"; do
   if [ ! -f "$path" ]; then
     echo "error: missing local session dependency" >&2
+    exit 1
+  fi
+done
+for path in /usr/bin/env /usr/bin/openvt /usr/bin/python3 /usr/bin/setsid; do
+  if [ ! -x "$path" ]; then
+    echo "error: missing executable session dependency" >&2
     exit 1
   fi
 done
@@ -453,11 +471,1045 @@ cleanup_update_lock() {
   fi
 }
 
+product_reset_pending() {
+  local state_dir="${PRODUCT_RESET_STATE_DIR:-/data/state/totem-appliance/product-reset}"
+  if [ -L "$state_dir" ]; then
+    return 0
+  fi
+  if [ -e "$state_dir" ] && [ ! -d "$state_dir" ]; then
+    return 0
+  fi
+  [ -e "$state_dir/intent.json" ] \
+    || [ -L "$state_dir/intent.json" ] \
+    || [ -e "$state_dir/pending-credential.json" ] \
+    || [ -L "$state_dir/pending-credential.json" ]
+}
+
+product_reset_onboarding_pending() {
+  local state_dir="${PRODUCT_RESET_STATE_DIR:-/data/state/totem-appliance/product-reset}"
+  if [ -L "$state_dir" ]; then
+    return 0
+  fi
+  if [ -e "$state_dir" ] && [ ! -d "$state_dir" ]; then
+    return 0
+  fi
+  [ -e "$state_dir/receipt.json" ] \
+    || [ -L "$state_dir/receipt.json" ]
+}
+
+product_reset_guard_required() {
+  product_reset_pending || product_reset_onboarding_pending
+}
+
+product_reset_cleanup_pending() {
+  local state_dir="${PRODUCT_RESET_STATE_DIR:-/data/state/totem-appliance/product-reset}"
+  local graveyard="$state_dir/graveyard"
+  local first_entry=""
+  if [ -L "$state_dir" ] || { [ -e "$state_dir" ] && [ ! -d "$state_dir" ]; }; then
+    return 0
+  fi
+  if [ -e "$state_dir/gc-pending.json" ] || [ -L "$state_dir/gc-pending.json" ]; then
+    return 0
+  fi
+  if [ -L "$graveyard" ] || { [ -e "$graveyard" ] && [ ! -d "$graveyard" ]; }; then
+    return 0
+  fi
+  [ -d "$graveyard" ] || return 1
+  if ! first_entry="$(find "$graveyard" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)"; then
+    return 0
+  fi
+  [ -n "$first_entry" ]
+}
+
+product_reset_homologation_seed_disabled_safe() {
+  local state_dir="${PRODUCT_RESET_STATE_DIR:-/data/state/totem-appliance/product-reset}"
+  local seed_path="/data/state/totem-settings/private-values.seed.json"
+  local expected_uid="0"
+  local expected_gid="0"
+  if [ "${TOTEM_C26_TEST_MODE:-0}" = "1" ]; then
+    seed_path="${TOTEM_C26_TEST_HOMOLOGATION_SEED:-}"
+    case "$state_dir:$seed_path" in
+      /tmp/*:/tmp/*) ;;
+      *) return 1 ;;
+    esac
+    expected_uid="$(id -u)"
+    expected_gid="$(id -g)"
+  fi
+  python3 - "$state_dir" "$seed_path" "$expected_uid" "$expected_gid" <<'PY'
+import json
+import os
+import pathlib
+import stat
+import sys
+import uuid
+
+state_dir = pathlib.Path(sys.argv[1])
+seed_path = pathlib.Path(sys.argv[2])
+expected_uid = int(sys.argv[3])
+expected_gid = int(sys.argv[4])
+marker = state_dir / "homologation-seed-disabled.json"
+try:
+    state_info = os.lstat(state_dir)
+    marker_info = os.lstat(marker)
+except OSError:
+    raise SystemExit(1)
+if (
+    stat.S_ISLNK(state_info.st_mode)
+    or not stat.S_ISDIR(state_info.st_mode)
+    or state_info.st_uid != expected_uid
+    or state_info.st_gid != expected_gid
+    or stat.S_IMODE(state_info.st_mode) != 0o700
+    or stat.S_ISLNK(marker_info.st_mode)
+    or not stat.S_ISREG(marker_info.st_mode)
+    or marker_info.st_uid != expected_uid
+    or marker_info.st_gid != expected_gid
+    or marker_info.st_nlink != 1
+    or stat.S_IMODE(marker_info.st_mode) != 0o600
+    or marker_info.st_size <= 0
+    or marker_info.st_size > 4096
+):
+    raise SystemExit(1)
+flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+try:
+    fd = os.open(marker, flags)
+    try:
+        opened_info = os.fstat(fd)
+        if (opened_info.st_dev, opened_info.st_ino) != (marker_info.st_dev, marker_info.st_ino):
+            raise SystemExit(1)
+        payload = json.loads(os.read(fd, 4097).decode("utf-8"))
+    finally:
+        os.close(fd)
+except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+    raise SystemExit(1)
+if set(payload) != {"schema_version", "disabled", "disabled_at_utc", "first_operation_id"}:
+    raise SystemExit(1)
+if (
+    payload.get("schema_version") != "dadooh-c26a-product-reset.v1"
+    or payload.get("disabled") is not True
+    or not isinstance(payload.get("disabled_at_utc"), str)
+    or not payload["disabled_at_utc"]
+):
+    raise SystemExit(1)
+try:
+    operation_id = uuid.UUID(str(payload.get("first_operation_id")))
+except ValueError:
+    raise SystemExit(1)
+if operation_id.version != 4 or str(operation_id) != payload.get("first_operation_id"):
+    raise SystemExit(1)
+try:
+    os.lstat(seed_path)
+except FileNotFoundError:
+    raise SystemExit(0)
+except OSError:
+    raise SystemExit(1)
+raise SystemExit(1)
+PY
+}
+
+remove_session_lock_if_safe() {
+  if product_reset_guard_required; then
+    return 0
+  fi
+  rmdir "$LOCK_DIR" 2>/dev/null || true
+}
+
+product_reset_lock_is_trusted() {
+  python3 - "$LOCK_DIR" <<'PY'
+import os
+import pathlib
+import stat
+import sys
+
+path = pathlib.Path(sys.argv[1])
+try:
+    info = path.stat(follow_symlinks=False)
+except OSError:
+    raise SystemExit(1)
+trusted = (
+    path.is_absolute()
+    and not path.is_symlink()
+    and stat.S_ISDIR(info.st_mode)
+    and info.st_uid == os.geteuid()
+    and not stat.S_IMODE(info.st_mode) & 0o022
+)
+raise SystemExit(0 if trusted else 1)
+PY
+}
+
+product_reset_resume_request_is_trusted() {
+  python3 - "$REQUEST_FILE" <<'PY'
+import json
+import os
+import pathlib
+import stat
+import sys
+
+path = pathlib.Path(sys.argv[1])
+try:
+    info = path.stat(follow_symlinks=False)
+    if (
+        path.is_symlink()
+        or not stat.S_ISREG(info.st_mode)
+        or info.st_uid != os.geteuid()
+        or stat.S_IMODE(info.st_mode) != 0o600
+        or info.st_nlink != 1
+        or info.st_size <= 0
+        or info.st_size > 4096
+    ):
+        raise SystemExit(1)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+except (OSError, ValueError, json.JSONDecodeError):
+    raise SystemExit(1)
+trusted = (
+    isinstance(payload, dict)
+    and set(payload) == {"schema_version", "requested_at", "trigger_type", "action"}
+    and payload.get("schema_version") == 1
+    and payload.get("trigger_type") == "product_reset_resume"
+    and payload.get("action") == "open_settings"
+    and isinstance(payload.get("requested_at"), str)
+    and bool(payload["requested_at"])
+)
+raise SystemExit(0 if trusted else 1)
+PY
+}
+
+settings_request_trigger_type() {
+  python3 - "$REQUEST_FILE" <<'PY'
+import json
+import os
+import pathlib
+import stat
+import sys
+
+path = pathlib.Path(sys.argv[1])
+try:
+    info = path.stat(follow_symlinks=False)
+    if (
+        path.is_symlink()
+        or not stat.S_ISREG(info.st_mode)
+        or info.st_uid != os.geteuid()
+        or stat.S_IMODE(info.st_mode) != 0o600
+        or info.st_nlink != 1
+        or info.st_size <= 0
+        or info.st_size > 4096
+    ):
+        raise SystemExit(1)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+except (OSError, ValueError, json.JSONDecodeError):
+    raise SystemExit(1)
+if (
+    not isinstance(payload, dict)
+    or set(payload) != {"schema_version", "requested_at", "trigger_type", "action"}
+    or payload.get("schema_version") != 1
+    or payload.get("action") != "open_settings"
+):
+    raise SystemExit(1)
+trigger = payload.get("trigger_type")
+if trigger not in {"keyboard_f10_hold", "product_reset_resume"}:
+    raise SystemExit(1)
+print(trigger)
+PY
+}
+
+product_reset_operation_id_from_status() {
+  python3 -c '
+import sys
+import uuid
+
+prefix = "product_reset_operation_id="
+values = [line[len(prefix):].strip() for line in sys.stdin if line.startswith(prefix)]
+if len(values) != 1:
+    raise SystemExit(1)
+try:
+    value = str(uuid.UUID(values[0]))
+except (ValueError, AttributeError):
+    raise SystemExit(1)
+if value != values[0] or uuid.UUID(value).version != 4:
+    raise SystemExit(1)
+print(value)
+'
+}
+
+resume_product_reset_if_pending() {
+  local resume_output=""
+  local resume_rc=0
+  local operation_id=""
+  local revoke_output=""
+  local revoke_rc=0
+  local revoke_result=""
+  local finalize_output=""
+  local finalize_rc=0
+
+  product_reset_pending || return 0
+  if [ ! -f "$WRITER" ] || [ ! -f "$QR_CLIENT" ]; then
+    c17_4_trace "product_reset_recovery_dependency_missing"
+    return 57
+  fi
+
+  c17_4_trace "product_reset_local_resume_start"
+  if resume_output="$({
+    /usr/bin/python3 "$WRITER" \
+      --product-reset-resume \
+      --enable-real-write \
+      --confirm-service-stopped
+  } 2>/dev/null)"; then
+    resume_rc=0
+  else
+    resume_rc=$?
+  fi
+  case "$resume_rc" in
+    0)
+      if product_reset_pending; then
+        c17_4_trace "product_reset_local_resume_inconsistent"
+        return 57
+      fi
+      c17_4_trace "product_reset_already_finalized"
+      return 0
+      ;;
+    10)
+      ;;
+    *)
+      c17_4_trace "product_reset_local_resume_failed" rc="$resume_rc"
+      return 57
+      ;;
+  esac
+
+  if ! operation_id="$(printf '%s\n' "$resume_output" | product_reset_operation_id_from_status)"; then
+    c17_4_trace "product_reset_operation_id_unavailable"
+    return 57
+  fi
+
+  c17_4_trace "product_reset_revocation_attempt"
+  if revoke_output="$({
+    /usr/bin/python3 "$QR_CLIENT" \
+      --product-reset-self-revoke \
+      --pending-credential "$PRODUCT_RESET_STATE_DIR/pending-credential.json" \
+      --timeout-sec 8
+  } 2>/dev/null)"; then
+    revoke_rc=0
+  else
+    revoke_rc=$?
+  fi
+  case "$revoke_rc:$revoke_output" in
+    "0:product_reset_revocation=confirmed result=revoked")
+      revoke_result="revoked"
+      ;;
+    "0:product_reset_revocation=confirmed result=not_device_activation")
+      revoke_result="not_device_activation"
+      ;;
+    "10:product_reset_revocation=retryable")
+      c17_4_trace "product_reset_revocation_retryable"
+      return 55
+      ;;
+    "20:product_reset_revocation=terminal")
+      c17_4_trace "product_reset_revocation_terminal"
+      return 56
+      ;;
+    *)
+      c17_4_trace "product_reset_revocation_contract_failed" rc="$revoke_rc"
+      return 57
+      ;;
+  esac
+
+  c17_4_trace "product_reset_finalize_start" result="$revoke_result"
+  if finalize_output="$({
+    /usr/bin/python3 "$WRITER" \
+      --product-reset-finalize \
+      --product-reset-operation-id "$operation_id" \
+      --product-reset-result "$revoke_result" \
+      --enable-real-write \
+      --confirm-service-stopped
+  } 2>/dev/null)"; then
+    finalize_rc=0
+  else
+    finalize_rc=$?
+  fi
+  : "$finalize_output"
+  if [ "$finalize_rc" -ne 0 ] || product_reset_pending; then
+    c17_4_trace "product_reset_finalize_failed" rc="$finalize_rc"
+    return 57
+  fi
+  c17_4_trace "product_reset_finalize_complete" result="$revoke_result"
+  return 0
+}
+
+product_reset_recovery_can_open() {
+  case "${1:-}:${2:-}" in
+    55:keyboard_f10_hold|56:keyboard_f10_hold) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+totem_core_capabilities_valid() {
+  python3 - "$@" <<'PY'
+import json
+import os
+import pathlib
+import re
+import stat
+import sys
+
+root = pathlib.Path("/data/core/totem")
+safe_version = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+targets = []
+requirements = []
+for raw in sys.argv[1:]:
+    if ":" not in raw:
+        raise SystemExit(1)
+    name, capability = raw.split(":", 1)
+    if name not in {"current", "previous"} or capability not in {
+        "product-reset-v1",
+        "totem-actions-v1",
+    }:
+        raise SystemExit(1)
+    requirements.append((name, capability))
+if not requirements:
+    raise SystemExit(1)
+
+try:
+    root_info = root.stat(follow_symlinks=False)
+    releases = root / "releases"
+    releases_info = releases.stat(follow_symlinks=False)
+    if (
+        root.is_symlink()
+        or releases.is_symlink()
+        or not stat.S_ISDIR(root_info.st_mode)
+        or not stat.S_ISDIR(releases_info.st_mode)
+        or root_info.st_uid != 0
+        or releases_info.st_uid != 0
+        or stat.S_IMODE(root_info.st_mode) & 0o022
+        or stat.S_IMODE(releases_info.st_mode) & 0o022
+    ):
+        raise ValueError("untrusted root")
+
+    for name, required_capability in requirements:
+        link = root / name
+        link_info = link.stat(follow_symlinks=False)
+        if not stat.S_ISLNK(link_info.st_mode) or link_info.st_uid != 0:
+            raise ValueError("untrusted link")
+        raw_target = os.readlink(link)
+        parts = pathlib.PurePosixPath(raw_target).parts
+        if len(parts) != 2 or parts[0] != "releases" or not safe_version.fullmatch(parts[1]):
+            raise ValueError("invalid target")
+        release = releases / parts[1]
+        release_info = release.stat(follow_symlinks=False)
+        if (
+            release.is_symlink()
+            or not stat.S_ISDIR(release_info.st_mode)
+            or release_info.st_uid != 0
+            or stat.S_IMODE(release_info.st_mode) & 0o022
+        ):
+            raise ValueError("untrusted release")
+        health_dir = release / "health"
+        health = health_dir / "totem-core-health.json"
+        health_dir_info = health_dir.stat(follow_symlinks=False)
+        health_info = health.stat(follow_symlinks=False)
+        if (
+            health_dir.is_symlink()
+            or not stat.S_ISDIR(health_dir_info.st_mode)
+            or health_dir_info.st_uid != 0
+            or stat.S_IMODE(health_dir_info.st_mode) & 0o022
+            or health.is_symlink()
+            or not stat.S_ISREG(health_info.st_mode)
+            or health_info.st_uid != 0
+            or health_info.st_nlink != 1
+            or stat.S_IMODE(health_info.st_mode) & 0o022
+            or health_info.st_size <= 0
+            or health_info.st_size > 65536
+        ):
+            raise ValueError("untrusted health")
+        payload = json.loads(health.read_text(encoding="utf-8"))
+        capabilities = payload.get("capabilities")
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema") != "dadooh.totem.core.health.v1"
+            or not isinstance(capabilities, list)
+            or not all(isinstance(item, str) and item for item in capabilities)
+            or required_capability not in capabilities
+        ):
+            raise ValueError("capability absent")
+        targets.append(raw_target)
+except (OSError, ValueError, json.JSONDecodeError):
+    raise SystemExit(1)
+
+raise SystemExit(0 if len(targets) == 1 or len(set(targets)) == len(targets) else 1)
+PY
+}
+
+totem_core_product_reset_capable() {
+  totem_core_capabilities_valid \
+    "current:product-reset-v1" \
+    "previous:product-reset-v1"
+}
+
+totem_actions_boot_order_safe() {
+  local systemctl_bin="/usr/bin/systemctl"
+  local ready_marker="/run/totem/c26-firstboot-ready.json"
+  local boot_id_file="/proc/sys/kernel/random/boot_id"
+  local expected_uid="0"
+  local expected_gid="0"
+  local properties=""
+  if [ "${TOTEM_C26_TEST_MODE:-0}" = "1" ]; then
+    [ "$(id -u)" -ne 0 ] || return 1
+    systemctl_bin="${TOTEM_C26_TEST_SYSTEMCTL_BIN:-}"
+    ready_marker="${TOTEM_C26_TEST_READY_MARKER:-}"
+    boot_id_file="${TOTEM_C26_TEST_BOOT_ID_FILE:-}"
+    case "$systemctl_bin:$ready_marker:$boot_id_file" in
+      /tmp/*:/tmp/*:/tmp/*) ;;
+      *) return 1 ;;
+    esac
+    [ -x "$systemctl_bin" ] || return 1
+    expected_uid="$(id -u)"
+    expected_gid="$(id -g)"
+  fi
+  properties="$("$systemctl_bin" show totem-firstboot-gate.service \
+    --property=LoadState \
+    --property=UnitFileState \
+    --property=ActiveState \
+    --property=SubState \
+    --property=Result \
+    --property=ExecMainStatus \
+    --property=Before 2>/dev/null)" || return 1
+  python3 - "$properties" "$ready_marker" "$boot_id_file" "$expected_uid" "$expected_gid" <<'PY'
+import json
+import os
+import pathlib
+import stat
+import sys
+import uuid
+
+raw_properties = sys.argv[1]
+ready_marker = pathlib.Path(sys.argv[2])
+boot_id_file = pathlib.Path(sys.argv[3])
+expected_uid = int(sys.argv[4])
+expected_gid = int(sys.argv[5])
+
+properties = {}
+for line in raw_properties.splitlines():
+    if "=" not in line:
+        raise SystemExit(1)
+    key, value = line.split("=", 1)
+    if key in properties:
+        raise SystemExit(1)
+    properties[key] = value
+expected = {
+    "LoadState": "loaded",
+    "UnitFileState": "enabled",
+    "ActiveState": "inactive",
+    "SubState": "dead",
+    "Result": "success",
+    "ExecMainStatus": "0",
+}
+if set(properties) != set(expected) | {"Before"}:
+    raise SystemExit(1)
+if any(properties[key] != value for key, value in expected.items()):
+    raise SystemExit(1)
+required_before = {
+    "totem-update-agent.service",
+    "totem-player-runtime-update-agent.service",
+}
+if not required_before <= set(properties["Before"].split()):
+    raise SystemExit(1)
+
+try:
+    parent_info = os.lstat(ready_marker.parent)
+    marker_info = os.lstat(ready_marker)
+    boot_info = os.lstat(boot_id_file)
+except OSError:
+    raise SystemExit(1)
+if (
+    stat.S_ISLNK(parent_info.st_mode)
+    or not stat.S_ISDIR(parent_info.st_mode)
+    or parent_info.st_uid != expected_uid
+    or parent_info.st_gid != expected_gid
+    or stat.S_IMODE(parent_info.st_mode) & 0o022
+    or stat.S_ISLNK(marker_info.st_mode)
+    or not stat.S_ISREG(marker_info.st_mode)
+    or marker_info.st_uid != expected_uid
+    or marker_info.st_gid != expected_gid
+    or marker_info.st_nlink != 1
+    or stat.S_IMODE(marker_info.st_mode) != 0o600
+    or marker_info.st_size <= 0
+    or marker_info.st_size > 4096
+    or stat.S_ISLNK(boot_info.st_mode)
+    or not stat.S_ISREG(boot_info.st_mode)
+):
+    raise SystemExit(1)
+
+flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+try:
+    fd = os.open(ready_marker, flags)
+    try:
+        opened_info = os.fstat(fd)
+        if (opened_info.st_dev, opened_info.st_ino) != (marker_info.st_dev, marker_info.st_ino):
+            raise SystemExit(1)
+        raw_marker = os.read(fd, 4097)
+    finally:
+        os.close(fd)
+    payload = json.loads(raw_marker.decode("utf-8"))
+except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+    raise SystemExit(1)
+if set(payload) != {"schema_version", "boot_id", "completed_at_utc"}:
+    raise SystemExit(1)
+if payload.get("schema_version") != "dadooh.c26.firstboot-ready.v1":
+    raise SystemExit(1)
+if not isinstance(payload.get("completed_at_utc"), str) or not payload["completed_at_utc"].endswith("Z"):
+    raise SystemExit(1)
+boot_id = boot_id_file.read_text(encoding="ascii").strip()
+try:
+    parsed_boot_id = uuid.UUID(boot_id)
+except ValueError:
+    raise SystemExit(1)
+if str(parsed_boot_id) != boot_id or payload.get("boot_id") != boot_id:
+    raise SystemExit(1)
+raise SystemExit(0)
+PY
+}
+
+totem_actions_image_contract_safe() {
+  local updatectl_bin="/opt/totem/bin/totem-updatectl"
+  if [ "${TOTEM_C26_TEST_MODE:-0}" = "1" ]; then
+    updatectl_bin="${TOTEM_C26_TEST_UPDATECTL_BIN:-}"
+    case "$updatectl_bin" in
+      /tmp/*) ;;
+      *) return 1 ;;
+    esac
+  fi
+  [ -x "$updatectl_bin" ] || return 1
+  "$updatectl_bin" check-image-contract \
+    --feature c26-product-reset-gc-static-v1 >/dev/null 2>&1
+}
+
+totem_core_actions_capable() {
+  totem_core_capabilities_valid "current:totem-actions-v1" \
+    && totem_actions_boot_order_safe \
+    && totem_actions_image_contract_safe
+}
+
+consume_totem_action_request() {
+  python3 - "$ACTION_REQUEST_FILE" "$ACTION_REQUEST_CONSUMED_FILE" "$SETTINGS_SESSION_ID" <<'PY'
+import datetime as dt
+import json
+import os
+import pathlib
+import re
+import stat
+import sys
+import uuid
+
+source = pathlib.Path(sys.argv[1])
+consumed = pathlib.Path(sys.argv[2])
+session_id = sys.argv[3]
+expected_fields = {
+    "schema_version",
+    "request_id",
+    "settings_session_id",
+    "action",
+    "source",
+    "confirmed_at_utc",
+}
+
+if re.fullmatch(r"[0-9a-f]{32}", session_id) is None:
+    raise SystemExit(1)
+try:
+    parent_info = source.parent.stat(follow_symlinks=False)
+    info = source.stat(follow_symlinks=False)
+    if (
+        source.is_symlink()
+        or source.parent.is_symlink()
+        or not stat.S_ISDIR(parent_info.st_mode)
+        or parent_info.st_uid != os.geteuid()
+        or stat.S_IMODE(parent_info.st_mode) != 0o700
+        or not stat.S_ISREG(info.st_mode)
+        or info.st_uid != os.geteuid()
+        or stat.S_IMODE(info.st_mode) != 0o600
+        or info.st_nlink != 1
+        or info.st_size <= 0
+        or info.st_size > 1024
+        or consumed.exists()
+        or consumed.is_symlink()
+    ):
+        raise ValueError("unsafe action request")
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(source, flags)
+    try:
+        opened = os.fstat(fd)
+        if opened.st_ino != info.st_ino or opened.st_dev != info.st_dev or opened.st_nlink != 1:
+            raise ValueError("action request changed")
+        chunks = []
+        remaining = 1025
+        while remaining > 0:
+            chunk = os.read(fd, remaining)
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        raw = b"".join(chunks)
+    finally:
+        os.close(fd)
+    if len(raw) > 1024:
+        raise ValueError("action request too large")
+    payload = json.loads(raw.decode("utf-8"))
+    if not isinstance(payload, dict) or set(payload) != expected_fields:
+        raise ValueError("action request fields")
+    if payload.get("schema_version") != "dadooh.totem.action-request.v1":
+        raise ValueError("action request schema")
+    if payload.get("settings_session_id") != session_id:
+        raise ValueError("action request session")
+    if payload.get("source") != "visual_wizard_header":
+        raise ValueError("action request source")
+    action = payload.get("action")
+    if action not in {"restart", "poweroff", "product_reset"}:
+        raise ValueError("action request action")
+    request_id = payload.get("request_id")
+    parsed_id = uuid.UUID(str(request_id))
+    if parsed_id.version != 4 or str(parsed_id) != request_id:
+        raise ValueError("action request id")
+    confirmed_raw = payload.get("confirmed_at_utc")
+    if not isinstance(confirmed_raw, str) or not confirmed_raw.endswith("Z"):
+        raise ValueError("action request time")
+    confirmed = dt.datetime.fromisoformat(confirmed_raw.replace("Z", "+00:00"))
+    now = dt.datetime.now(dt.timezone.utc)
+    if confirmed.utcoffset() != dt.timedelta(0) or confirmed > now + dt.timedelta(seconds=60):
+        raise ValueError("action request time")
+    os.replace(source, consumed)
+    os.chmod(consumed, 0o600)
+    parent_fd = os.open(source.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(parent_fd)
+    finally:
+        os.close(parent_fd)
+except (OSError, ValueError, UnicodeDecodeError, json.JSONDecodeError):
+    raise SystemExit(1)
+
+print(action)
+print(request_id)
+PY
+}
+
+consume_product_reset_recovery_signal() {
+  python3 - "$PRODUCT_RESET_RECOVERY_SIGNAL_FILE" "$PRODUCT_RESET_RECOVERY_SIGNAL_CONSUMED_FILE" "$SETTINGS_SESSION_ID" <<'PY'
+import datetime as dt
+import json
+import os
+import pathlib
+import re
+import stat
+import sys
+
+source = pathlib.Path(sys.argv[1])
+consumed = pathlib.Path(sys.argv[2])
+session_id = sys.argv[3]
+expected_fields = {
+    "schema_version",
+    "settings_session_id",
+    "result",
+    "recorded_at_utc",
+}
+if re.fullmatch(r"[0-9a-f]{32}", session_id) is None:
+    raise SystemExit(1)
+try:
+    parent_info = source.parent.stat(follow_symlinks=False)
+    info = source.stat(follow_symlinks=False)
+    if (
+        source.is_symlink()
+        or source.parent.is_symlink()
+        or not stat.S_ISDIR(parent_info.st_mode)
+        or parent_info.st_uid != os.geteuid()
+        or stat.S_IMODE(parent_info.st_mode) != 0o700
+        or not stat.S_ISREG(info.st_mode)
+        or info.st_uid != os.geteuid()
+        or stat.S_IMODE(info.st_mode) != 0o600
+        or info.st_nlink != 1
+        or info.st_size <= 0
+        or info.st_size > 1024
+        or consumed.exists()
+        or consumed.is_symlink()
+    ):
+        raise ValueError("unsafe recovery signal")
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(source, flags)
+    try:
+        opened = os.fstat(fd)
+        if opened.st_ino != info.st_ino or opened.st_dev != info.st_dev or opened.st_nlink != 1:
+            raise ValueError("recovery signal changed")
+        raw = os.read(fd, 1025)
+    finally:
+        os.close(fd)
+    if len(raw) > 1024:
+        raise ValueError("recovery signal too large")
+    payload = json.loads(raw.decode("utf-8"))
+    if not isinstance(payload, dict) or set(payload) != expected_fields:
+        raise ValueError("recovery signal fields")
+    if payload.get("schema_version") != "dadooh.totem.product-reset-recovery.network-ready.v1":
+        raise ValueError("recovery signal schema")
+    if payload.get("settings_session_id") != session_id or payload.get("result") != "network_ready":
+        raise ValueError("recovery signal scope")
+    recorded_raw = payload.get("recorded_at_utc")
+    if not isinstance(recorded_raw, str) or not recorded_raw.endswith("Z"):
+        raise ValueError("recovery signal time")
+    recorded = dt.datetime.fromisoformat(recorded_raw.replace("Z", "+00:00"))
+    now = dt.datetime.now(dt.timezone.utc)
+    if (
+        recorded.utcoffset() != dt.timedelta(0)
+        or recorded > now + dt.timedelta(seconds=60)
+        or recorded < now - dt.timedelta(hours=2)
+    ):
+        raise ValueError("recovery signal time")
+    os.replace(source, consumed)
+    os.chmod(consumed, 0o600)
+    parent_fd = os.open(source.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(parent_fd)
+    finally:
+        os.close(parent_fd)
+except (OSError, ValueError, UnicodeDecodeError, json.JSONDecodeError):
+    raise SystemExit(1)
+PY
+}
+
+write_terminal_action_marker() {
+  local phase="$1"
+  local action="$2"
+  local request_id="$3"
+  python3 - "$TERMINAL_ACTION_MARKER" "$phase" "$action" "$request_id" "$SETTINGS_SESSION_ID" <<'PY'
+import datetime as dt
+import json
+import os
+import pathlib
+import stat
+import sys
+import tempfile
+import uuid
+
+target = pathlib.Path(sys.argv[1])
+phase = sys.argv[2]
+action = sys.argv[3]
+request_id = sys.argv[4]
+session_id = sys.argv[5]
+expected_fields = {
+    "schema_version",
+    "phase",
+    "action",
+    "request_id",
+    "settings_session_id",
+    "prepared_at_utc",
+    "accepted_at_utc",
+}
+if phase not in {"prepared", "armed", "accepted"} or action not in {"restart", "poweroff"}:
+    raise SystemExit(1)
+parsed_request_id = uuid.UUID(request_id)
+if parsed_request_id.version != 4 or str(parsed_request_id) != request_id:
+    raise SystemExit(1)
+if len(session_id) != 32 or any(char not in "0123456789abcdef" for char in session_id):
+    raise SystemExit(1)
+
+parent_info = os.lstat(target.parent)
+if (
+    stat.S_ISLNK(parent_info.st_mode)
+    or not stat.S_ISDIR(parent_info.st_mode)
+    or parent_info.st_uid != os.geteuid()
+    or stat.S_IMODE(parent_info.st_mode) & 0o077
+):
+    raise SystemExit(1)
+
+now = dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+if phase == "prepared":
+    try:
+        os.lstat(target)
+    except FileNotFoundError:
+        pass
+    else:
+        raise SystemExit(1)
+    payload = {
+        "schema_version": "dadooh.c26.terminal-action.v1",
+        "phase": "prepared",
+        "action": action,
+        "request_id": request_id,
+        "settings_session_id": session_id,
+        "prepared_at_utc": now,
+        "accepted_at_utc": None,
+    }
+else:
+    info = os.lstat(target)
+    if (
+        stat.S_ISLNK(info.st_mode)
+        or not stat.S_ISREG(info.st_mode)
+        or info.st_uid != os.geteuid()
+        or stat.S_IMODE(info.st_mode) != 0o600
+        or info.st_nlink != 1
+        or info.st_size <= 0
+        or info.st_size > 4096
+    ):
+        raise SystemExit(1)
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(target, flags)
+    try:
+        opened = os.fstat(fd)
+        if (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
+            raise SystemExit(1)
+        prior = json.loads(os.read(fd, 4097).decode("utf-8"))
+    finally:
+        os.close(fd)
+    if (
+        not isinstance(prior, dict)
+        or set(prior) != expected_fields
+        or prior.get("schema_version") != "dadooh.c26.terminal-action.v1"
+        or prior.get("phase") != ("prepared" if phase == "armed" else "armed")
+        or prior.get("action") != action
+        or prior.get("request_id") != request_id
+        or prior.get("settings_session_id") != session_id
+        or not isinstance(prior.get("prepared_at_utc"), str)
+        or prior.get("accepted_at_utc") is not None
+    ):
+        raise SystemExit(1)
+    payload = dict(prior)
+    payload["phase"] = phase
+    if phase == "accepted":
+        payload["accepted_at_utc"] = now
+
+fd, raw_tmp = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent))
+tmp = pathlib.Path(raw_tmp)
+try:
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        fd = -1
+        handle.write(json.dumps(payload, separators=(",", ":")) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(tmp, target)
+    os.chmod(target, 0o600)
+    parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(parent_fd)
+    finally:
+        os.close(parent_fd)
+finally:
+    if fd >= 0:
+        os.close(fd)
+    try:
+        tmp.unlink()
+    except FileNotFoundError:
+        pass
+PY
+}
+
+TERMINAL_ACTION_RECONCILE_UNIT=""
+
+coalesce_terminal_action_reconcilers() {
+  local keep_unit="$1"
+  local listed=""
+  local unit=""
+  if ! [[ "$keep_unit" =~ ^totem-terminal-action-reconcile-[0-9a-f]{32}$ ]]; then
+    return 1
+  fi
+  listed="$(/usr/bin/systemctl list-units \
+    --all \
+    --type=timer \
+    --plain \
+    --no-legend \
+    'totem-terminal-action-reconcile-*.timer' 2>/dev/null)" || return 1
+  while read -r unit _; do
+    [ -n "$unit" ] || continue
+    if ! [[ "$unit" =~ ^totem-terminal-action-reconcile-[0-9a-f]{32}\.timer$ ]]; then
+      return 1
+    fi
+    [ "$unit" = "${keep_unit}.timer" ] && continue
+    /usr/bin/timeout -k 1s 5s /usr/bin/systemctl stop "$unit" \
+      >/dev/null 2>&1 || return 1
+    /usr/bin/systemctl --no-block stop "${unit%.timer}.service" \
+      >/dev/null 2>&1 || true
+  done <<< "$listed"
+}
+
+schedule_terminal_action_reconcile() {
+  local request_id="$1"
+  local unit_suffix="${request_id//-/}"
+  local player_was_active="false"
+  local player_was_enabled="false"
+  [ "$INITIAL_SERVICE_ACTIVE" = "active" ] && player_was_active="true"
+  [ "$INITIAL_SERVICE_ENABLED" = "enabled" ] && player_was_enabled="true"
+  TERMINAL_ACTION_RECONCILE_UNIT="totem-terminal-action-reconcile-${unit_suffix}"
+  /usr/bin/systemd-run \
+    --quiet \
+    --collect \
+    --unit="$TERMINAL_ACTION_RECONCILE_UNIT" \
+    --property=DefaultDependencies=no \
+    --on-active=125s \
+    --on-unit-active=30s \
+    --timer-property=AccuracySec=1s \
+    --timer-property=DefaultDependencies=no \
+    /opt/totem/bin/totem_open_settings_cleanup.sh \
+      --reason terminal-action-timeout \
+      --request-dir "$REQUEST_DIR" \
+      --lock-dir "$LOCK_DIR" \
+      --out-dir "$REQUEST_DIR" \
+      --tty "$REMOTE_TTY" \
+      --expire-terminal-action \
+      --terminal-action-reconcile-unit "$TERMINAL_ACTION_RECONCILE_UNIT" \
+      --terminal-action-player-was-active "$player_was_active" \
+      --terminal-action-player-was-enabled "$player_was_enabled" \
+      >/dev/null 2>&1 || return 1
+  if ! coalesce_terminal_action_reconcilers "$TERMINAL_ACTION_RECONCILE_UNIT"; then
+    /usr/bin/systemctl --no-block stop "$TERMINAL_ACTION_RECONCILE_UNIT.timer" \
+      "$TERMINAL_ACTION_RECONCILE_UNIT.service" >/dev/null 2>&1 || true
+    return 1
+  fi
+}
+
+cancel_terminal_action_reconcile() {
+  [ -n "$TERMINAL_ACTION_RECONCILE_UNIT" ] || return 0
+  /usr/bin/systemctl --no-block stop "${TERMINAL_ACTION_RECONCILE_UNIT}.timer" \
+    "${TERMINAL_ACTION_RECONCILE_UNIT}.service" >/dev/null 2>&1 || true
+}
+
+write_product_reset_resume_request() {
+  python3 - "$REQUEST_FILE" <<'PY'
+import json
+import os
+import pathlib
+import tempfile
+import time
+import sys
+
+target = pathlib.Path(sys.argv[1])
+payload = {
+    "schema_version": 1,
+    "requested_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "trigger_type": "product_reset_resume",
+    "action": "open_settings",
+}
+fd, raw_tmp = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent))
+tmp = pathlib.Path(raw_tmp)
+try:
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        fd = -1
+        handle.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(tmp, target)
+    os.chmod(target, 0o600)
+    parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(parent_fd)
+    finally:
+        os.close(parent_fd)
+finally:
+    if fd >= 0:
+        os.close(fd)
+    try:
+        tmp.unlink()
+    except FileNotFoundError:
+        pass
+PY
+}
+
 bootstrap_exit() {
   local rc="${1:-$?}"
   trap - EXIT INT TERM HUP
   cleanup_update_lock
-  rmdir "$LOCK_DIR" 2>/dev/null || true
+  remove_session_lock_if_safe
   exit "$rc"
 }
 bootstrap_term() { bootstrap_exit 143; }
@@ -476,8 +1528,14 @@ mkdir -p "$(dirname "$LOCK_DIR")" "$REQUEST_DIR"
 chmod 700 "$REQUEST_DIR" 2>/dev/null || true
 chmod 755 "$(dirname "$LOCK_DIR")" 2>/dev/null || true
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-  echo "settings_session_already_running" >&2
-  exit 23
+  if { product_reset_guard_required || product_reset_resume_request_is_trusted; } \
+    && product_reset_lock_is_trusted; then
+    PRODUCT_RESET_GUARD_ADOPTED="true"
+    c17_4_trace "product_reset_guard_adopted"
+  else
+    echo "settings_session_already_running" >&2
+    exit 23
+  fi
 fi
 chmod 755 "$LOCK_DIR" 2>/dev/null || true
 c17_4_trace "session_lock_acquired"
@@ -540,7 +1598,7 @@ IFS= read -r UPDATE_LOCK_STATUS <&"$UPDATE_LOCK_STATUS_FD" || true
 exec {UPDATE_LOCK_STATUS_FD}<&-
 if [ "$UPDATE_LOCK_STATUS" != "LOCKED" ]; then
   cleanup_update_lock
-  rmdir "$LOCK_DIR" 2>/dev/null || true
+  remove_session_lock_if_safe
   if [ "$UPDATE_LOCK_STATUS" = "BUSY" ]; then
     echo "settings_deferred_update_active" >&2
   else
@@ -682,7 +1740,7 @@ for scratch_path in scratch_paths:
     clear_scratch(scratch_path)
 PY
 then
-  rmdir "$LOCK_DIR" 2>/dev/null || true
+  remove_session_lock_if_safe
   echo "session_scratch_reset_failed" >&2
   exit 24
 fi
@@ -694,6 +1752,21 @@ PY
 if [ -z "$SETTINGS_SESSION_ID" ]; then
   echo "settings_session_id_unavailable" >&2
   exit 24
+fi
+if totem_core_actions_capable; then
+  TOTEM_ACTIONS_AVAILABLE="1"
+  c17_4_trace "totem_actions_capability_available"
+else
+  TOTEM_ACTIONS_AVAILABLE="0"
+  c17_4_trace "totem_actions_capability_unavailable"
+fi
+if [ "$TOTEM_ACTIONS_AVAILABLE" = "1" ] && totem_core_product_reset_capable \
+  && ! product_reset_guard_required && ! product_reset_cleanup_pending; then
+  PRODUCT_RESET_AVAILABLE="1"
+  c17_4_trace "product_reset_capability_available"
+else
+  PRODUCT_RESET_AVAILABLE="0"
+  c17_4_trace "product_reset_capability_unavailable"
 fi
 
 for unit in "${GETTY_UNITS[@]}"; do
@@ -1024,7 +2097,7 @@ if parent_info.st_uid != os.geteuid() or stat.S_IMODE(parent_info.st_mode) != 0o
 with active.open("r", encoding="utf-8") as handle:
     config = json.load(handle)
 payload = {}
-for field in ("api_url", "api_key", "station_id"):
+for field in ("api_url", "api_key", "environment_id", "station_id", "api_token_id"):
     value = config.get(field)
     if isinstance(value, str) and value.strip():
         payload[field] = value.strip()
@@ -1078,11 +2151,15 @@ select_qr_pairing_private_values_if_available() {
     return 0
   fi
   local result_path="$WIZARD_OUT_DIR/qr-pairing/pairing-result.public.json"
+  local selection=""
   if [ ! -f "$result_path" ]; then
     return 0
   fi
-  eval "$(
-    python3 - "$result_path" "$WIZARD_OUT_DIR/qr-pairing/private-values.json" <<'PY'
+  if ! selection="$(
+    python3 - \
+      "$result_path" \
+      "$WIZARD_OUT_DIR/qr-pairing/private-values.json" \
+      "$WIZARD_OUT_DIR/config.candidate.json" <<'PY'
 import json
 import os
 import pathlib
@@ -1092,6 +2169,7 @@ import sys
 
 result_path = pathlib.Path(sys.argv[1])
 expected_private_path = pathlib.Path(sys.argv[2])
+candidate_path = pathlib.Path(sys.argv[3])
 if result_path.is_symlink() or result_path.parent.is_symlink():
     raise SystemExit("pairing_result_symlink")
 try:
@@ -1140,12 +2218,28 @@ for field in ("api_url", "api_key", "environment_id"):
     value = private_values.get(field)
     if not isinstance(value, str) or not value.strip():
         raise SystemExit("pairing_private_values_required_missing")
+if candidate_path.is_symlink() or candidate_path.parent.is_symlink():
+    raise SystemExit("pairing_candidate_symlink")
+try:
+    candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    raise SystemExit("pairing_candidate_invalid") from exc
+if not isinstance(candidate, dict):
+    raise SystemExit("pairing_candidate_not_object")
+selected_environment = candidate.get("environment_id")
+if not isinstance(selected_environment, str) or not selected_environment.strip():
+    raise SystemExit("pairing_candidate_environment_missing")
+if private_values["environment_id"].strip() != selected_environment.strip():
+    raise SystemExit(0)
 print(f"PRIVATE_VALUES={shlex.quote(str(resolved))}")
 print("POLICY_PRIVATE_SOURCE=tmp-file")
 print("HOMOLOGATION_SEED_MODE=false")
 print("PAIRING_PRIVATE_VALUES_USED=true")
 PY
-  )"
+  )"; then
+    return 1
+  fi
+  eval "$selection"
   validate_private_values_metadata
 }
 
@@ -1262,6 +2356,9 @@ cleanup_apply_policy() {
 }
 
 cleanup_trigger_request() {
+  if product_reset_guard_required; then
+    return 0
+  fi
   case "$REQUEST_FILE" in
     /run/*|/tmp/*)
       rm -f "$REQUEST_FILE" || true
@@ -1270,6 +2367,9 @@ cleanup_trigger_request() {
 }
 
 cleanup_session_lock() {
+  if product_reset_guard_required; then
+    return 0
+  fi
   case "$LOCK_DIR" in
     /run/*|/tmp/*)
       rmdir -- "$LOCK_DIR" 2>/dev/null || true
@@ -1572,6 +2672,13 @@ on_exit() {
   restore_tty_console_mode || true
   cleanup_private_artifacts || true
   cleanup_apply_policy || true
+  if [ "$TERMINAL_ACTION_PENDING" = "true" ]; then
+    c15_trace "on_exit_terminal_action_pending"
+    write_final_status "skip-player-wait" || true
+    cleanup_update_lock
+    c1523_phase "session_terminal_action_pending rc=$rc"
+    exit "$rc"
+  fi
   cleanup_trigger_request || true
   cleanup_session_lock || true
   c17_4_trace "session_lock_released"
@@ -1592,6 +2699,23 @@ trap on_int  INT
 trap on_hup  HUP
 
 load_apply_policy
+if product_reset_pending; then
+  if [ "$POLICY_PRIVATE_SOURCE" = "homologation-seed" ]; then
+    APPLY_MODE="candidate-only"
+    POLICY_PRIVATE_SOURCE="none"
+    PRIVATE_VALUES="$INITIAL_PRIVATE_VALUES_PATH"
+    HOMOLOGATION_SEED_MODE="false"
+    cleanup_apply_policy || true
+  fi
+elif product_reset_onboarding_pending \
+  || [ -e "$PRODUCT_RESET_STATE_DIR/homologation-seed-disabled.json" ] \
+  || [ -L "$PRODUCT_RESET_STATE_DIR/homologation-seed-disabled.json" ]; then
+  if [ "$POLICY_PRIVATE_SOURCE" = "homologation-seed" ] \
+    || ! product_reset_homologation_seed_disabled_safe; then
+    echo "product_reset_homologation_seed_fail_closed" >&2
+    exit 25
+  fi
+fi
 if [ "$APPLY_MODE" = "dry-run" ] || [ "$APPLY_MODE" = "real-write" ]; then
   for path in "$HANDOFF" "$CONTRACT"; do
     if [ ! -f "$path" ]; then
@@ -1670,20 +2794,48 @@ if [ "${1:-0}" -ne 0 ] || [ "${2:-0}" -ne 0 ] || [ "${3:-0}" -ne 0 ] || [ "${4:-
   echo "hdmi_not_free_after_player_pause" >&2
   exit 42
 fi
+
+if product_reset_pending; then
+  c15_trace "product_reset_recovery_begin"
+  if resume_product_reset_if_pending; then
+    c15_trace "product_reset_recovery_complete"
+  else
+    product_reset_recovery_rc=$?
+    c15_trace "product_reset_recovery_deferred rc=$product_reset_recovery_rc"
+    show_transition product_reset_pending || true
+    request_trigger="$(settings_request_trigger_type 2>/dev/null || true)"
+    if product_reset_recovery_can_open "$product_reset_recovery_rc" "$request_trigger"; then
+      PRODUCT_RESET_RECOVERY_MODE="1"
+      PRODUCT_RESET_AVAILABLE="0"
+      c17_4_trace "product_reset_recovery_opening" rc="$product_reset_recovery_rc"
+    else
+      exit "$product_reset_recovery_rc"
+    fi
+  fi
+fi
+if product_reset_guard_required \
+  || [ -e "$PRODUCT_RESET_STATE_DIR/homologation-seed-disabled.json" ] \
+  || [ -L "$PRODUCT_RESET_STATE_DIR/homologation-seed-disabled.json" ]; then
+  if ! product_reset_homologation_seed_disabled_safe; then
+    echo "product_reset_homologation_seed_fail_closed" >&2
+    exit 25
+  fi
+fi
+
 c15_trace "before_openvt"
 c17_4_trace "wizard_surface_owner"
 c1523_phase "wizard_started"
 
 set +e
 if [ "$MODE" = "preview" ]; then
-  setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
+  /usr/bin/setsid --wait /usr/bin/openvt -c "$REMOTE_TTY" -s -f -e -- \
+    /usr/bin/env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_TOTEM_ACTIONS_AVAILABLE="$TOTEM_ACTIONS_AVAILABLE" TOTEM_PRODUCT_RESET_AVAILABLE="$PRODUCT_RESET_AVAILABLE" TOTEM_PRODUCT_RESET_RECOVERY_MODE="$PRODUCT_RESET_RECOVERY_MODE" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
       --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH" \
       --preview-screens --show-preview --auto-exit-sec "$PREVIEW_SEC" >/dev/null 2>&1
   WIZARD_RC="$?"
 else
-  setsid openvt -c "$REMOTE_TTY" -s -f -w -- \
-    env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
+  /usr/bin/setsid --wait /usr/bin/openvt -c "$REMOTE_TTY" -s -f -e -- \
+    /usr/bin/env TERM=linux PYTHONPATH="$SCRIPT_DIR" TOTEM_SETTINGS_SESSION_ID="$SETTINGS_SESSION_ID" TOTEM_TOTEM_ACTIONS_AVAILABLE="$TOTEM_ACTIONS_AVAILABLE" TOTEM_PRODUCT_RESET_AVAILABLE="$PRODUCT_RESET_AVAILABLE" TOTEM_PRODUCT_RESET_RECOVERY_MODE="$PRODUCT_RESET_RECOVERY_MODE" TOTEM_VISUAL_WIZARD_APPLY_CONTEXT="$APPLY_MODE" TOTEM_VISUAL_WIZARD_HOMOLOGATION_MODE="$HOMOLOGATION_SEED_MODE" /usr/bin/python3 "$VISUAL" \
       --out-dir "$WIZARD_OUT_DIR" --private-settings-context-path "$WIZARD_PRIVATE_SETTINGS_CONTEXT_PATH" >/dev/null 2>&1 &
   OPENVT_PID="$!"
   c15_trace "openvt_started pid=$OPENVT_PID"
@@ -1712,26 +2864,142 @@ set -e
 restore_tty_console_mode || true
 c15_trace "after_wizard WIZARD_RC=$WIZARD_RC"
 
+if [ "$WIZARD_RC" = "76" ]; then
+  if [ "$PRODUCT_RESET_RECOVERY_MODE" != "1" ] || ! product_reset_pending; then
+    echo "product_reset_recovery_signal_out_of_context" >&2
+    exit 47
+  fi
+  if ! consume_product_reset_recovery_signal; then
+    echo "product_reset_recovery_signal_invalid" >&2
+    exit 47
+  fi
+  if [ -e "$ACTION_REQUEST_FILE" ] || [ -L "$ACTION_REQUEST_FILE" ]; then
+    echo "totem_action_request_during_product_reset_recovery" >&2
+    exit 47
+  fi
+  if ! write_product_reset_resume_request; then
+    echo "product_reset_resume_request_failed" >&2
+    exit 47
+  fi
+  c17_4_trace "product_reset_network_repair_complete"
+  show_transition product_reset_pending || true
+  exit 0
+elif [ -e "$PRODUCT_RESET_RECOVERY_SIGNAL_FILE" ] || [ -L "$PRODUCT_RESET_RECOVERY_SIGNAL_FILE" ]; then
+  echo "product_reset_recovery_signal_without_exit_code" >&2
+  exit 47
+elif [ "$WIZARD_RC" = "75" ]; then
+  mapfile -t action_request_fields < <(consume_totem_action_request)
+  if [ "${#action_request_fields[@]}" -ne 2 ]; then
+    echo "totem_action_request_invalid" >&2
+    exit 47
+  fi
+  requested_action="${action_request_fields[0]}"
+  requested_action_id="${action_request_fields[1]}"
+  if [ "$TOTEM_ACTIONS_AVAILABLE" != "1" ] || ! totem_core_actions_capable; then
+    echo "totem_actions_capability_unavailable" >&2
+    exit 47
+  fi
+  c15_trace "totem_action_request_consumed action=$requested_action"
+  case "$requested_action" in
+    restart|poweroff)
+      terminal_command="$requested_action"
+      [ "$requested_action" = "restart" ] && terminal_command="reboot"
+      if ! write_terminal_action_marker "prepared" "$requested_action" "$requested_action_id"; then
+        echo "totem_terminal_action_marker_failed" >&2
+        exit 47
+      fi
+      if ! schedule_terminal_action_reconcile "$requested_action_id"; then
+        rm -f -- "$TERMINAL_ACTION_MARKER" 2>/dev/null || true
+        echo "totem_terminal_action_reconcile_schedule_failed" >&2
+        exit 47
+      fi
+      if ! write_terminal_action_marker "armed" "$requested_action" "$requested_action_id"; then
+        cancel_terminal_action_reconcile
+        rm -f -- "$TERMINAL_ACTION_MARKER" 2>/dev/null || true
+        echo "totem_terminal_action_arm_failed" >&2
+        exit 47
+      fi
+      # Shutdown may stop this service as soon as systemd accepts the request.
+      # Arm the delayed recovery path before entering that interruption window.
+      TERMINAL_ACTION_PENDING="true"
+      if /usr/bin/systemctl --no-block "$terminal_command" >/dev/null 2>&1; then
+        if ! write_terminal_action_marker "accepted" "$requested_action" "$requested_action_id"; then
+          echo "totem_terminal_action_acceptance_marker_failed" >&2
+          exit 47
+        fi
+        c17_4_trace "totem_terminal_action_accepted" action="$requested_action"
+        exit 0
+      fi
+      if ! rm -f -- "$TERMINAL_ACTION_MARKER" 2>/dev/null; then
+        echo "totem_terminal_action_disarm_failed" >&2
+        exit 47
+      fi
+      TERMINAL_ACTION_PENDING="false"
+      cancel_terminal_action_reconcile
+      echo "totem_terminal_action_failed" >&2
+      exit 47
+      ;;
+    product_reset)
+      if [ "$PRODUCT_RESET_AVAILABLE" != "1" ] || ! totem_core_product_reset_capable \
+        || product_reset_cleanup_pending; then
+        echo "product_reset_capability_unavailable" >&2
+        exit 47
+      fi
+      reset_start_output=""
+      if reset_start_output="$({
+        /usr/bin/python3 "$WRITER" \
+          --product-reset-start \
+          --product-reset-operation-id "$requested_action_id" \
+          --enable-real-write \
+          --confirm-service-stopped \
+          --confirm-human-approved-product-reset
+      } 2>/dev/null)"; then
+        reset_start_rc=0
+      else
+        reset_start_rc=$?
+      fi
+      : "$reset_start_output"
+      if [ "$reset_start_rc" -ne 10 ] || ! product_reset_pending; then
+        c17_4_trace "product_reset_start_failed" rc="$reset_start_rc"
+        echo "product_reset_start_failed" >&2
+        exit 47
+      fi
+      if ! write_product_reset_resume_request; then
+        c17_4_trace "product_reset_resume_request_failed"
+        echo "product_reset_resume_request_failed" >&2
+        exit 47
+      fi
+      c17_4_trace "product_reset_started"
+      show_transition product_reset_pending || true
+      exit 0
+      ;;
+    *)
+      echo "totem_action_request_invalid" >&2
+      exit 47
+      ;;
+  esac
+elif [ -e "$ACTION_REQUEST_FILE" ] || [ -L "$ACTION_REQUEST_FILE" ]; then
+  echo "totem_action_request_without_exit_code" >&2
+  exit 47
+fi
+
 SETUP_CANCELLED="false"
-if [ -f "$WIZARD_OUT_DIR/setup-cancelled.json" ] || [ "$WIZARD_RC" = "130" ]; then
+if [ "$WIZARD_RC" = "130" ]; then
   SETUP_CANCELLED="true"
   c15_trace "wizard_cancelled_restore_path"
+elif [ -e "$WIZARD_OUT_DIR/setup-cancelled.json" ] \
+  || [ -L "$WIZARD_OUT_DIR/setup-cancelled.json" ]; then
+  echo "wizard_cancel_artifact_without_exit_code" >&2
+  exit 47
 fi
 
 if [ -f "$WIZARD_OUT_DIR/setup-failed.json" ]; then
   echo "wizard_failed_current_session" >&2
   exit 46
 fi
-if [ "$SETUP_CANCELLED" != "true" ] && [ "$WIZARD_RC" = "8" ]; then
-  if [ ! -f "$WIZARD_OUT_DIR/config.candidate.json" ] || ! candidate_is_current_session_ready; then
-    echo "wizard_rc8_without_attested_candidate" >&2
-    exit 44
-  fi
-fi
 if [ "$SETUP_CANCELLED" != "true" ]; then
-  # util-linux openvt on the target can return 8 after a completed VT handoff.
   case "$WIZARD_RC" in
-    0|8) ;;
+    0) ;;
     *)
       echo "wizard_unexpected_exit:$WIZARD_RC" >&2
       exit 46
@@ -1852,6 +3120,23 @@ if [ "$SETUP_CANCELLED" != "true" ] && [ "$APPLY_MODE" = "real-write" ]; then
   fi
   cleanup_private_artifacts || true
   cleanup_apply_policy || true
+  if product_reset_onboarding_pending; then
+    set +e
+    /usr/bin/python3 "$WRITER" \
+      --product-reset-complete-onboarding \
+      --product-reset-data-root /data \
+      --enable-real-write \
+      --confirm-service-stopped \
+      --confirm-product-reset-new-config-applied >/dev/null 2>&1
+    onboarding_complete_rc="$?"
+    set -e
+    if [ "$onboarding_complete_rc" -ne 0 ] || product_reset_guard_required; then
+      c17_4_trace "product_reset_onboarding_complete_failed" rc="$onboarding_complete_rc"
+      echo "product_reset_onboarding_complete_failed" >&2
+      exit 47
+    fi
+    c17_4_trace "product_reset_onboarding_complete"
+  fi
   show_transition complete "$SELECTED_ROTATION_DEG" || true
   sleep 1
 fi
