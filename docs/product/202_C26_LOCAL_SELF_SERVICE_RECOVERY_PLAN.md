@@ -547,6 +547,10 @@ Depois de reboot limpo, o timer de producao disparou naturalmente em
 segundos depois. O gate final correlaciona o trigger com os eventos da mesma
 release e reprova um timer antigo combinado com execucao manual posterior.
 
+O fechamento documental foi auditado duas vezes de forma independente no
+commit limpo `ea235fe`; ambos os pareceres foram GO, e um deles rerodou o gate
+completo em 85/85 nesse HEAD exato.
+
 Uma janela anterior de 60 segundos foi preservada como resultado negativo: o
 gate classificou dois episodios de uma unica amostra nas bordas de transicao.
 Cinco episodios completos progrediram, sem restart, falha de carga, kernel ou

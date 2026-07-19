@@ -622,8 +622,8 @@ Resultado dessa decisao: a linha de producao pragmatica foi materializada:
    restauracao;
 4. especificacao curta para devs e fabrica;
 5. ponte publica exact-target para C25B, com rollback e health real;
-6. auditoria pre-publicacao concluida sem blocker; o fechamento documental e a
-   auditoria independente post-publicacao encerram a rastreabilidade da rodada.
+6. auditoria pre-publicacao, fechamento documental e duas auditorias
+   independentes post-publicacao concluidos sem blocker.
 
 ## Historico V3/M5 - C22/prod7
 

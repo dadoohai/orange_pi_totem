@@ -50,8 +50,9 @@ Target:
 9. Final deep health passed with 60/60 expected `v4l2request-copy` samples,
    four content aliases, advancing playback, zero media-load failures, zero
    MPV/service restarts and no kernel/storage fault.
-10. The final repository release gate passed 85/85 and the C26 contract suite
-    passed 19/19.
+10. The final repository release gate passed 85/85. The C26 contract suite
+    passed 19/19 at that checkpoint and 20/20 after the preservation assertion
+    was added.
 11. A separate closeout replay bound held `F10` to the real kernel input
     trigger, proved Enter-on-Cancel for restart and restore, Escape from the
     restore confirmation, repeated Enter safety and updater denial with
@@ -88,6 +89,9 @@ Target:
     passed.
 19. With that hardening committed, the full release gate passed 85/85 again
     on clean HEAD `f4e5233`, with no failed step.
+20. Two independent read-only closeout reviews returned GO on clean
+    `ea235fe`; one of them independently reran the full gate at 85/85 on that
+    exact HEAD. No technical or documentary blocker remained.
 
 ## Evidence layout
 
@@ -156,8 +160,9 @@ timer fire naturally. Its exact C26.17 selection and no-op occurred within
 three seconds of `LastTriggerUSec`; the hardened gate rejects an old timer
 combined with a later manual service and accepted this correlated run.
 
-Repository freeze and the independent re-audit remain the administrative
-closeout steps. They do not require more board or HDMI work.
+Repository freeze and both independent re-audits are complete. The campaign
+is closed for the claims and boundaries stated here; no further board or HDMI
+work is required for C26.
 
 No API key, token value, password, SSID, pairing code, QR payload or customer
 identifier is included.
