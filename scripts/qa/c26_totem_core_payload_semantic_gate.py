@@ -31,9 +31,12 @@ REQUIRED_BIN_FILES = frozenset(
 )
 
 PROBE = r'''
+import inspect
 import json
+import os
 import pathlib
 import shlex
+import signal
 import subprocess
 import tempfile
 
@@ -44,6 +47,25 @@ import totem_qr_pairing_client as pairing_client
 import totem_settings_production_apply_policy as apply_policy
 import totem_setup_visual_wizard as visual_wizard
 import totem_visual_setup_writer_handoff as writer_handoff
+
+
+writer_source = inspect.getsource(config_writer.run_writer)
+lock_source = inspect.getsource(config_writer.lock_real_active_parent)
+restore_parent_source = inspect.getsource(config_writer.restore_real_active_parent)
+backup_prepare_source = inspect.getsource(config_writer.prepare_backup_dir)
+if writer_source.index("lock_real_active_parent") > writer_source.index("prepare_backup_dir"):
+    raise AssertionError("real_config_parent_locked_after_backup_prepare")
+if "staging_dir=backup_dir" not in writer_source:
+    raise AssertionError("active_config_not_staged_under_locked_backup_dir")
+for required in ("os.chown", "os.chmod", "REAL_CONFIG_PARENT_LOCK_MODE", "fsync_directory"):
+    if required not in lock_source:
+        raise AssertionError("real_config_parent_lock_incomplete")
+if "restore_real_active_parent" not in writer_source or "finally:" not in writer_source:
+    raise AssertionError("real_config_parent_restore_not_finally_guarded")
+if "os.chown" not in restore_parent_source or "os.chmod" not in restore_parent_source:
+    raise AssertionError("real_config_parent_restore_incomplete")
+if "path.is_symlink()" not in backup_prepare_source:
+    raise AssertionError("real_backup_symlink_not_rejected")
 
 
 def require_rejection(label, callback, value):
@@ -309,6 +331,69 @@ with tempfile.TemporaryDirectory(prefix="c26-writer-fsync-probe-") as raw_root:
     before_failure = dest_path.read_bytes()
     original_fsync_directory = config_writer.fsync_directory
 
+    staged_dest = root / "staged-active" / "config.json"
+    config_writer.write_self_test_candidate(staged_dest, old_config)
+    staged_before = staged_dest.read_bytes()
+    staged_validation_called = [False]
+
+    def reject_staged_candidate(staged_path):
+        staged_value = config_writer.load_json_file(
+            pathlib.Path(staged_path), label="staged rejection probe"
+        )
+        if staged_value.get("station_id") != new_config["station_id"]:
+            raise AssertionError("staged_validator_did_not_receive_candidate")
+        staged_validation_called[0] = True
+        raise config_writer.WriterError("semantic gate staged validation rejection")
+
+    try:
+        config_writer.atomic_write_active_config(
+            staged_dest,
+            new_config,
+            mode=config_writer.ACTIVE_CONFIG_MODE,
+            real_write_enabled=False,
+            validate_staged=reject_staged_candidate,
+        )
+    except config_writer.WriterError:
+        pass
+    else:
+        raise AssertionError("staged_validation_failure_not_reported")
+    if not staged_validation_called[0]:
+        raise AssertionError("staged_validation_not_called")
+    if staged_dest.read_bytes() != staged_before:
+        raise AssertionError("staged_validation_failure_replaced_active_config")
+
+    substituted_dest = root / "substituted-staged-active" / "config.json"
+    config_writer.write_self_test_candidate(substituted_dest, old_config)
+    substituted_before = substituted_dest.read_bytes()
+    substituted_config = dict(new_config)
+    substituted_config["station_id"] = "STATION_SUBSTITUTED_AFTER_VALIDATION"
+
+    def substitute_staged_candidate(staged_path):
+        staged_path = pathlib.Path(staged_path)
+        staged_value = config_writer.load_json_file(
+            staged_path, label="staged substitution probe"
+        )
+        if staged_value.get("station_id") != new_config["station_id"]:
+            raise AssertionError("staged_substitution_probe_received_wrong_candidate")
+        replacement_path = staged_path.parent / ".staged-substitution.json"
+        config_writer.write_self_test_candidate(replacement_path, substituted_config)
+        os.replace(replacement_path, staged_path)
+
+    try:
+        config_writer.atomic_write_active_config(
+            substituted_dest,
+            new_config,
+            mode=config_writer.ACTIVE_CONFIG_MODE,
+            real_write_enabled=False,
+            validate_staged=substitute_staged_candidate,
+        )
+    except config_writer.WriterError:
+        pass
+    else:
+        raise AssertionError("staged_identity_substitution_accepted")
+    if substituted_dest.read_bytes() != substituted_before:
+        raise AssertionError("staged_identity_substitution_replaced_active_config")
+
     def fail_after_replace(path, *, required=False):
         current_path = pathlib.Path(path)
         if current_path == dest_path.parent and dest_path.exists():
@@ -342,6 +427,8 @@ with tempfile.TemporaryDirectory(prefix="c26-writer-fsync-probe-") as raw_root:
     )
     if not rollback_status["write"]["atomic_rename_completed"]:
         raise AssertionError("post_replace_fsync_failure_rename_not_recorded")
+    if not rollback_status["validation"]["staged_write_valid"]:
+        raise AssertionError("post_replace_failure_missing_staged_validation")
     if rollback_status["write"]["fsync_directory_completed"]:
         raise AssertionError("post_replace_fsync_failure_claimed_durable")
     if not rollback_status["rollback"]["restored_valid"]:
@@ -423,7 +510,9 @@ with tempfile.TemporaryDirectory(prefix="c26-writer-fsync-probe-") as raw_root:
     config_writer.write_self_test_candidate(dest_path, old_config)
     original_copy_file_private_atomic = config_writer.copy_file_private_atomic
 
-    def fail_restore_before_replace(src, dst, mode, *, real_write_enabled):
+    def fail_restore_before_replace(
+        src, dst, mode, *, real_write_enabled, staging_dir=None
+    ):
         if pathlib.Path(dst) == dest_path and pathlib.Path(src).parent == backup_dir:
             raise OSError("semantic gate persistent restore failure")
         original_copy_file_private_atomic(
@@ -431,6 +520,7 @@ with tempfile.TemporaryDirectory(prefix="c26-writer-fsync-probe-") as raw_root:
             pathlib.Path(dst),
             mode,
             real_write_enabled=real_write_enabled,
+            staging_dir=staging_dir,
         )
 
     config_writer.copy_file_private_atomic = fail_restore_before_replace
@@ -494,6 +584,196 @@ with tempfile.TemporaryDirectory(prefix="c26-writer-fsync-probe-") as raw_root:
         raise AssertionError("persistent_fsync_restore_not_observed")
     if persistent_fsync_status["rollback"]["durability_verified"]:
         raise AssertionError("persistent_fsync_false_durability_claim")
+
+    config_writer.write_self_test_candidate(dest_path, old_config)
+    pre_replace_before = dest_path.read_bytes()
+    original_atomic_write_active_config = config_writer.atomic_write_active_config
+
+    def lose_backup_then_fail_before_replace(*_args, **_kwargs):
+        for existing_backup in backup_dir.glob("*.bak"):
+            existing_backup.unlink()
+        raise OSError("semantic gate failure before active replace")
+
+    config_writer.atomic_write_active_config = lose_backup_then_fail_before_replace
+    try:
+        try:
+            config_writer.run_writer(
+                candidate_raw=str(candidate_path),
+                dest_raw=str(dest_path),
+                backup_dir_raw=str(backup_dir),
+                out_dir_raw=str(root / "pre-replace-missing-backup-out"),
+            )
+        except Exception:
+            pass
+        else:
+            raise AssertionError("pre_replace_missing_backup_failure_not_reported")
+    finally:
+        config_writer.atomic_write_active_config = original_atomic_write_active_config
+    if not dest_path.exists() or dest_path.read_bytes() != pre_replace_before:
+        raise AssertionError("pre_replace_missing_backup_destroyed_prior_config")
+    pre_replace_status = config_writer.load_json_file(
+        root / "pre-replace-missing-backup-out" / config_writer.STATUS_FILENAME,
+        label="pre-replace missing backup writer status",
+    )
+    if pre_replace_status["rollback"]["attempted"]:
+        raise AssertionError("pre_replace_missing_backup_claimed_rollback")
+
+    config_writer.write_self_test_candidate(dest_path, old_config)
+    signal_before = dest_path.read_bytes()
+    original_os_replace = config_writer.os.replace
+    signal_count = [0]
+
+    def terminate_immediately_after_replace(src, dst):
+        replaced_path = pathlib.Path(dst)
+        original_os_replace(src, dst)
+        if replaced_path == dest_path and signal_count[0] < 2:
+            signal_count[0] += 1
+            os.kill(os.getpid(), signal.SIGTERM)
+
+    config_writer.os.replace = terminate_immediately_after_replace
+    try:
+        try:
+            with config_writer.config_write_signal_guard() as replace_signal_state:
+                config_writer.run_writer(
+                    candidate_raw=str(candidate_path),
+                    dest_raw=str(dest_path),
+                    backup_dir_raw=str(backup_dir),
+                    out_dir_raw=str(root / "signal-after-replace-out"),
+                    on_recovery_start=replace_signal_state.mark_recovering,
+                )
+        except config_writer.WriterError:
+            pass
+        else:
+            raise AssertionError("signal_after_replace_not_reported")
+    finally:
+        config_writer.os.replace = original_os_replace
+    if signal_count[0] != 2:
+        raise AssertionError("signal_during_rollback_not_injected")
+    if not dest_path.exists() or dest_path.read_bytes() != signal_before:
+        raise AssertionError("signal_after_replace_not_rolled_back")
+    signal_status = config_writer.load_json_file(
+        root / "signal-after-replace-out" / config_writer.STATUS_FILENAME,
+        label="signal after replace writer status",
+    )
+    if not signal_status["rollback"]["restored_valid"]:
+        raise AssertionError("signal_after_replace_restore_not_verified")
+    if not signal_status["write"]["atomic_rename_completed"]:
+        raise AssertionError("signal_after_replace_rename_not_observed")
+    if not signal_status["write"]["fsync_file_completed"]:
+        raise AssertionError("signal_after_replace_file_fsync_not_observed")
+
+    rollback_signal_dest = root / "rollback-signal-active" / "config.json"
+    rollback_signal_backups = root / "rollback-signal-backups"
+    config_writer.write_self_test_candidate(rollback_signal_dest, old_config)
+    rollback_signal_before = rollback_signal_dest.read_bytes()
+    rollback_replace_count = [0]
+
+    def signal_during_error_rollback(src, dst):
+        replaced_path = pathlib.Path(dst)
+        original_os_replace(src, dst)
+        if replaced_path == rollback_signal_dest:
+            rollback_replace_count[0] += 1
+            if rollback_replace_count[0] == 2:
+                os.kill(os.getpid(), signal.SIGTERM)
+
+    config_writer.os.replace = signal_during_error_rollback
+    try:
+        try:
+            with config_writer.config_write_signal_guard() as rollback_signal_state:
+                config_writer.run_writer(
+                    candidate_raw=str(candidate_path),
+                    dest_raw=str(rollback_signal_dest),
+                    backup_dir_raw=str(rollback_signal_backups),
+                    out_dir_raw=str(root / "rollback-signal-out"),
+                    simulate_post_write_failure=True,
+                    on_recovery_start=rollback_signal_state.mark_recovering,
+                )
+        except config_writer.WriterError:
+            pass
+        else:
+            raise AssertionError("rollback_signal_failure_not_reported")
+    finally:
+        config_writer.os.replace = original_os_replace
+    if rollback_replace_count[0] != 2:
+        raise AssertionError("rollback_signal_not_injected")
+    if rollback_signal_dest.read_bytes() != rollback_signal_before:
+        raise AssertionError("first_signal_during_rollback_interrupted_recovery")
+    rollback_signal_status = config_writer.load_json_file(
+        root / "rollback-signal-out" / config_writer.STATUS_FILENAME,
+        label="rollback signal writer status",
+    )
+    if not rollback_signal_status["rollback"]["restored_valid"]:
+        raise AssertionError("rollback_signal_restore_not_verified")
+
+    identical_dest = root / "identical-signal-active" / "config.json"
+    identical_backups = root / "identical-signal-backups"
+    config_writer.write_self_test_candidate(identical_dest, new_config)
+    identical_signal_count = [0]
+
+    def signal_after_identical_replace(src, dst):
+        replaced_path = pathlib.Path(dst)
+        original_os_replace(src, dst)
+        if replaced_path == identical_dest and identical_signal_count[0] == 0:
+            identical_signal_count[0] = 1
+            os.kill(os.getpid(), signal.SIGTERM)
+
+    config_writer.os.replace = signal_after_identical_replace
+    try:
+        try:
+            with config_writer.config_write_signal_guard() as identical_signal_state:
+                config_writer.run_writer(
+                    candidate_raw=str(candidate_path),
+                    dest_raw=str(identical_dest),
+                    backup_dir_raw=str(identical_backups),
+                    out_dir_raw=str(root / "identical-signal-out"),
+                    on_recovery_start=identical_signal_state.mark_recovering,
+                )
+        except config_writer.WriterError:
+            pass
+        else:
+            raise AssertionError("identical_candidate_signal_not_reported")
+    finally:
+        config_writer.os.replace = original_os_replace
+    identical_signal_status = config_writer.load_json_file(
+        root / "identical-signal-out" / config_writer.STATUS_FILENAME,
+        label="identical candidate signal writer status",
+    )
+    if not identical_signal_status["write"]["atomic_rename_completed"]:
+        raise AssertionError("identical_candidate_rename_not_observed")
+    if not identical_signal_status["rollback"]["restored_valid"]:
+        raise AssertionError("identical_candidate_signal_not_rolled_back")
+
+    commit_dest = root / "commit-signal-active" / "config.json"
+    config_writer.write_self_test_candidate(commit_dest, old_config)
+    commit_signal_delivered = [False]
+    with config_writer.config_write_signal_guard() as commit_signal_state:
+        def commit_then_signal():
+            commit_signal_state.mark_committed()
+            commit_signal_delivered[0] = True
+            os.kill(os.getpid(), signal.SIGTERM)
+
+        committed_status = config_writer.run_writer(
+            candidate_raw=str(candidate_path),
+            dest_raw=str(commit_dest),
+            backup_dir_raw=str(root / "commit-signal-backups"),
+            out_dir_raw=str(root / "commit-signal-out"),
+            on_commit=commit_then_signal,
+        )
+    if not commit_signal_delivered[0]:
+        raise AssertionError("post_commit_signal_not_injected")
+    if committed_status["result"] != "passed":
+        raise AssertionError("post_commit_signal_reported_failure")
+    if commit_signal_state.post_commit_signum != signal.SIGTERM:
+        raise AssertionError("post_commit_signal_not_recorded")
+    if config_writer.load_json_file(
+        commit_dest, label="post commit signal active config"
+    ).get("station_id") != new_config["station_id"]:
+        raise AssertionError("post_commit_signal_undid_committed_config")
+
+    summary_probe_status = config_writer.build_base_status("2026-07-19T00:00:00Z")
+    summary_probe_status["guardrails"]["real_config_read"] = True
+    if "real_config_read: true" not in config_writer.build_summary(summary_probe_status):
+        raise AssertionError("summary_did_not_report_real_config_read")
 
     stale_out = root / "stale-evidence-out"
     stale_out.mkdir(mode=0o700)

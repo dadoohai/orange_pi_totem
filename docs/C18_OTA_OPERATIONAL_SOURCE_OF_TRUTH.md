@@ -98,11 +98,15 @@ guiadas no proprio aparelho. M11 nao bloqueia M10.
   combinada com outro ambiente selecionado manualmente, e uma falha depois da
   troca atomica do arquivo podia deixar a configuracao nova ativa apesar do
   erro. Nenhuma dessas versoes foi gravada na placa;
-- as correcoes foram congeladas em `6d95dd1`. C26.13 e C26.14 foram geradas de
-  commits distintos, possuem pacotes distintos e passam o gate semantico que
-  reprova C26.8 a C26.12;
-- pendente macro: embutir C26.13 como retorno e C26.14 como atual na nova
-  imagem, auditar o artefato, prova-lo na placa e so entao promover a baseline.
+- C26.13 e C26.14 passaram o gate anterior, mas a auditoria final bloqueou a
+  composicao antes do build: o desaparecimento do backup antes do rename podia
+  fazer uma falha preparatoria apagar a configuracao antiga intacta;
+- a correcao sucessora valida o arquivo oculto exato antes de torna-lo ativo,
+  bloqueia escrita concorrente do usuario do player durante a transacao,
+  preserva o anterior em falha pre-troca e protege o rollback de `SIGTERM`
+  repetido. C26.13/C26.14 nao devem ser embutidas;
+- pendente macro: gerar dois novos slots sucessores, compor a nova imagem,
+  auditar o artefato, prova-lo na placa e so entao promover a baseline.
   Ate la, a referencia publica continua `prod15` + C25B + C21.24.
 
 ## Repositorio de entrega
@@ -951,5 +955,8 @@ podemos escolher entre:
     que provem os dois casos adversariais no proprio pacote.
 21. O commit `6d95dd1` fechou vinculo obrigatorio de ambiente, rollback
     pos-troca, falhas persistentes e descarte de diagnostico stale. C26.13 e
-    C26.14 foram geradas de commits distintos e passaram o gate semantico; a
-    proxima composicao usa C26.13 como retorno e C26.14 como atual.
+    C26.14 foram geradas de commits distintos e passaram o gate semantico da
+    rodada, mas a auditoria final encontrou um fallback pre-rename que podia
+    apagar a configuracao antiga se o backup sumisse. A composicao foi bloqueada
+    antes do build; dois slots posteriores devem provar preservacao pre-troca,
+    validacao do arquivo oculto e rollback protegido contra sinais repetidos.

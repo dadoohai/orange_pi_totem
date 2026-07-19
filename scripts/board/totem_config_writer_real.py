@@ -18,6 +18,7 @@ the api_key/token value.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime as _datetime
 import grp
 import json
@@ -27,6 +28,7 @@ import pwd
 import re
 import secrets
 import shutil
+import signal
 import socket
 import stat
 import sys
@@ -71,6 +73,7 @@ REAL_DEST_PATH = pathlib.Path("/data/config/config.json")
 REAL_BACKUP_DIR = pathlib.Path("/data/config/backups")
 REAL_FILE_OWNER = "root"
 REAL_FILE_GROUP = "totem"
+REAL_CONFIG_PARENT_LOCK_MODE = 0o750
 
 PRODUCT_RESET_SCHEMA_VERSION = "dadooh-c26a-product-reset.v1"
 PRODUCT_RESET_STATE_REL = pathlib.Path("state/totem-appliance/product-reset")
@@ -167,6 +170,51 @@ class WriterError(ValueError):
     """Raised for expected C6.2 writer failures."""
 
 
+class ConfigWriteInterrupted(WriterError):
+    """Raised when a guarded config write receives a termination signal."""
+
+
+@dataclass
+class ConfigWriteSignalState:
+    committed: bool = False
+    interrupted: bool = False
+    recovering: bool = False
+    post_commit_signum: int | None = None
+
+    def mark_committed(self) -> None:
+        self.committed = True
+
+    def mark_recovering(self) -> None:
+        self.recovering = True
+
+
+@contextlib.contextmanager
+def config_write_signal_guard():
+    watched = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+    previous = {signum: signal.getsignal(signum) for signum in watched}
+    state = ConfigWriteSignalState()
+
+    def interrupt(signum: int, _frame: Any) -> None:
+        if state.committed:
+            if state.post_commit_signum is None:
+                state.post_commit_signum = signum
+            return
+        if state.interrupted or state.recovering:
+            return
+        state.interrupted = True
+        for watched_signum in watched:
+            signal.signal(watched_signum, signal.SIG_IGN)
+        raise ConfigWriteInterrupted(f"config write interrupted by signal {signum}")
+
+    try:
+        for signum in watched:
+            signal.signal(signum, interrupt)
+        yield state
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+
+
 @dataclass(frozen=True)
 class WriterPaths:
     candidate: pathlib.Path
@@ -174,6 +222,13 @@ class WriterPaths:
     backup_dir: pathlib.Path
     out_dir: pathlib.Path
     real_write_enabled: bool
+
+
+@dataclass(frozen=True)
+class DirectoryMetadata:
+    uid: int
+    gid: int
+    mode: int
 
 
 @dataclass(frozen=True)
@@ -437,11 +492,51 @@ def prepare_active_parent(dest: pathlib.Path, *, real_write_enabled: bool) -> No
         raise WriterError("real dest parent must not be a symlink")
 
 
+def lock_real_active_parent(path: pathlib.Path) -> DirectoryMetadata:
+    if path != REAL_DEST_PATH.parent:
+        raise WriterError("real config parent lock path invalid")
+    current = os.lstat(path)
+    if not stat.S_ISDIR(current.st_mode):
+        raise WriterError("real config parent is not a trusted directory")
+    metadata = DirectoryMetadata(
+        uid=current.st_uid,
+        gid=current.st_gid,
+        mode=stat.S_IMODE(current.st_mode),
+    )
+    try:
+        root_uid = pwd.getpwnam(REAL_FILE_OWNER).pw_uid
+        totem_gid = grp.getgrnam(REAL_FILE_GROUP).gr_gid
+        os.chown(path, root_uid, totem_gid)
+        os.chmod(path, REAL_CONFIG_PARENT_LOCK_MODE)
+        fsync_directory(path, required=True)
+        fsync_directory(path.parent, required=True)
+    except (KeyError, OSError, WriterError) as exc:
+        try:
+            os.chown(path, metadata.uid, metadata.gid)
+            os.chmod(path, metadata.mode)
+        except OSError:
+            pass
+        raise WriterError("could not lock real config parent") from exc
+    return metadata
+
+
+def restore_real_active_parent(path: pathlib.Path, metadata: DirectoryMetadata) -> None:
+    try:
+        os.chown(path, metadata.uid, metadata.gid)
+        os.chmod(path, metadata.mode)
+        fsync_directory(path, required=True)
+        fsync_directory(path.parent, required=True)
+    except (OSError, WriterError) as exc:
+        raise WriterError("could not restore real config parent") from exc
+
+
 def prepare_backup_dir(path: pathlib.Path, *, real_write_enabled: bool) -> None:
     if not real_write_enabled:
         prepare_private_dir(path)
         return
 
+    if path.is_symlink():
+        raise WriterError("real backup-dir must not be a symlink")
     if path.exists() and not path.is_dir():
         raise WriterError("real backup-dir exists and is not a directory")
     path.mkdir(mode=PRIVATE_DIR_MODE, parents=False, exist_ok=True)
@@ -538,26 +633,46 @@ def atomic_write_active_config(
     *,
     mode: int,
     real_write_enabled: bool,
+    staging_dir: pathlib.Path | None = None,
+    validate_staged: Callable[[pathlib.Path], None] | None = None,
     on_replace: Callable[[], None] | None = None,
 ) -> None:
     payload = config_payload(config)
+    staging_parent = staging_dir or dest.parent
     tmp_name: str | None = None
     fd: int | None = None
     try:
-        fd, tmp_name = tempfile.mkstemp(prefix=f".{dest.name}.", suffix=".tmp", dir=str(dest.parent))
+        fd, tmp_name = tempfile.mkstemp(
+            prefix=f".{dest.name}.", suffix=".tmp", dir=str(staging_parent)
+        )
         os.fchmod(fd, mode)
         if real_write_enabled:
             apply_real_ownership(pathlib.Path(tmp_name))
-        with os.fdopen(fd, "wb") as handle:
+        with os.fdopen(fd, "w+b") as handle:
             fd = None
             handle.write(payload)
             handle.flush()
+            os.fsync(handle.fileno())
+            staged_stat = os.fstat(handle.fileno())
+            if validate_staged is not None:
+                validate_staged(pathlib.Path(tmp_name))
+            visible_stat = os.lstat(tmp_name)
+            if not stat.S_ISREG(visible_stat.st_mode) or (
+                visible_stat.st_dev,
+                visible_stat.st_ino,
+            ) != (staged_stat.st_dev, staged_stat.st_ino):
+                raise WriterError("staged active config identity changed before replace")
+            handle.seek(0)
+            if handle.read() != payload:
+                raise WriterError("staged active config bytes changed before replace")
             os.fsync(handle.fileno())
         os.replace(tmp_name, dest)
         tmp_name = None
         if on_replace is not None:
             on_replace()
         fsync_directory(dest.parent, required=True)
+        if staging_parent != dest.parent:
+            fsync_directory(staging_parent, required=True)
     finally:
         if fd is not None:
             os.close(fd)
@@ -574,11 +689,15 @@ def copy_file_private_atomic(
     mode: int,
     *,
     real_write_enabled: bool,
+    staging_dir: pathlib.Path | None = None,
 ) -> None:
+    staging_parent = staging_dir or dst.parent
     tmp_name: str | None = None
     fd: int | None = None
     try:
-        fd, tmp_name = tempfile.mkstemp(prefix=f".{dst.name}.", suffix=".tmp", dir=str(dst.parent))
+        fd, tmp_name = tempfile.mkstemp(
+            prefix=f".{dst.name}.", suffix=".tmp", dir=str(staging_parent)
+        )
         os.fchmod(fd, mode)
         if real_write_enabled:
             apply_real_ownership(pathlib.Path(tmp_name))
@@ -590,6 +709,8 @@ def copy_file_private_atomic(
         os.replace(tmp_name, dst)
         tmp_name = None
         fsync_directory(dst.parent, required=True)
+        if staging_parent != dst.parent:
+            fsync_directory(staging_parent, required=True)
     finally:
         if fd is not None:
             os.close(fd)
@@ -625,7 +746,13 @@ def restore_backup(
         result["reason"] = "backup_missing"
         return result
 
-    copy_file_private_atomic(backup_path, dest, mode, real_write_enabled=real_write_enabled)
+    copy_file_private_atomic(
+        backup_path,
+        dest,
+        mode,
+        real_write_enabled=real_write_enabled,
+        staging_dir=backup_path.parent,
+    )
     restored_config = load_json_file(dest, label="restored config")
     restored_status = validate_real_dry_run(restored_config)
     result["restored"] = True
@@ -649,6 +776,25 @@ def files_have_same_bytes(left: pathlib.Path, right: pathlib.Path) -> bool:
         return left.read_bytes() == right.read_bytes()
     except OSError:
         return False
+
+
+def file_has_bytes(path: pathlib.Path, expected: bytes | None) -> bool:
+    if expected is None:
+        return False
+    try:
+        return path.read_bytes() == expected
+    except OSError:
+        return False
+
+
+def regular_file_identity(path: pathlib.Path) -> tuple[int, int] | None:
+    try:
+        current = os.lstat(path)
+    except OSError:
+        return None
+    if not stat.S_ISREG(current.st_mode):
+        return None
+    return current.st_dev, current.st_ino
 
 
 def rollback_active_write(
@@ -730,6 +876,7 @@ def build_base_status(generated_at: str) -> dict[str, Any]:
         "validation": {
             "contract_mode": "real-dry-run",
             "pre_write_valid": False,
+            "staged_write_valid": False,
             "post_write_valid": False,
             "api_key_present": False,
             "placeholder_detected": False,
@@ -822,6 +969,7 @@ def build_summary(status: dict[str, Any]) -> str:
             f"phase: {status['phase']}",
             f"contract_mode: {status['validation']['contract_mode']}",
             f"pre_write_valid: {str(status['validation']['pre_write_valid']).lower()}",
+            f"staged_write_valid: {str(status['validation']['staged_write_valid']).lower()}",
             f"post_write_valid: {str(status['validation']['post_write_valid']).lower()}",
             f"api_key_present: {str(status['validation']['api_key_present']).lower()}",
             f"placeholder_detected: {str(status['validation']['placeholder_detected']).lower()}",
@@ -836,8 +984,15 @@ def build_summary(status: dict[str, Any]) -> str:
             f"backup_created: {str(status['backup']['created']).lower()}",
             f"backup_mode: {status['backup']['mode']}",
             f"rollback_attempted: {str(status['rollback']['attempted']).lower()}",
+            f"rollback_backup_available: {str(status['rollback']['backup_available']).lower()}",
             f"rollback_restored: {str(status['rollback']['restored']).lower()}",
             f"rollback_restored_valid: {str(status['rollback']['restored_valid']).lower()}",
+            f"rollback_durability_verified: {str(status['rollback']['durability_verified']).lower()}",
+            "rollback_active_removed_without_backup: "
+            f"{str(status['rollback']['active_removed_without_backup']).lower()}",
+            "rollback_active_removed_fail_closed: "
+            f"{str(status['rollback']['active_removed_fail_closed']).lower()}",
+            f"rollback_reason: {status['rollback']['reason']}",
             f"real_write_enabled: {str(status['real_write']['enabled']).lower()}",
             "service_stop_confirmed_by_operator: "
             f"{str(status['real_write']['service_stop_confirmed_by_operator']).lower()}",
@@ -850,7 +1005,7 @@ def build_summary(status: dict[str, Any]) -> str:
             "api_key_value_written_to_summary: false",
             "candidate_config_copied_to_output: false",
             "backup_content_copied_to_output: false",
-            "real_config_read: false",
+            f"real_config_read: {str(status['guardrails']['real_config_read']).lower()}",
             f"post_write_active_config_read: {str(status['guardrails']['post_write_active_config_read']).lower()}",
             f"data_written: {str(status['guardrails']['data_written']).lower()}",
             "network_access: false",
@@ -885,6 +1040,8 @@ def run_writer(
     confirm_service_stopped: bool = False,
     confirm_human_approved_real_write: bool = False,
     simulate_post_write_failure: bool = False,
+    on_commit: Callable[[], None] | None = None,
+    on_recovery_start: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     generated_at = utc_timestamp()
     out_dir = require_tmp_dir(out_dir_raw, "out-dir")
@@ -894,6 +1051,10 @@ def run_writer(
 
     backup_path: pathlib.Path | None = None
     dest: pathlib.Path | None = None
+    prior_active_config_bytes: bytes | None = None
+    prior_active_config_identity: tuple[int, int] | None = None
+    candidate_payload_bytes: bytes | None = None
+    active_parent_metadata: DirectoryMetadata | None = None
     active_config_mode = ACTIVE_CONFIG_MODE
     active_config_replaced = False
     active_config_write_started = False
@@ -906,6 +1067,13 @@ def run_writer(
         status["write"]["atomic_rename_completed"] = True
         status["write"]["fsync_file_completed"] = True
         status["guardrails"]["data_written"] = writer_real_write_enabled
+
+    def validate_staged_active_config(staged_path: pathlib.Path) -> None:
+        staged_candidate = load_json_file(staged_path, label="staged active config")
+        staged_status = validate_real_dry_run(staged_candidate)
+        status["validation"]["staged_write_valid"] = bool(staged_status["valid"])
+        if not staged_status["valid"]:
+            raise WriterError("staged active config failed validation")
 
     try:
         status["phase"] = "argument_validation"
@@ -951,6 +1119,7 @@ def run_writer(
 
         status["phase"] = "candidate_load"
         candidate = load_json_file(candidate_path, label="candidate")
+        candidate_payload_bytes = config_payload(candidate)
 
         status["phase"] = "pre_write_validation"
         pre_status = validate_real_dry_run(candidate)
@@ -961,12 +1130,19 @@ def run_writer(
             raise WriterError("candidate failed real-dry-run validation")
 
         status["phase"] = "prepare_destination"
+        if paths.real_write_enabled:
+            active_parent_metadata = lock_real_active_parent(dest.parent)
         prepare_active_parent(dest, real_write_enabled=paths.real_write_enabled)
         prepare_backup_dir(backup_dir, real_write_enabled=paths.real_write_enabled)
 
         status["backup"]["previous_config_existed"] = dest.exists()
         if dest.exists():
             status["phase"] = "backup"
+            prior_active_config_identity = regular_file_identity(dest)
+            if prior_active_config_identity is None:
+                raise WriterError("active config is not a regular file")
+            prior_active_config_bytes = dest.read_bytes()
+            status["guardrails"]["real_config_read"] = paths.real_write_enabled
             backup_path = create_backup(dest, backup_dir, real_write_enabled=paths.real_write_enabled)
             status["backup"]["created"] = True
             status["backup"]["mode"] = file_mode_string(backup_path)
@@ -979,6 +1155,8 @@ def run_writer(
             candidate,
             mode=active_config_mode,
             real_write_enabled=paths.real_write_enabled,
+            staging_dir=backup_dir,
+            validate_staged=validate_staged_active_config,
             on_replace=mark_active_config_replaced,
         )
         status["write"]["fsync_directory_completed"] = True
@@ -997,6 +1175,8 @@ def run_writer(
 
         status["phase"] = "completed"
         status["result"] = "passed"
+        if on_commit is not None:
+            on_commit()
         try:
             write_status_artifacts(out_dir, status)
         except OSError:
@@ -1005,20 +1185,32 @@ def run_writer(
             print("warning: config_saved_status_artifact_unavailable", file=sys.stderr)
         return status
     except Exception as exc:
+        if on_recovery_start is not None:
+            on_recovery_start()
         rollback_error: Exception | None = None
         active_write_recovered = False
         prior_state_intact = True
+        replacement_observed = active_config_replaced
         if active_config_write_started and dest is not None:
             if status["backup"]["previous_config_existed"]:
                 prior_state_intact = bool(
-                    backup_path is not None
-                    and backup_path.exists()
-                    and dest.exists()
-                    and files_have_same_bytes(backup_path, dest)
+                    file_has_bytes(dest, prior_active_config_bytes)
+                    and regular_file_identity(dest) == prior_active_config_identity
                 )
             else:
                 prior_state_intact = not dest.exists()
-        rollback_needed = active_config_replaced or (
+            if (
+                not prior_state_intact
+                and candidate_payload_bytes is not None
+                and file_has_bytes(dest, candidate_payload_bytes)
+            ):
+                replacement_observed = True
+        if replacement_observed:
+            status["write"]["active_config_written"] = True
+            status["write"]["atomic_rename_completed"] = True
+            status["write"]["fsync_file_completed"] = True
+            status["guardrails"]["data_written"] = writer_real_write_enabled
+        rollback_needed = replacement_observed or (
             active_config_write_started and not prior_state_intact
         )
         if rollback_needed and dest is not None:
@@ -1045,6 +1237,14 @@ def run_writer(
         if active_write_recovered:
             raise WriterError("active config write failed; prior state recovered") from exc
         raise
+    finally:
+        if active_parent_metadata is not None and dest is not None:
+            try:
+                restore_real_active_parent(dest.parent, active_parent_metadata)
+            except WriterError:
+                # Leaving the directory root-owned and non-writable is fail-closed;
+                # the player retains group read/traverse access.
+                print("warning: real config parent remained locked", file=sys.stderr)
 
 
 def product_reset_fault(ctx: ProductResetContext, phase: str) -> None:
@@ -4380,6 +4580,7 @@ def run_self_test() -> None:
             mode: int,
             *,
             real_write_enabled: bool,
+            staging_dir: pathlib.Path | None = None,
         ) -> None:
             if pathlib.Path(dst) == dest and pathlib.Path(src).parent == backup_dir:
                 raise OSError("simulated persistent restore failure")
@@ -4388,6 +4589,7 @@ def run_self_test() -> None:
                 pathlib.Path(dst),
                 mode,
                 real_write_enabled=real_write_enabled,
+                staging_dir=staging_dir,
             )
 
         globals()["copy_file_private_atomic"] = fail_backup_restore_before_replace
@@ -4664,15 +4866,23 @@ def main(argv: list[str]) -> int:
         if not args.dest:
             raise WriterError("--dest is required unless --self-test is used")
 
-        status = run_writer(
-            candidate_raw=args.candidate,
-            dest_raw=args.dest,
-            backup_dir_raw=args.backup_dir,
-            out_dir_raw=args.out_dir,
-            enable_real_write=args.enable_real_write,
-            confirm_service_stopped=args.confirm_service_stopped,
-            confirm_human_approved_real_write=args.confirm_human_approved_real_write,
-        )
+        with config_write_signal_guard() as signal_state:
+            status = run_writer(
+                candidate_raw=args.candidate,
+                dest_raw=args.dest,
+                backup_dir_raw=args.backup_dir,
+                out_dir_raw=args.out_dir,
+                enable_real_write=args.enable_real_write,
+                confirm_service_stopped=args.confirm_service_stopped,
+                confirm_human_approved_real_write=args.confirm_human_approved_real_write,
+                on_commit=signal_state.mark_committed,
+                on_recovery_start=signal_state.mark_recovering,
+            )
+        if signal_state.post_commit_signum is not None:
+            print(
+                f"warning: config write committed before signal {signal_state.post_commit_signum}",
+                file=sys.stderr,
+            )
     except WriterError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

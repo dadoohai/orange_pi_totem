@@ -470,8 +470,18 @@ estado anterior depois de qualquer falha pos-troca e provar ambos os casos no
 gate semantico do pacote. Somente dois slots sucessores aprovados podem compor a
 nova imagem de referencia.
 
-Estado sucessor: as correcoes foram congeladas em `6d95dd1`. C26.13 e C26.14
-foram geradas de commits distintos, com payloads distintos, e passam o gate
-semantico que reprova C26.8 a C26.12. A composicao seguinte deve usar C26.13
-como `previous` e C26.14 como `current`; isso ainda nao equivale a imagem
-construida ou validada na placa.
+As correcoes foram congeladas em `6d95dd1`, e C26.13/C26.14 passaram o gate que
+reprova C26.8 a C26.12. Uma auditoria posterior bloqueou a composicao antes do
+build: se o backup desaparecesse antes da troca, uma falha preparatoria podia
+apagar a configuracao antiga intacta. A mesma rodada exigiu tratar `SIGTERM`
+durante a troca sem permitir que outro sinal interrompesse o rollback.
+
+O sucessor valida o arquivo temporario exato, ja sincronizado e com ownership
+final, antes do rename; decide rollback comparando o estado visivel com os bytes
+e o inode anteriores; bloqueia temporariamente escrita do usuario do player no
+diretorio de configuracao; e protege a recuperacao contra sinais repetidos.
+Falhas trataveis e sinais capturaveis restauram o anterior. `SIGKILL` ou corte antes do `fsync` do
+diretorio continuam tendo resultado de persistencia ambiguo, mas somente entre o
+arquivo anterior e o candidato completo, previamente validado; o launcher ainda
+falha fechado antes do playback. C26.13/C26.14 nao devem compor a imagem; dois
+novos slots sucessores precisam passar o gate atualizado.
