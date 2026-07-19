@@ -469,3 +469,9 @@ sucessor deve vincular credenciais QR ao ambiente selecionado, restaurar o
 estado anterior depois de qualquer falha pos-troca e provar ambos os casos no
 gate semantico do pacote. Somente dois slots sucessores aprovados podem compor a
 nova imagem de referencia.
+
+Estado sucessor: as correcoes foram congeladas em `6d95dd1`. C26.13 e C26.14
+foram geradas de commits distintos, com payloads distintos, e passam o gate
+semantico que reprova C26.8 a C26.12. A composicao seguinte deve usar C26.13
+como `previous` e C26.14 como `current`; isso ainda nao equivale a imagem
+construida ou validada na placa.

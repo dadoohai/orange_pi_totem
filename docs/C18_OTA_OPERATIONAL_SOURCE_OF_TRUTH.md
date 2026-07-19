@@ -98,10 +98,12 @@ guiadas no proprio aparelho. M11 nao bloqueia M10.
   combinada com outro ambiente selecionado manualmente, e uma falha depois da
   troca atomica do arquivo podia deixar a configuracao nova ativa apesar do
   erro. Nenhuma dessas versoes foi gravada na placa;
-- pendente macro: fechar e auditar essas duas correcoes, gerar dois slots C26
-  sucessores semanticamente seguros, embuti-los em uma nova imagem, prova-la na
-  placa e so entao promover a baseline. Ate la, a referencia publica continua
-  `prod15` + C25B + C21.24.
+- as correcoes foram congeladas em `6d95dd1`. C26.13 e C26.14 foram geradas de
+  commits distintos, possuem pacotes distintos e passam o gate semantico que
+  reprova C26.8 a C26.12;
+- pendente macro: embutir C26.13 como retorno e C26.14 como atual na nova
+  imagem, auditar o artefato, prova-lo na placa e so entao promover a baseline.
+  Ate la, a referencia publica continua `prod15` + C25B + C21.24.
 
 ## Repositorio de entrega
 
@@ -947,3 +949,7 @@ podemos escolher entre:
     incompleto quando o armazenamento falha depois da troca atomica. Nenhuma
     chegou a placa. A proxima imagem somente pode usar dois slots posteriores
     que provem os dois casos adversariais no proprio pacote.
+21. O commit `6d95dd1` fechou vinculo obrigatorio de ambiente, rollback
+    pos-troca, falhas persistentes e descarte de diagnostico stale. C26.13 e
+    C26.14 foram geradas de commits distintos e passaram o gate semantico; a
+    proxima composicao usa C26.13 como retorno e C26.14 como atual.
