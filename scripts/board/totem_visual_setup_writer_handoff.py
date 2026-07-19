@@ -36,8 +36,8 @@ SUMMARY_FILENAME = "summary.txt"
 TMP_ROOT = pathlib.Path("/tmp").resolve()
 PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
-REQUIRED_PRIVATE_FIELDS = ("api_key", "api_url")
-OPTIONAL_PRIVATE_FIELDS = ("station_id", "environment_id", "api_token_id")
+REQUIRED_PRIVATE_FIELDS = ("api_key", "api_url", "environment_id")
+OPTIONAL_PRIVATE_FIELDS = ("station_id", "api_token_id")
 PRIVATE_METADATA_FIELDS = {
     "setup_source",
     "setup_interface",
@@ -280,6 +280,21 @@ def build_private_candidate(
     return candidate
 
 
+def require_private_environment_binding(
+    source: dict[str, Any],
+    private_values: dict[str, str],
+) -> bool:
+    private_environment = private_values["environment_id"]
+    source_environment = source.get("environment_id")
+    if (
+        not isinstance(source_environment, str)
+        or not source_environment.strip()
+        or source_environment.strip() != private_environment
+    ):
+        raise HandoffError("private credential does not match selected environment")
+    return True
+
+
 def build_status(
     *,
     source_candidate: dict[str, Any],
@@ -288,6 +303,7 @@ def build_status(
     source_allow_status: dict[str, Any],
     private_allow_status: dict[str, Any],
     private_real_status: dict[str, Any],
+    private_environment_binding_verified: bool,
 ) -> dict[str, Any]:
     known_fields = set(contract.REQUIRED_CONFIG_FIELDS) | set(contract.OPTIONAL_CONFIG_FIELDS)
     return {
@@ -312,6 +328,7 @@ def build_status(
             "credential_present": bool(private_values.get("api_key")),
             "optional_station_identifier_provided": bool(private_values.get("station_id")),
             "environment_identifier_from_private_values_used": False,
+            "environment_identifier_binding_verified": private_environment_binding_verified,
             "values_written_to_public_artifacts": False,
         },
         "private_candidate": {
@@ -500,6 +517,10 @@ def run_handoff(
 
     source_candidate = load_json_object(source_path, "source candidate")
     private_values = validate_private_values(load_json_object(private_values_path, "private values"))
+    private_environment_binding_verified = require_private_environment_binding(
+        source_candidate,
+        private_values,
+    )
     private_source = (
         "homologation_private_seed"
         if str(private_values_path) == "/data/state/totem-settings/private-values.seed.json"
@@ -531,6 +552,7 @@ def run_handoff(
         source_allow_status=source_allow_status,
         private_allow_status=private_allow_status,
         private_real_status=private_real_status,
+        private_environment_binding_verified=private_environment_binding_verified,
     )
     write_outputs(out_dir, private_candidate, status, source_candidate, private_values)
     return status
@@ -575,7 +597,7 @@ def run_self_test() -> None:
                 "api_url": "https://api.sandbox.localhost/search",
                 "api_key": "REALISHVALUEABC1234567890",
                 "station_id": "STATION-C10-HANDOFF-SMOKE",
-                "environment_id": "IGNORED-BY-C10-HANDOFF",
+                "environment_id": "ENV-C10-HANDOFF-SMOKE",
                 "api_token_id": "33333333-4444-4555-8666-777777777777",
             },
         )
@@ -633,6 +655,45 @@ def run_self_test() -> None:
             "handoff should reject unsafe C18 mpv_path before writer",
         )
 
+        mismatched_values = root / "private-mismatched" / "private-values.json"
+        write_json_file(
+            mismatched_values,
+            {
+                "api_url": "https://api.sandbox.localhost/search",
+                "api_key": "REALISHVALUEABC1234567890",
+                "station_id": "STATION-C10-HANDOFF-SMOKE",
+                "environment_id": "ENV-C10-HANDOFF-OTHER",
+                "api_token_id": "33333333-4444-4555-8666-777777777777",
+            },
+        )
+        assert_raises_handoff(
+            lambda: run_handoff(
+                source_candidate_raw=str(source_path),
+                private_values_raw=str(mismatched_values),
+                out_dir_raw=str(root / "out-mismatched-environment"),
+                confirm_private_values_approved=True,
+            ),
+            "handoff should reject credentials bound to another environment",
+        )
+
+        unbound_values = root / "private-unbound" / "private-values.json"
+        write_json_file(
+            unbound_values,
+            {
+                "api_url": "https://api.sandbox.localhost/search",
+                "api_key": "REALISHVALUEABC1234567890",
+            },
+        )
+        assert_raises_handoff(
+            lambda: run_handoff(
+                source_candidate_raw=str(source_path),
+                private_values_raw=str(unbound_values),
+                out_dir_raw=str(root / "out-unbound-environment"),
+                confirm_private_values_approved=True,
+            ),
+            "private source without environment binding should fail closed",
+        )
+
         out_dir = root / "out"
         status = run_handoff(
             source_candidate_raw=str(source_path),
@@ -642,6 +703,10 @@ def run_self_test() -> None:
         )
         assert_true(status["result"] == "passed", "handoff should pass")
         assert_true(status["contract_validation"]["private_real_dry_run_passed"], "real-dry-run should pass")
+        assert_true(
+            status["private_inputs"]["environment_identifier_binding_verified"],
+            "private environment binding should be verified",
+        )
         private_candidate = json.loads((out_dir / PRIVATE_CANDIDATE_FILENAME).read_text(encoding="utf-8"))
         assert_true(private_candidate["environment_id"] == "ENV-C10-HANDOFF-SMOKE", "wizard env should be preserved")
         assert_true(private_candidate["rotation_deg"] == 90, "rotation should be preserved")

@@ -41,7 +41,10 @@ def active_config_ready(path: pathlib.Path) -> bool:
         return False
     if not isinstance(data, dict):
         return False
-    return all(isinstance(data.get(key), str) and data[key].strip() for key in ("api_url", "api_key"))
+    return all(
+        isinstance(data.get(key), str) and data[key].strip()
+        for key in ("api_url", "api_key", "environment_id")
+    )
 
 
 def build_policy(active_config: pathlib.Path) -> dict[str, Any]:
@@ -96,7 +99,16 @@ class ProductionApplyPolicySelfTest(unittest.TestCase):
     def test_existing_valid_config_uses_active_config(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = pathlib.Path(tmp) / "config.json"
-            config.write_text(json.dumps({"api_url": "https://example.invalid", "api_key": "fixture"}), encoding="utf-8")
+            config.write_text(
+                json.dumps(
+                    {
+                        "api_url": "https://example.invalid",
+                        "api_key": "fixture",
+                        "environment_id": "environment-fixture",
+                    }
+                ),
+                encoding="utf-8",
+            )
             payload = build_policy(config)
         self.assertEqual(payload["private_source"], "active-config")
         self.assertTrue(payload["active_config_private_source_confirmed"])

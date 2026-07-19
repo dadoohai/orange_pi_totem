@@ -2097,7 +2097,7 @@ if parent_info.st_uid != os.geteuid() or stat.S_IMODE(parent_info.st_mode) != 0o
 with active.open("r", encoding="utf-8") as handle:
     config = json.load(handle)
 payload = {}
-for field in ("api_url", "api_key", "station_id", "api_token_id"):
+for field in ("api_url", "api_key", "environment_id", "station_id", "api_token_id"):
     value = config.get(field)
     if isinstance(value, str) and value.strip():
         payload[field] = value.strip()
@@ -2151,11 +2151,15 @@ select_qr_pairing_private_values_if_available() {
     return 0
   fi
   local result_path="$WIZARD_OUT_DIR/qr-pairing/pairing-result.public.json"
+  local selection=""
   if [ ! -f "$result_path" ]; then
     return 0
   fi
-  eval "$(
-    python3 - "$result_path" "$WIZARD_OUT_DIR/qr-pairing/private-values.json" <<'PY'
+  if ! selection="$(
+    python3 - \
+      "$result_path" \
+      "$WIZARD_OUT_DIR/qr-pairing/private-values.json" \
+      "$WIZARD_OUT_DIR/config.candidate.json" <<'PY'
 import json
 import os
 import pathlib
@@ -2165,6 +2169,7 @@ import sys
 
 result_path = pathlib.Path(sys.argv[1])
 expected_private_path = pathlib.Path(sys.argv[2])
+candidate_path = pathlib.Path(sys.argv[3])
 if result_path.is_symlink() or result_path.parent.is_symlink():
     raise SystemExit("pairing_result_symlink")
 try:
@@ -2213,12 +2218,28 @@ for field in ("api_url", "api_key", "environment_id"):
     value = private_values.get(field)
     if not isinstance(value, str) or not value.strip():
         raise SystemExit("pairing_private_values_required_missing")
+if candidate_path.is_symlink() or candidate_path.parent.is_symlink():
+    raise SystemExit("pairing_candidate_symlink")
+try:
+    candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    raise SystemExit("pairing_candidate_invalid") from exc
+if not isinstance(candidate, dict):
+    raise SystemExit("pairing_candidate_not_object")
+selected_environment = candidate.get("environment_id")
+if not isinstance(selected_environment, str) or not selected_environment.strip():
+    raise SystemExit("pairing_candidate_environment_missing")
+if private_values["environment_id"].strip() != selected_environment.strip():
+    raise SystemExit(0)
 print(f"PRIVATE_VALUES={shlex.quote(str(resolved))}")
 print("POLICY_PRIVATE_SOURCE=tmp-file")
 print("HOMOLOGATION_SEED_MODE=false")
 print("PAIRING_PRIVATE_VALUES_USED=true")
 PY
-  )"
+  )"; then
+    return 1
+  fi
+  eval "$selection"
   validate_private_values_metadata
 }
 

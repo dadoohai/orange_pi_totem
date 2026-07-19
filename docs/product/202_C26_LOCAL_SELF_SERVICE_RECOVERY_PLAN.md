@@ -451,3 +451,21 @@ antes do flash:
 
 Evidencia:
 `docs/evidence/c26-local-recovery/20260718T230211Z-prod18-c26-build/`.
+
+## Auditoria dos slots C26.8 a C26.12
+
+C26.8, C26.9 e C26.10 foram iteracoes intermediarias e permanecem bloqueadas
+pelo gate semantico atual por contratos incompletos de transporte e credencial.
+C26.11 e C26.12 fecharam esses pontos, mas uma auditoria adversarial encontrou
+duas regressoes novas:
+
+- um resultado QR autorizado para um ambiente podia fornecer chave e identidade
+  privadas depois que o usuario selecionasse manualmente outro ambiente;
+- uma falha de armazenamento depois da troca atomica de `config.json` podia
+  reportar erro e ainda deixar a configuracao candidata instalada.
+
+As cinco versoes sao artefatos rejeitados e nenhuma foi gravada na placa. O
+sucessor deve vincular credenciais QR ao ambiente selecionado, restaurar o
+estado anterior depois de qualquer falha pos-troca e provar ambos os casos no
+gate semantico do pacote. Somente dois slots sucessores aprovados podem compor a
+nova imagem de referencia.

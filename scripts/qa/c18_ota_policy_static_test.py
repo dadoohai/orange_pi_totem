@@ -4870,8 +4870,23 @@ exec "$C18_REAL_PYTHON3" "$@"
                 path.write_text(json.dumps(private_payload) + "\n", encoding="utf-8")
                 path.chmod(0o600)
             result_path = pairing_dir / "pairing-result.public.json"
+            candidate_path = root / "wizard" / "config.candidate.json"
+            candidate_path.write_text(
+                json.dumps({"environment_id": private_payload["environment_id"]}) + "\n",
+                encoding="utf-8",
+            )
+            candidate_path.chmod(0o600)
 
-            def run_parser(private_path: Path) -> subprocess.CompletedProcess[str]:
+            def run_parser(
+                private_path: Path,
+                *,
+                selected_environment: str | None = None,
+            ) -> subprocess.CompletedProcess[str]:
+                if selected_environment is not None:
+                    candidate_path.write_text(
+                        json.dumps({"environment_id": selected_environment}) + "\n",
+                        encoding="utf-8",
+                    )
                 result_path.write_text(
                     json.dumps({
                         "passed": True,
@@ -4881,7 +4896,13 @@ exec "$C18_REAL_PYTHON3" "$@"
                     encoding="utf-8",
                 )
                 return subprocess.run(
-                    [sys.executable, "-", str(result_path), str(expected_private)],
+                    [
+                        sys.executable,
+                        "-",
+                        str(result_path),
+                        str(expected_private),
+                        str(candidate_path),
+                    ],
                     input=pairing_parser,
                     text=True,
                     stdout=subprocess.PIPE,
@@ -4892,6 +4913,13 @@ exec "$C18_REAL_PYTHON3" "$@"
             accepted = run_parser(expected_private)
             self.assertEqual(accepted.returncode, 0, accepted.stderr)
             self.assertIn(f"PRIVATE_VALUES={expected_private}", accepted.stdout)
+
+            stale_for_other_environment = run_parser(
+                expected_private,
+                selected_environment="other-environment",
+            )
+            self.assertEqual(stale_for_other_environment.returncode, 0, stale_for_other_environment.stderr)
+            self.assertEqual(stale_for_other_environment.stdout, "")
 
             rejected = run_parser(external_private)
             self.assertNotEqual(rejected.returncode, 0)

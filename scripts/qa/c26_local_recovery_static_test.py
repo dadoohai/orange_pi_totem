@@ -62,6 +62,8 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
                 "releases/core-updates/c26.8-local-recovery-20260718-08d9412-transport-actions",
                 "releases/core-updates/c26.9-local-recovery-20260718-a9ffd4c-composed-actions",
                 "releases/core-updates/c26.10-local-recovery-20260719-097720e-semantic-actions",
+                "releases/core-updates/c26.11-local-recovery-20260719-24797ad-transport-complete-actions",
+                "releases/core-updates/c26.12-local-recovery-20260719-2b67570-final-actions",
             )
         )
 
@@ -177,7 +179,7 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
             "validate_private_values_metadata",
         )
         self.assertIn(
-            'for field in ("api_url", "api_key", "station_id", "api_token_id"):',
+            'for field in ("api_url", "api_key", "environment_id", "station_id", "api_token_id"):',
             active_config_copy,
         )
         self.assertIn('tmp.write_text(json.dumps(payload, indent=2, sort_keys=True)', active_config_copy)

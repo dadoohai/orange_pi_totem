@@ -34,7 +34,7 @@ import tempfile
 import urllib.parse as urllib_parse
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 sys.dont_write_bytecode = True
 
@@ -538,6 +538,7 @@ def atomic_write_active_config(
     *,
     mode: int,
     real_write_enabled: bool,
+    on_replace: Callable[[], None] | None = None,
 ) -> None:
     payload = config_payload(config)
     tmp_name: str | None = None
@@ -554,8 +555,9 @@ def atomic_write_active_config(
             os.fsync(handle.fileno())
         os.replace(tmp_name, dest)
         tmp_name = None
-        apply_mode_and_owner(dest, mode, real_write_enabled=real_write_enabled)
-        fsync_directory(dest.parent)
+        if on_replace is not None:
+            on_replace()
+        fsync_directory(dest.parent, required=True)
     finally:
         if fd is not None:
             os.close(fd)
@@ -587,8 +589,7 @@ def copy_file_private_atomic(
             os.fsync(target.fileno())
         os.replace(tmp_name, dst)
         tmp_name = None
-        apply_mode_and_owner(dst, mode, real_write_enabled=real_write_enabled)
-        fsync_directory(dst.parent)
+        fsync_directory(dst.parent, required=True)
     finally:
         if fd is not None:
             os.close(fd)
@@ -618,6 +619,7 @@ def restore_backup(
         "backup_available": backup_path.exists(),
         "restored": False,
         "restored_valid": False,
+        "durability_verified": False,
     }
     if not backup_path.exists():
         result["reason"] = "backup_missing"
@@ -628,6 +630,7 @@ def restore_backup(
     restored_status = validate_real_dry_run(restored_config)
     result["restored"] = True
     result["restored_valid"] = bool(restored_status["valid"])
+    result["durability_verified"] = True
     if not restored_status["valid"]:
         result["reason"] = "restored_config_failed_validation"
     return result
@@ -639,6 +642,76 @@ def safe_unlink(path: pathlib.Path) -> bool:
     except FileNotFoundError:
         return False
     return True
+
+
+def files_have_same_bytes(left: pathlib.Path, right: pathlib.Path) -> bool:
+    try:
+        return left.read_bytes() == right.read_bytes()
+    except OSError:
+        return False
+
+
+def rollback_active_write(
+    status: dict[str, Any],
+    *,
+    backup_path: pathlib.Path | None,
+    dest: pathlib.Path,
+    mode: int,
+    real_write_enabled: bool,
+) -> None:
+    status["phase"] = "rollback"
+    rollback_status = status["rollback"]
+    rollback_status["attempted"] = True
+    if backup_path is not None:
+        rollback_status["backup_available"] = backup_path.exists()
+        if not backup_path.exists():
+            rollback_status["reason"] = "backup_missing"
+            rollback_status["active_removed_fail_closed"] = safe_unlink(dest)
+            fsync_directory(dest.parent, required=True)
+            status["write"]["active_config_mode"] = file_mode_string(dest)
+            raise WriterError("rollback backup missing; candidate removed")
+        try:
+            rollback = restore_backup(
+                backup_path,
+                dest,
+                mode=mode,
+                real_write_enabled=real_write_enabled,
+            )
+        except Exception as exc:
+            rollback_status["reason"] = "restore_failed"
+            if files_have_same_bytes(backup_path, dest):
+                rollback_status["restored"] = True
+                try:
+                    restored = load_json_file(dest, label="restored config")
+                    rollback_status["restored_valid"] = bool(validate_real_dry_run(restored)["valid"])
+                except WriterError:
+                    rollback_status["restored_valid"] = False
+                rollback_status["durability_verified"] = False
+            else:
+                rollback_status["active_removed_fail_closed"] = safe_unlink(dest)
+                fsync_directory(dest.parent, required=True)
+            status["write"]["active_config_mode"] = file_mode_string(dest)
+            raise WriterError("rollback restore could not be verified") from exc
+        rollback_status.update(rollback)
+        if not (
+            rollback_status["restored"]
+            and rollback_status["restored_valid"]
+            and rollback_status["durability_verified"]
+        ):
+            rollback_status["reason"] = "restored_config_not_verified"
+            rollback_status["active_removed_fail_closed"] = safe_unlink(dest)
+            fsync_directory(dest.parent, required=True)
+            status["write"]["active_config_mode"] = file_mode_string(dest)
+            raise WriterError("rollback restored config failed verification")
+    else:
+        rollback_status["backup_available"] = False
+        rollback_status["active_removed_without_backup"] = safe_unlink(dest)
+        rollback_status["active_removed_fail_closed"] = rollback_status[
+            "active_removed_without_backup"
+        ]
+        fsync_directory(dest.parent, required=True)
+        rollback_status["durability_verified"] = True
+    status["write"]["active_config_mode"] = file_mode_string(dest)
 
 
 def file_mode_string(path: pathlib.Path) -> str | None:
@@ -682,7 +755,10 @@ def build_base_status(generated_at: str) -> dict[str, Any]:
             "backup_available": False,
             "restored": False,
             "restored_valid": False,
+            "durability_verified": False,
             "active_removed_without_backup": False,
+            "active_removed_fail_closed": False,
+            "reason": None,
         },
         "real_write": {
             "enabled": False,
@@ -791,6 +867,14 @@ def write_status_artifacts(out_dir: pathlib.Path, status: dict[str, Any]) -> Non
     atomic_write_text(out_dir / SUMMARY_FILENAME, build_summary(status), out_dir)
 
 
+def clear_status_artifacts(out_dir: pathlib.Path) -> None:
+    for name in (STATUS_FILENAME, SUMMARY_FILENAME):
+        try:
+            (out_dir / name).unlink()
+        except FileNotFoundError:
+            pass
+
+
 def run_writer(
     *,
     candidate_raw: str,
@@ -805,10 +889,24 @@ def run_writer(
     generated_at = utc_timestamp()
     out_dir = require_tmp_dir(out_dir_raw, "out-dir")
     prepare_private_dir(out_dir)
+    clear_status_artifacts(out_dir)
     status = build_base_status(generated_at)
 
     backup_path: pathlib.Path | None = None
     dest: pathlib.Path | None = None
+    active_config_mode = ACTIVE_CONFIG_MODE
+    active_config_replaced = False
+    active_config_write_started = False
+    writer_real_write_enabled = False
+
+    def mark_active_config_replaced() -> None:
+        nonlocal active_config_replaced
+        active_config_replaced = True
+        status["write"]["active_config_written"] = True
+        status["write"]["atomic_rename_completed"] = True
+        status["write"]["fsync_file_completed"] = True
+        status["guardrails"]["data_written"] = writer_real_write_enabled
+
     try:
         status["phase"] = "argument_validation"
         paths = validate_writer_paths(
@@ -825,6 +923,7 @@ def run_writer(
         backup_dir = paths.backup_dir
         out_dir = paths.out_dir
         active_config_mode = REAL_ACTIVE_CONFIG_MODE if paths.real_write_enabled else ACTIVE_CONFIG_MODE
+        writer_real_write_enabled = paths.real_write_enabled
 
         if paths.real_write_enabled:
             status["mode"] = "c6.2.2-real-write-guarded"
@@ -874,18 +973,16 @@ def run_writer(
 
         status["phase"] = "atomic_write"
         status["write"]["attempted"] = True
+        active_config_write_started = True
         atomic_write_active_config(
             dest,
             candidate,
             mode=active_config_mode,
             real_write_enabled=paths.real_write_enabled,
+            on_replace=mark_active_config_replaced,
         )
-        status["write"]["active_config_written"] = True
-        status["write"]["atomic_rename_completed"] = True
-        status["write"]["fsync_file_completed"] = True
         status["write"]["fsync_directory_completed"] = True
         status["write"]["active_config_mode"] = file_mode_string(dest)
-        status["guardrails"]["data_written"] = paths.real_write_enabled
 
         status["phase"] = "post_write_validation"
         written_candidate = load_json_file(dest, label="active simulated config")
@@ -896,23 +993,6 @@ def run_writer(
             post_status["valid"] = False
         apply_validation_to_status(status, post_status, "post_write")
         if not post_status["valid"]:
-            status["phase"] = "rollback"
-            if backup_path is not None:
-                rollback = restore_backup(
-                    backup_path,
-                    dest,
-                    mode=active_config_mode,
-                    real_write_enabled=paths.real_write_enabled,
-                )
-                status["rollback"].update(rollback)
-                status["write"]["active_config_mode"] = file_mode_string(dest)
-            else:
-                status["rollback"]["attempted"] = True
-                status["rollback"]["backup_available"] = False
-                status["rollback"]["active_removed_without_backup"] = safe_unlink(dest)
-                status["write"]["active_config_mode"] = file_mode_string(dest)
-            status["result"] = "failed"
-            write_status_artifacts(out_dir, status)
             raise WriterError("post-write validation failed")
 
         status["phase"] = "completed"
@@ -924,15 +1004,46 @@ def run_writer(
             # Losing local evidence must not be reported to the user as a failed write.
             print("warning: config_saved_status_artifact_unavailable", file=sys.stderr)
         return status
-    except Exception:
-        if dest is not None and status["phase"] not in {"completed", "rollback"}:
-            status["write"]["active_config_mode"] = file_mode_string(dest)
-        if status["phase"] not in {"pre_write_validation", "post_write_validation", "rollback"}:
-            status["result"] = "failed"
+    except Exception as exc:
+        rollback_error: Exception | None = None
+        active_write_recovered = False
+        prior_state_intact = True
+        if active_config_write_started and dest is not None:
+            if status["backup"]["previous_config_existed"]:
+                prior_state_intact = bool(
+                    backup_path is not None
+                    and backup_path.exists()
+                    and dest.exists()
+                    and files_have_same_bytes(backup_path, dest)
+                )
+            else:
+                prior_state_intact = not dest.exists()
+        rollback_needed = active_config_replaced or (
+            active_config_write_started and not prior_state_intact
+        )
+        if rollback_needed and dest is not None:
             try:
-                write_status_artifacts(out_dir, status)
-            except OSError:
-                pass
+                rollback_active_write(
+                    status,
+                    backup_path=backup_path,
+                    dest=dest,
+                    mode=active_config_mode,
+                    real_write_enabled=writer_real_write_enabled,
+                )
+                active_write_recovered = True
+            except Exception as caught_rollback_error:
+                rollback_error = caught_rollback_error
+        status["result"] = "failed"
+        if dest is not None:
+            status["write"]["active_config_mode"] = file_mode_string(dest)
+        try:
+            write_status_artifacts(out_dir, status)
+        except Exception:
+            pass
+        if rollback_error is not None:
+            raise WriterError("active config write failed and rollback could not be verified") from rollback_error
+        if active_write_recovered:
+            raise WriterError("active config write failed; prior state recovered") from exc
         raise
 
 
@@ -4046,6 +4157,10 @@ def run_self_test() -> None:
             assert_true(synthetic["api_key"] not in content, "synthetic api_key leaked to status/summary")
 
         evidence_failure_dest = root / "evidence-failure" / "config.json"
+        evidence_failure_out = root / "out-evidence-failure"
+        prepare_private_dir(evidence_failure_out)
+        for name in (STATUS_FILENAME, SUMMARY_FILENAME):
+            (evidence_failure_out / name).write_text("stale\n", encoding="utf-8")
         original_write_status_artifacts = globals()["write_status_artifacts"]
         try:
             def fail_status_artifacts(_out_dir: pathlib.Path, _status: dict[str, Any]) -> None:
@@ -4056,7 +4171,7 @@ def run_self_test() -> None:
                 candidate_raw=str(candidate),
                 dest_raw=str(evidence_failure_dest),
                 backup_dir_raw=str(root / "evidence-failure-backups"),
-                out_dir_raw=str(root / "out-evidence-failure"),
+                out_dir_raw=str(evidence_failure_out),
             )
         finally:
             globals()["write_status_artifacts"] = original_write_status_artifacts
@@ -4065,6 +4180,11 @@ def run_self_test() -> None:
             load_json_file(evidence_failure_dest, label="evidence failure active config") == synthetic,
             "evidence failure must preserve the validated active config",
         )
+        for name in (STATUS_FILENAME, SUMMARY_FILENAME):
+            assert_true(
+                not (evidence_failure_out / name).exists(),
+                "failed evidence refresh must not leave stale writer artifacts",
+            )
 
         replacement = build_synthetic_candidate()
         replacement["station_id"] = "STATION_ALPHA_002"
@@ -4105,7 +4225,250 @@ def run_self_test() -> None:
         rollback_summary = (root / "out-rollback" / SUMMARY_FILENAME).read_text(encoding="utf-8")
         assert_true(rollback_candidate["api_key"] not in rollback_summary, "rollback summary leaked api_key")
 
-        generated_paths = [candidate, repo_candidate, mock_candidate, replacement_candidate, rollback_candidate_path, dest]
+        fsync_failure_candidate = build_synthetic_candidate()
+        fsync_failure_candidate["station_id"] = "STATION_AFTER_RENAME_FSYNC_FAILURE"
+        fsync_failure_candidate_path = root / "candidate" / "config.fsync-failure.json"
+        write_self_test_candidate(fsync_failure_candidate_path, fsync_failure_candidate)
+        before_fsync_failure = dest.read_bytes()
+        original_fsync_directory = globals()["fsync_directory"]
+
+        def fail_directory_fsync_after_candidate_replace(
+            path: pathlib.Path,
+            *,
+            required: bool = False,
+        ) -> None:
+            current_path = pathlib.Path(path)
+            if current_path == dest.parent and dest.exists():
+                current = load_json_file(dest, label="fsync failure active config")
+                if current.get("station_id") == fsync_failure_candidate["station_id"]:
+                    assert_true(required, "active config directory fsync must be required")
+                    raise OSError("simulated directory fsync failure after replace")
+            original_fsync_directory(current_path, required=required)
+
+        globals()["fsync_directory"] = fail_directory_fsync_after_candidate_replace
+        try:
+            assert_raises_writer_error(
+                lambda: run_writer(
+                    candidate_raw=str(fsync_failure_candidate_path),
+                    dest_raw=str(dest),
+                    backup_dir_raw=str(backup_dir),
+                    out_dir_raw=str(root / "out-fsync-rollback"),
+                ),
+                "directory fsync failure after replace should raise",
+            )
+        finally:
+            globals()["fsync_directory"] = original_fsync_directory
+        assert_true(dest.read_bytes() == before_fsync_failure, "fsync failure should restore previous active config")
+        fsync_rollback_status = load_json_file(
+            root / "out-fsync-rollback" / STATUS_FILENAME,
+            label="fsync rollback status",
+        )
+        assert_true(
+            fsync_rollback_status["write"]["atomic_rename_completed"],
+            "fsync failure should record the completed rename",
+        )
+        assert_true(
+            not fsync_rollback_status["write"]["fsync_directory_completed"],
+            "fsync failure must not claim directory durability",
+        )
+        assert_true(
+            fsync_rollback_status["rollback"]["restored"],
+            "fsync failure should record restored backup",
+        )
+        assert_true(
+            fsync_rollback_status["rollback"]["restored_valid"],
+            "fsync failure should revalidate restored backup",
+        )
+
+        no_backup_dest = root / "fsync-no-backup" / "config.json"
+
+        def fail_directory_fsync_after_new_destination_replace(
+            path: pathlib.Path,
+            *,
+            required: bool = False,
+        ) -> None:
+            current_path = pathlib.Path(path)
+            if current_path == no_backup_dest.parent and no_backup_dest.exists():
+                current = load_json_file(no_backup_dest, label="no-backup fsync failure active config")
+                if current.get("station_id") == fsync_failure_candidate["station_id"]:
+                    assert_true(required, "new active config directory fsync must be required")
+                    raise OSError("simulated no-backup directory fsync failure after replace")
+            original_fsync_directory(current_path, required=required)
+
+        globals()["fsync_directory"] = fail_directory_fsync_after_new_destination_replace
+        try:
+            assert_raises_writer_error(
+                lambda: run_writer(
+                    candidate_raw=str(fsync_failure_candidate_path),
+                    dest_raw=str(no_backup_dest),
+                    backup_dir_raw=str(root / "fsync-no-backup-store"),
+                    out_dir_raw=str(root / "out-fsync-no-backup"),
+                ),
+                "directory fsync failure without backup should raise",
+            )
+        finally:
+            globals()["fsync_directory"] = original_fsync_directory
+        assert_true(not no_backup_dest.exists(), "fsync failure without backup should remove the new active config")
+        no_backup_status = load_json_file(
+            root / "out-fsync-no-backup" / STATUS_FILENAME,
+            label="no-backup fsync rollback status",
+        )
+        assert_true(no_backup_status["rollback"]["attempted"], "no-backup fsync failure should attempt rollback")
+        assert_true(
+            no_backup_status["rollback"]["active_removed_without_backup"],
+            "no-backup fsync failure should record removal",
+        )
+        assert_true(
+            no_backup_status["write"]["active_config_mode"] is None,
+            "no-backup fsync failure must not leave an active config",
+        )
+
+        prior_config = load_json_file(dest, label="prior config for persistent rollback tests")
+        missing_backup_candidate = dict(prior_config)
+        missing_backup_candidate["station_id"] = "STATION_BACKUP_DISAPPEARS"
+        missing_backup_candidate_path = root / "candidate" / "config.backup-missing.json"
+        write_self_test_candidate(missing_backup_candidate_path, missing_backup_candidate)
+
+        def remove_backup_then_fail_directory_fsync(
+            path: pathlib.Path,
+            *,
+            required: bool = False,
+        ) -> None:
+            current_path = pathlib.Path(path)
+            if current_path == dest.parent and dest.exists():
+                current = load_json_file(dest, label="backup-missing active config")
+                if current.get("station_id") == missing_backup_candidate["station_id"]:
+                    for current_backup in backup_dir.glob("*.bak"):
+                        current_backup.unlink()
+                    raise OSError("simulated backup disappearance after replace")
+            original_fsync_directory(current_path, required=required)
+
+        globals()["fsync_directory"] = remove_backup_then_fail_directory_fsync
+        try:
+            assert_raises_writer_error(
+                lambda: run_writer(
+                    candidate_raw=str(missing_backup_candidate_path),
+                    dest_raw=str(dest),
+                    backup_dir_raw=str(backup_dir),
+                    out_dir_raw=str(root / "out-backup-missing"),
+                ),
+                "missing rollback backup should fail closed",
+            )
+        finally:
+            globals()["fsync_directory"] = original_fsync_directory
+        assert_true(not dest.exists(), "missing rollback backup must not leave the candidate active")
+        missing_backup_status = load_json_file(
+            root / "out-backup-missing" / STATUS_FILENAME,
+            label="missing backup rollback status",
+        )
+        assert_true(missing_backup_status["rollback"]["attempted"], "missing backup must record rollback attempt")
+        assert_true(
+            missing_backup_status["rollback"]["active_removed_fail_closed"],
+            "missing backup must remove the candidate fail closed",
+        )
+
+        write_self_test_candidate(dest, prior_config)
+        restore_failure_candidate = dict(prior_config)
+        restore_failure_candidate["station_id"] = "STATION_PERSISTENT_RESTORE_FAILURE"
+        restore_failure_candidate_path = root / "candidate" / "config.restore-failure.json"
+        write_self_test_candidate(restore_failure_candidate_path, restore_failure_candidate)
+        original_copy_file_private_atomic = globals()["copy_file_private_atomic"]
+
+        def fail_backup_restore_before_replace(
+            src: pathlib.Path,
+            dst: pathlib.Path,
+            mode: int,
+            *,
+            real_write_enabled: bool,
+        ) -> None:
+            if pathlib.Path(dst) == dest and pathlib.Path(src).parent == backup_dir:
+                raise OSError("simulated persistent restore failure")
+            original_copy_file_private_atomic(
+                pathlib.Path(src),
+                pathlib.Path(dst),
+                mode,
+                real_write_enabled=real_write_enabled,
+            )
+
+        globals()["copy_file_private_atomic"] = fail_backup_restore_before_replace
+        try:
+            assert_raises_writer_error(
+                lambda: run_writer(
+                    candidate_raw=str(restore_failure_candidate_path),
+                    dest_raw=str(dest),
+                    backup_dir_raw=str(backup_dir),
+                    out_dir_raw=str(root / "out-persistent-restore-failure"),
+                    simulate_post_write_failure=True,
+                ),
+                "persistent restore failure should fail closed",
+            )
+        finally:
+            globals()["copy_file_private_atomic"] = original_copy_file_private_atomic
+        assert_true(not dest.exists(), "persistent restore failure must not leave the candidate active")
+        restore_failure_status = load_json_file(
+            root / "out-persistent-restore-failure" / STATUS_FILENAME,
+            label="persistent restore failure status",
+        )
+        assert_true(restore_failure_status["rollback"]["attempted"], "restore failure must record attempt")
+        assert_true(
+            restore_failure_status["rollback"]["active_removed_fail_closed"],
+            "restore failure must remove the candidate fail closed",
+        )
+
+        write_self_test_candidate(dest, prior_config)
+        prior_config_bytes = dest.read_bytes()
+        persistent_fsync_candidate = dict(prior_config)
+        persistent_fsync_candidate["station_id"] = "STATION_PERSISTENT_DIRECTORY_FSYNC"
+        persistent_fsync_candidate_path = root / "candidate" / "config.persistent-fsync.json"
+        write_self_test_candidate(persistent_fsync_candidate_path, persistent_fsync_candidate)
+
+        def fail_all_active_directory_fsyncs(
+            path: pathlib.Path,
+            *,
+            required: bool = False,
+        ) -> None:
+            current_path = pathlib.Path(path)
+            if current_path == dest.parent and dest.exists():
+                raise OSError("simulated persistent active directory fsync failure")
+            original_fsync_directory(current_path, required=required)
+
+        globals()["fsync_directory"] = fail_all_active_directory_fsyncs
+        try:
+            assert_raises_writer_error(
+                lambda: run_writer(
+                    candidate_raw=str(persistent_fsync_candidate_path),
+                    dest_raw=str(dest),
+                    backup_dir_raw=str(backup_dir),
+                    out_dir_raw=str(root / "out-persistent-fsync"),
+                ),
+                "persistent directory fsync failure should remain explicit",
+            )
+        finally:
+            globals()["fsync_directory"] = original_fsync_directory
+        assert_true(dest.read_bytes() == prior_config_bytes, "persistent fsync failure must expose prior config")
+        persistent_fsync_status = load_json_file(
+            root / "out-persistent-fsync" / STATUS_FILENAME,
+            label="persistent fsync rollback status",
+        )
+        assert_true(persistent_fsync_status["rollback"]["attempted"], "persistent fsync must record rollback")
+        assert_true(persistent_fsync_status["rollback"]["restored"], "persistent fsync must expose restored config")
+        assert_true(
+            not persistent_fsync_status["rollback"]["durability_verified"],
+            "persistent fsync must not claim rollback durability",
+        )
+
+        generated_paths = [
+            candidate,
+            repo_candidate,
+            mock_candidate,
+            replacement_candidate,
+            rollback_candidate_path,
+            fsync_failure_candidate_path,
+            missing_backup_candidate_path,
+            restore_failure_candidate_path,
+            persistent_fsync_candidate_path,
+            dest,
+        ]
         generated_paths.extend(root.rglob(STATUS_FILENAME))
         generated_paths.extend(root.rglob(SUMMARY_FILENAME))
         generated_paths.extend(backup_dir.glob("*.bak"))

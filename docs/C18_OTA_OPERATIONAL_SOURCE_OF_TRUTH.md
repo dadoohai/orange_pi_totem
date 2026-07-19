@@ -90,10 +90,18 @@ guiadas no proprio aparelho. M11 nao bloqueia M10.
   tambem foi rejeitada antes do flash: C26.5 e um retorno byte-real, porem
   reabre uma divergencia writer/revogacao; C26.7 ainda aceita chaves e hosts
   extremos que podem falhar depois da limpeza local;
-- pendente macro: consolidar um contrato unico e limitado de URL, chave e
-  credencial pendente, gerar dois slots C26 novos e semanticamente seguros,
-  embuti-los em uma nova imagem, prova-la na placa e so entao promover a
-  baseline. Ate la, a referencia publica continua `prod15` + C25B + C21.24.
+- C26.8, C26.9 e C26.10 foram candidatas intermediarias e permanecem
+  reprovadas pelo gate semantico sucessor por lacunas no contrato de transporte
+  e credenciais;
+- C26.11 e C26.12 fecharam essas lacunas anteriores, mas a auditoria final
+  encontrou duas regressoes da candidata: credencial QR antiga podia ser
+  combinada com outro ambiente selecionado manualmente, e uma falha depois da
+  troca atomica do arquivo podia deixar a configuracao nova ativa apesar do
+  erro. Nenhuma dessas versoes foi gravada na placa;
+- pendente macro: fechar e auditar essas duas correcoes, gerar dois slots C26
+  sucessores semanticamente seguros, embuti-los em uma nova imagem, prova-la na
+  placa e so entao promover a baseline. Ate la, a referencia publica continua
+  `prod15` + C25B + C21.24.
 
 ## Repositorio de entrega
 
@@ -933,3 +941,9 @@ podemos escolher entre:
     nova seguranca de validacao e o atual ainda permite credenciais/hosts que
     so falham depois da limpeza. O proximo artefato deve conter dois slots
     distintos ja protegidos pelo mesmo contrato de transporte.
+20. As candidatas C26.8 a C26.10 foram rejeitadas pelo gate semantico sucessor.
+    C26.11 e C26.12 passaram os gates anteriores, mas foram rejeitadas pela
+    auditoria final por mistura de credencial QR entre ambientes e rollback
+    incompleto quando o armazenamento falha depois da troca atomica. Nenhuma
+    chegou a placa. A proxima imagem somente pode usar dois slots posteriores
+    que provem os dois casos adversariais no proprio pacote.
