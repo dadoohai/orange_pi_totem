@@ -28,6 +28,7 @@ CLEANUP_SCRIPT = BOARD_DIR / "totem_open_settings_cleanup.sh"
 UPDATECTL_SCRIPT = BOARD_DIR / "totem_updatectl.py"
 IMAGE_EMBED = REPO_ROOT / "scripts" / "build" / "totem_core_image_embed.py"
 PACKAGE_BUILDER = REPO_ROOT / "scripts" / "deploy" / "build_totem_core_release_package.sh"
+PAYLOAD_SEMANTIC_GATE = REPO_ROOT / "scripts" / "qa" / "c26_totem_core_payload_semantic_gate.py"
 
 if str(BOARD_DIR) not in sys.path:
     sys.path.insert(0, str(BOARD_DIR))
@@ -54,6 +55,40 @@ def load_updatectl(module_name: str):
 
 
 class C26LocalRecoveryContractTest(unittest.TestCase):
+    def test_payload_semantic_gate_rejects_c26_8_and_accepts_c26_9(self) -> None:
+        c26_8 = next(
+            (REPO_ROOT / "releases/core-updates/c26.8-local-recovery-20260718-08d9412-transport-actions").glob(
+                "*.tar.gz"
+            )
+        )
+        c26_9 = next(
+            (REPO_ROOT / "releases/core-updates/c26.9-local-recovery-20260718-a9ffd4c-composed-actions").glob(
+                "*.tar.gz"
+            )
+        )
+
+        def run(payload: pathlib.Path) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+            result = subprocess.run(
+                [sys.executable, "-B", str(PAYLOAD_SEMANTIC_GATE), "--payload", str(payload), "--json"],
+                cwd=REPO_ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=180,
+                check=False,
+            )
+            return result, json.loads(result.stdout)
+
+        rejected, rejected_status = run(c26_8)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIs(rejected_status["passed"], False)
+        self.assertIs(rejected_status["checks"]["composed_transport_probe"], False)
+
+        accepted, accepted_status = run(c26_9)
+        self.assertEqual(accepted.returncode, 0, accepted.stderr + accepted.stdout)
+        self.assertIs(accepted_status["passed"], True)
+        self.assertTrue(all(accepted_status["checks"].values()))
+
     def test_api_transport_contract_is_compositional_before_reset(self) -> None:
         invalid_urls = (
             "https://api.example.com:",
