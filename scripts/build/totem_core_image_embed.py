@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import subprocess
+import sys
 import tarfile
 import tempfile
 import time
@@ -17,19 +18,19 @@ from typing import Any, Callable
 import derive_c15_2_1_homolog_image as base
 
 
-TOTEM_CORE_VERSION = "c26.9-local-recovery-20260718-a9ffd4c-composed-actions"
-TOTEM_CORE_RELEASE_TAG = "totem-core-c26.9-local-recovery-20260718-a9ffd4c-composed-actions"
+TOTEM_CORE_VERSION = "c26.10-local-recovery-20260719-097720e-semantic-actions"
+TOTEM_CORE_RELEASE_TAG = "totem-core-c26.10-local-recovery-20260719-097720e-semantic-actions"
 TOTEM_CORE_CHANNEL = "homologation"
-TOTEM_CORE_PAYLOAD_SHA256 = "bfca7aeb90c2b5e9c35ce3c14f540ef631a8a1fab0b1860625d90f777c4e26fb"
-TOTEM_CORE_CREATED_AT_UTC = "2026-07-18T23:59:01Z"
-TOTEM_CORE_SOURCE_COMMIT = "a9ffd4c6c6c3e42d155ea248d009786ca25a6675"
+TOTEM_CORE_PAYLOAD_SHA256 = "2576d30d45a5ec1739797f34082ecd8d461364e38dd876a7fa94bdf720d13f5a"
+TOTEM_CORE_CREATED_AT_UTC = "2026-07-19T00:21:28Z"
+TOTEM_CORE_SOURCE_COMMIT = "097720ed6d2e33944e19f5cac9faec37b62fbafd"
 TOTEM_CORE_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")
-TOTEM_CORE_PREVIOUS_VERSION = "c26.8-local-recovery-20260718-08d9412-transport-actions"
-TOTEM_CORE_PREVIOUS_RELEASE_TAG = "totem-core-c26.8-local-recovery-20260718-08d9412-transport-actions"
+TOTEM_CORE_PREVIOUS_VERSION = "c26.9-local-recovery-20260718-a9ffd4c-composed-actions"
+TOTEM_CORE_PREVIOUS_RELEASE_TAG = "totem-core-c26.9-local-recovery-20260718-a9ffd4c-composed-actions"
 TOTEM_CORE_PREVIOUS_CHANNEL = "homologation"
-TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256 = "7515375cf2245e0fedc297284a034bd955c2acb10ad3ae36d5c3bde87f089542"
-TOTEM_CORE_PREVIOUS_CREATED_AT_UTC = "2026-07-18T23:53:13Z"
-TOTEM_CORE_PREVIOUS_SOURCE_COMMIT = "08d9412780c811ff72efa7718636366a64bf82f1"
+TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256 = "bfca7aeb90c2b5e9c35ce3c14f540ef631a8a1fab0b1860625d90f777c4e26fb"
+TOTEM_CORE_PREVIOUS_CREATED_AT_UTC = "2026-07-18T23:59:01Z"
+TOTEM_CORE_PREVIOUS_SOURCE_COMMIT = "a9ffd4c6c6c3e42d155ea248d009786ca25a6675"
 TOTEM_CORE_PREVIOUS_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")
 UPDATE_POLICY_TARGET = "/data/updates/policy.json"
 UPDATE_AGENT_SERVICE_TARGET = "/etc/systemd/system/totem-update-agent.service"
@@ -150,6 +151,7 @@ IMAGE_FIXED_PLAYER_SYSTEMD_FILES = [
         "/etc/systemd/system/totem-product-reset-gc.service",
     ),
 ]
+PAYLOAD_SEMANTIC_GATE_REL = "scripts/qa/c26_totem_core_payload_semantic_gate.py"
 
 
 def _validate_totem_core_release(
@@ -187,6 +189,39 @@ def _validate_totem_core_release(
     payload_sha = hashlib.sha256(payload_path.read_bytes()).hexdigest()
     if payload_sha != payload_sha256:
         raise RuntimeError("totem_core_embed_payload_sha256_mismatch")
+    semantic_gate_path = repo_root / PAYLOAD_SEMANTIC_GATE_REL
+    if not semantic_gate_path.is_file():
+        raise RuntimeError("totem_core_embed_payload_semantic_gate_missing")
+    try:
+        semantic_result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(semantic_gate_path),
+                "--payload",
+                str(payload_path),
+                "--json",
+            ],
+            cwd=repo_root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=180,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"totem_core_embed_payload_semantic_gate_timeout:{version}") from exc
+    try:
+        semantic_status = json.loads(semantic_result.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"totem_core_embed_payload_semantic_gate_invalid_json:{version}") from exc
+    if (
+        semantic_result.returncode != 0
+        or semantic_status.get("schema") != "dadooh.c26.totem_core_payload_semantic_gate.v1"
+        or semantic_status.get("passed") is not True
+    ):
+        reason = str(semantic_status.get("reason") or "semantic_contract_failed")
+        raise RuntimeError(f"totem_core_embed_payload_semantic_gate_failed:{version}:{reason}")
     ancestor = subprocess.run(
         ["git", "merge-base", "--is-ancestor", source_commit, "HEAD"],
         cwd=repo_root,
@@ -250,6 +285,7 @@ def _validate_totem_core_release(
         "capabilities": list(capabilities),
         "manifest": str(manifest_path.relative_to(repo_root)),
         "payload": str(payload_path.relative_to(repo_root)),
+        "semantic_gate_schema": semantic_status["schema"],
     }
     return provenance, payload_files
 

@@ -1088,6 +1088,8 @@ terminal_action_reconcile_complete
             image_embed = (REPO_ROOT / "scripts/build/totem_core_image_embed.py").read_text(encoding="utf-8")
             self.assertIn('TOTEM_CORE_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")', image_embed)
             self.assertIn('TOTEM_CORE_PREVIOUS_CAPABILITIES = ("product-reset-v1", "totem-actions-v1")', image_embed)
+            self.assertIn("c26_totem_core_payload_semantic_gate.py", image_embed)
+            self.assertIn("totem_core_embed_payload_semantic_gate_failed", image_embed)
             self.assertIn('current_target = f"releases/{TOTEM_CORE_VERSION}"', image_embed)
             self.assertIn('previous_target = f"releases/{TOTEM_CORE_PREVIOUS_VERSION}"', image_embed)
             self.assertIn('capabilities=TOTEM_CORE_CAPABILITIES', image_embed)
