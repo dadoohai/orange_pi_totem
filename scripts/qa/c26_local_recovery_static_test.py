@@ -55,15 +55,13 @@ def load_updatectl(module_name: str):
 
 
 class C26LocalRecoveryContractTest(unittest.TestCase):
-    def test_payload_semantic_gate_rejects_c26_8_and_accepts_c26_9(self) -> None:
-        c26_8 = next(
-            (REPO_ROOT / "releases/core-updates/c26.8-local-recovery-20260718-08d9412-transport-actions").glob(
-                "*.tar.gz"
-            )
-        )
-        c26_9 = next(
-            (REPO_ROOT / "releases/core-updates/c26.9-local-recovery-20260718-a9ffd4c-composed-actions").glob(
-                "*.tar.gz"
+    def test_payload_semantic_gate_rejects_known_unsafe_slots(self) -> None:
+        unsafe_payloads = tuple(
+            next((REPO_ROOT / directory).glob("*.tar.gz"))
+            for directory in (
+                "releases/core-updates/c26.8-local-recovery-20260718-08d9412-transport-actions",
+                "releases/core-updates/c26.9-local-recovery-20260718-a9ffd4c-composed-actions",
+                "releases/core-updates/c26.10-local-recovery-20260719-097720e-semantic-actions",
             )
         )
 
@@ -79,15 +77,15 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
             )
             return result, json.loads(result.stdout)
 
-        rejected, rejected_status = run(c26_8)
-        self.assertNotEqual(rejected.returncode, 0)
-        self.assertIs(rejected_status["passed"], False)
-        self.assertIs(rejected_status["checks"]["composed_transport_probe"], False)
-
-        accepted, accepted_status = run(c26_9)
-        self.assertEqual(accepted.returncode, 0, accepted.stderr + accepted.stdout)
-        self.assertIs(accepted_status["passed"], True)
-        self.assertTrue(all(accepted_status["checks"].values()))
+        for payload in unsafe_payloads:
+            rejected, rejected_status = run(payload)
+            self.assertNotEqual(rejected.returncode, 0, payload.name)
+            self.assertIs(rejected_status["passed"], False, payload.name)
+            self.assertIs(
+                rejected_status["checks"]["composed_transport_probe"],
+                False,
+                payload.name,
+            )
 
     def test_api_transport_contract_is_compositional_before_reset(self) -> None:
         invalid_urls = (
@@ -147,6 +145,29 @@ class C26LocalRecoveryContractTest(unittest.TestCase):
         )
         with self.assertRaises(visual_wizard.VisualWizardError):
             visual_wizard.validate_pairing_api_token_id("token-self-test")
+        placeholder_key = "real_preencher_key_1234567890"
+        self.assertTrue(api_contract.api_key_is_placeholder(placeholder_key))
+        with self.assertRaises(config_writer.WriterError):
+            config_writer.product_reset_validate_api_key(placeholder_key)
+        with self.assertRaises(pairing_client.PairingError):
+            pairing_client.validate_api_key(placeholder_key)
+        with self.assertRaises(visual_wizard.VisualWizardError):
+            visual_wizard.validate_pairing_api_key(placeholder_key)
+        placeholder_candidate = config_contract.build_mock_candidate()
+        placeholder_candidate["api_key"] = placeholder_key
+        self.assertFalse(
+            config_contract.validate_candidate_config(
+                placeholder_candidate,
+                "real-dry-run",
+            )["valid"]
+        )
+        exact_query_prefix = "https://api.example.com?source="
+        exact_query_url = exact_query_prefix + (
+            "x" * (api_contract.MAX_API_URL_BYTES - len(exact_query_prefix))
+        )
+        self.assertEqual(api_contract.validate_https_api_url(exact_query_url), exact_query_url)
+        with self.assertRaises(visual_wizard.VisualWizardError):
+            visual_wizard.normalize_runtime_api_url(exact_query_url)
 
     def test_reopening_settings_preserves_device_token_identity_privately(self) -> None:
         session = SESSION_SCRIPT.read_text(encoding="utf-8")
@@ -1079,6 +1100,27 @@ terminal_action_reconcile_complete
             self.assertIn(feature, b_manifest["requires"]["updater_features"])
 
             payload = next(b_dir.glob("*.tar.gz"))
+            semantic_gate = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(PAYLOAD_SEMANTIC_GATE),
+                    "--payload",
+                    str(payload),
+                    "--json",
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=180,
+                check=False,
+            )
+            self.assertEqual(
+                semantic_gate.returncode,
+                0,
+                semantic_gate.stderr + semantic_gate.stdout,
+            )
             release = root / "extracted-actions"
             release.mkdir()
             with tarfile.open(payload, "r:gz") as archive:

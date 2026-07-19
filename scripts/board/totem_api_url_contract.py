@@ -16,6 +16,10 @@ MAX_API_KEY_BYTES = 4096
 MAX_PRODUCT_RESET_CREDENTIAL_BYTES = 8 * 1024
 DNS_LABEL_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
 INVALID_PERCENT_ESCAPE_RE = re.compile(r"%(?![0-9A-Fa-f]{2})")
+API_KEY_PLACEHOLDER_RE = re.compile(
+    r"(?:mock|test|example|placeholder|replace|preencher)",
+    re.IGNORECASE,
+)
 
 
 class ApiUrlContractError(ValueError):
@@ -103,6 +107,10 @@ def validate_api_key_format(value: Any) -> str:
     return value
 
 
+def api_key_is_placeholder(value: Any) -> bool:
+    return isinstance(value, str) and API_KEY_PLACEHOLDER_RE.search(value) is not None
+
+
 def run_self_test() -> None:
     exact_limit_prefix = "https://api.example.com/"
     exact_limit = exact_limit_prefix + ("x" * (MAX_API_URL_BYTES - len(exact_limit_prefix)))
@@ -154,6 +162,16 @@ def run_self_test() -> None:
 
     for value in ("A" * MIN_API_KEY_BYTES, "A" * MAX_API_KEY_BYTES):
         assert validate_api_key_format(value) == value
+    for value in (
+        "real_mock_key_1234567890",
+        "real_test_key_1234567890",
+        "real_example_key_1234567890",
+        "real_placeholder_key_1234567890",
+        "real_replace_key_1234567890",
+        "real_preencher_key_1234567890",
+    ):
+        assert api_key_is_placeholder(value)
+    assert not api_key_is_placeholder("live_key_1234567890abcdef")
     rejected_keys: tuple[Any, ...] = (
         None,
         "",

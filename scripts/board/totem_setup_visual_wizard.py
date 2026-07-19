@@ -6155,7 +6155,8 @@ def normalize_runtime_api_url(value: str) -> str:
     path = parsed.path.rstrip("/")
     if path in {"", "/"}:
         path = "/search"
-    return urllib_parse.urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, ""))
+    normalized = urllib_parse.urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, ""))
+    return validate_pairing_https_url(normalized, "api_url")
 
 
 def device_fingerprint() -> str:
@@ -9827,6 +9828,19 @@ def run_self_test() -> None:
                 == "https://api.example.com/search?source=totem",
                 "runtime API normalization must preserve an accepted query",
             )
+            exact_query_prefix = "https://api.example.com?source="
+            exact_query_url = exact_query_prefix + (
+                "x" * (2048 - len(exact_query_prefix))
+            )
+            assert_true(
+                validate_pairing_https_url(exact_query_url, "api_url") == exact_query_url,
+                "exact-limit URL should be valid before runtime path normalization",
+            )
+            try:
+                normalize_runtime_api_url(exact_query_url)
+                raise AssertionError("runtime API normalization exceeded transport limit")
+            except VisualWizardError:
+                pass
             for invalid_runtime_value in (
                 "https://%/search",
                 "https://a..example.com/search",
@@ -9837,7 +9851,12 @@ def run_self_test() -> None:
                     raise AssertionError("invalid runtime API URL accepted")
                 except VisualWizardError:
                     pass
-            for invalid_pairing_key in ("é" * 1500, "😀" * 16, "A" * 4097):
+            for invalid_pairing_key in (
+                "é" * 1500,
+                "😀" * 16,
+                "A" * 4097,
+                "real_preencher_key_1234567890",
+            ):
                 try:
                     validate_pairing_api_key(invalid_pairing_key)
                     raise AssertionError("invalid pairing API key accepted")

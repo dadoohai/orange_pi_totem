@@ -43,6 +43,7 @@ from totem_api_url_contract import (
     MAX_PRODUCT_RESET_CREDENTIAL_BYTES,
     ApiKeyContractError,
     ApiUrlContractError,
+    api_key_is_placeholder,
     validate_api_key_format,
     validate_https_api_url,
 )
@@ -1277,13 +1278,22 @@ def product_reset_atomic_write_json(path: pathlib.Path, value: dict[str, Any], m
                 pass
 
 
-def product_reset_load_json(path: pathlib.Path, *, label: str, private_mode: int | None = None) -> dict[str, Any]:
+def product_reset_load_json(
+    path: pathlib.Path,
+    *,
+    label: str,
+    private_mode: int | None = None,
+    max_bytes: int | None = None,
+    too_large_error: str = "product_reset_json_too_large",
+) -> dict[str, Any]:
     product_reset_checked_file(path, label)
     path_stat = os.lstat(path)
     if path_stat.st_nlink != 1:
         raise WriterError(f"product_reset_untrusted_path:{label}")
     if private_mode is not None and stat.S_IMODE(path_stat.st_mode) != private_mode:
         raise WriterError(f"product_reset_bad_mode:{label}")
+    if max_bytes is not None and path_stat.st_size > max_bytes:
+        raise WriterError(too_large_error)
     try:
         with path.open("r", encoding="utf-8") as handle:
             value = json.load(handle)
@@ -1500,8 +1510,7 @@ def product_reset_validate_api_key(value: Any) -> str:
         raise WriterError("product_reset_api_key_invalid") from exc
     if not isinstance(raw, str):
         raise WriterError("product_reset_api_key_invalid")
-    lowered = raw.lower()
-    if "placeholder" in lowered or "preencher" in lowered or "mock" in lowered:
+    if api_key_is_placeholder(raw):
         raise WriterError("product_reset_api_key_invalid")
     return raw
 
@@ -2042,7 +2051,13 @@ def product_reset_pending_without_intent(ctx: ProductResetContext) -> dict[str, 
     pending_path = product_reset_pending_credential_path(ctx)
     if product_reset_existing_path_type(pending_path) == "missing":
         return None
-    pending = product_reset_load_json(pending_path, label="pending-credential", private_mode=PRIVATE_FILE_MODE)
+    pending = product_reset_load_json(
+        pending_path,
+        label="pending-credential",
+        private_mode=PRIVATE_FILE_MODE,
+        max_bytes=MAX_PRODUCT_RESET_CREDENTIAL_BYTES,
+        too_large_error="product_reset_pending_credential_too_large",
+    )
     return product_reset_validate_pending_credential(pending)
 
 
@@ -3153,6 +3168,48 @@ def run_product_reset_self_test() -> None:
         assert_true(
             not (oversized_pending_data / PRODUCT_RESET_STATE_REL / PRODUCT_RESET_INTENT_FILENAME).exists(),
             "oversized pending credential should fail before intent",
+        )
+
+        padded_pending_fixture = product_reset_self_test_fixture(root, 931)
+        padded_pending_data = padded_pending_fixture["data"]
+        padded_pending_ctx = product_reset_self_test_context(padded_pending_data)
+        product_reset_prepare_state(padded_pending_ctx)
+        padded_pending_operation = product_reset_self_test_uuid(931)
+        padded_pending = product_reset_capture_active_credential(
+            padded_pending_ctx,
+            padded_pending_operation,
+        )
+        padded_pending_bytes = product_reset_json_payload(padded_pending)
+        assert_true(
+            len(padded_pending_bytes) <= MAX_PRODUCT_RESET_CREDENTIAL_BYTES,
+            "canonical pending fixture should fit the reader",
+        )
+        padded_pending_path = product_reset_pending_credential_path(padded_pending_ctx)
+        padded_pending_path.write_bytes(
+            padded_pending_bytes
+            + (b" " * (MAX_PRODUCT_RESET_CREDENTIAL_BYTES + 1 - len(padded_pending_bytes)))
+        )
+        padded_pending_path.chmod(PRIVATE_FILE_MODE)
+        assert_raises_writer_error_code(
+            lambda: product_reset_start_or_resume(
+                padded_pending_ctx,
+                operation_id_raw=None,
+                start=False,
+            ),
+            "product_reset_pending_credential_too_large",
+            "physical pending size must be rejected before reset resume",
+        )
+        assert_true(
+            (padded_pending_data / "config/config.json").exists(),
+            "oversized physical pending should preserve active config",
+        )
+        assert_true(
+            not product_reset_intent_path(padded_pending_ctx).exists(),
+            "oversized physical pending should fail before intent",
+        )
+        assert_true(
+            (padded_pending_data / "media/kiosky-player/marker.txt").exists(),
+            "oversized physical pending should fail before data moves",
         )
 
         insecure_dir_fixture = product_reset_self_test_fixture(root, 115)

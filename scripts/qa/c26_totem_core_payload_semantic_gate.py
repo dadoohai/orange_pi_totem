@@ -29,6 +29,8 @@ REQUIRED_BIN_FILES = frozenset(
 
 PROBE = r'''
 import json
+import pathlib
+import tempfile
 
 import totem_api_url_contract as api_contract
 import totem_config_contract_validate as config_contract
@@ -81,9 +83,25 @@ for value in invalid_keys:
     if config_contract.validate_candidate_config(candidate, "real-dry-run")["valid"]:
         raise AssertionError("config_contract_key_accepted")
 
+placeholder_key = "real_preencher_key_1234567890"
+if not api_contract.api_key_is_placeholder(placeholder_key):
+    raise AssertionError("placeholder_key_not_classified")
+require_rejection("writer_placeholder_key_accepted", config_writer.product_reset_validate_api_key, placeholder_key)
+require_rejection("qr_placeholder_key_accepted", pairing_client.validate_api_key, placeholder_key)
+require_rejection("wizard_placeholder_key_accepted", visual_wizard.validate_pairing_api_key, placeholder_key)
+placeholder_candidate = config_contract.build_mock_candidate()
+placeholder_candidate["api_key"] = placeholder_key
+if config_contract.validate_candidate_config(placeholder_candidate, "real-dry-run")["valid"]:
+    raise AssertionError("config_contract_placeholder_key_accepted")
+
 query_url = "https://api.example.com/search?source=totem"
 if visual_wizard.normalize_runtime_api_url(query_url) != query_url:
     raise AssertionError("wizard_did_not_preserve_valid_query")
+exact_query_prefix = "https://api.example.com?source="
+exact_query_url = exact_query_prefix + ("x" * (api_contract.MAX_API_URL_BYTES - len(exact_query_prefix)))
+if api_contract.validate_https_api_url(exact_query_url) != exact_query_url:
+    raise AssertionError("exact_limit_input_rejected")
+require_rejection("wizard_normalized_url_exceeded_limit", visual_wizard.normalize_runtime_api_url, exact_query_url)
 require_rejection(
     "wizard_noncanonical_api_token_id_accepted",
     visual_wizard.validate_pairing_api_token_id,
@@ -104,6 +122,34 @@ candidate.update(
 )
 if not config_contract.validate_candidate_config(candidate, "real-dry-run")["valid"]:
     raise AssertionError("valid_composed_candidate_rejected")
+
+with tempfile.TemporaryDirectory(prefix="c26-physical-pending-probe-") as raw_root:
+    fixture = config_writer.product_reset_self_test_fixture(pathlib.Path(raw_root), 991)
+    data = fixture["data"]
+    ctx = config_writer.product_reset_self_test_context(data)
+    config_writer.product_reset_prepare_state(ctx)
+    operation_id = config_writer.product_reset_self_test_uuid(991)
+    pending = config_writer.product_reset_capture_active_credential(ctx, operation_id)
+    raw_pending = config_writer.product_reset_json_payload(pending)
+    pending_path = config_writer.product_reset_pending_credential_path(ctx)
+    pending_path.write_bytes(
+        raw_pending
+        + (b" " * (api_contract.MAX_PRODUCT_RESET_CREDENTIAL_BYTES + 1 - len(raw_pending)))
+    )
+    pending_path.chmod(config_writer.PRIVATE_FILE_MODE)
+    try:
+        config_writer.product_reset_start_or_resume(ctx, operation_id_raw=None, start=False)
+    except config_writer.WriterError as exc:
+        if str(exc) != "product_reset_pending_credential_too_large":
+            raise
+    else:
+        raise AssertionError("oversized_physical_pending_accepted")
+    if not (data / "config/config.json").exists():
+        raise AssertionError("oversized_physical_pending_moved_config")
+    if config_writer.product_reset_intent_path(ctx).exists():
+        raise AssertionError("oversized_physical_pending_wrote_intent")
+    if not (data / "media/kiosky-player/marker.txt").exists():
+        raise AssertionError("oversized_physical_pending_moved_media")
 
 print(json.dumps({"passed": True, "contract": "c26-recovery-transport-v1"}, sort_keys=True))
 '''

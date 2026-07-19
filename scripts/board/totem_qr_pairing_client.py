@@ -34,6 +34,7 @@ from totem_api_url_contract import (
     MAX_PRODUCT_RESET_CREDENTIAL_BYTES,
     ApiKeyContractError,
     ApiUrlContractError,
+    api_key_is_placeholder,
     validate_api_key_format,
     validate_https_api_url,
 )
@@ -129,8 +130,7 @@ def validate_api_key(value: str) -> str:
         raw = validate_api_key_format(value)
     except ApiKeyContractError as exc:
         raise PairingError("api_key_invalid") from exc
-    lowered = raw.lower()
-    if "placeholder" in lowered or "preencher" in lowered:
+    if api_key_is_placeholder(raw):
         raise PairingError("api_key_placeholder")
     return raw
 
@@ -712,7 +712,7 @@ def write_product_reset_test_credential(
     *,
     operation_id: str = "123e4567-e89b-42d3-a456-426614174000",
     api_url: str = "https://api.example.com/search",
-    api_key: str = "C26A_SELF_TEST_SECRET_1234567890",
+    api_key: str = "C26A_VALID_SECRET_1234567890",
     device_fingerprint: str = "self-test-device-fingerprint",
     api_token_id: str = "223e4567-e89b-42d3-a456-426614174001",
 ) -> dict[str, str]:

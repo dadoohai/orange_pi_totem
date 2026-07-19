@@ -24,6 +24,7 @@ from urllib.parse import urlparse
 from totem_api_url_contract import (
     ApiKeyContractError,
     ApiUrlContractError,
+    api_key_is_placeholder,
     validate_api_key_format,
     validate_https_api_url,
 )
@@ -342,7 +343,7 @@ def detect_api_key_placeholder(raw_value: Any) -> bool:
         return False
     if raw_value == MOCK_API_KEY:
         return True
-    return bool(PLACEHOLDER_LABEL_RE.search(raw_value))
+    return api_key_is_placeholder(raw_value)
 
 
 def append_invalid(invalid_fields: list[dict[str, str]], field: str, reason: str) -> None:
