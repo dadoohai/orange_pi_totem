@@ -1,0 +1,13 @@
+{
+  "checks": {
+    "composed_transport_probe": false,
+    "payload_regular_file": true,
+    "required_files_present": true
+  },
+  "passed": false,
+  "payload": "releases/core-updates/c26.14-local-recovery-20260719-fd58c0f-final-actions/dadooh-totem-core-c26.14-local-recovery-20260719-fd58c0f-final-actions.tar.gz",
+  "probe_stderr_tail": "Traceback (most recent call last):\n  File \"<string>\", line 21, in <module>\nAttributeError: module 'totem_config_writer_real' has no attribute 'lock_real_active_parent'. Did you mean: 'prepare_active_parent'?\n",
+  "probe_stdout_tail": "",
+  "reason": "composed_transport_probe_failed:rc=1",
+  "schema": "dadooh.c26.totem_core_payload_semantic_gate.v1"
+}

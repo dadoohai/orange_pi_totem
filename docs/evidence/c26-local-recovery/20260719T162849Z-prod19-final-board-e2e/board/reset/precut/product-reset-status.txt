@@ -1,0 +1,12 @@
+product_reset_code=pending_revocation
+product_reset_operation_id=9766fc98-346e-460b-bf1d-0ecc4751391e
+product_reset_phase=local_complete
+product_reset_local_complete=true
+product_reset_pending_credential=true
+product_reset_graveyard_count=1
+product_reset_receipt_present=false
+product_reset_gc_pending=false
+product_reset_secret_public=false
+product_reset_api_url_public=false
+product_reset_environment_public=false
+product_reset_station_public=false

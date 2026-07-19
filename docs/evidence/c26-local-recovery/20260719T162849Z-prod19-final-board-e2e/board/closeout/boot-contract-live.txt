@@ -1,0 +1,46 @@
+
+collected_at_utc=2026-07-19T18:09:56Z
+boot_id=d711dbac-e712-40ed-90e4-df53ea0609ba
+---firstboot-show
+Result=success
+ExecMainStartTimestampMonotonic=23528498
+ExecMainExitTimestampMonotonic=25522798
+ExecMainStatus=0
+Before=kiosky-player.service totem-player-runtime-update-agent.service dadooh-visual-splash.service totem-update-agent.service totem-settings-trigger.service
+After=local-fs.target systemd-remount-fs.service system.slice
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+InactiveExitTimestampMonotonic=23528766
+ActiveEnterTimestampMonotonic=0
+---agent-show
+ExecMainStartTimestampMonotonic=719468604
+ExecMainExitTimestampMonotonic=722327869
+Id=totem-update-agent.service
+After=sysinit.target systemd-tmpfiles-setup.service -.mount network-online.target totem-firstboot-gate.service tmp.mount basic.target totem-update-agent.timer system.slice systemd-journald.socket
+LoadState=loaded
+ActiveState=failed
+SubState=failed
+ActiveEnterTimestampMonotonic=0
+
+ExecMainStartTimestampMonotonic=1337044669
+ExecMainExitTimestampMonotonic=1340490063
+Id=totem-player-runtime-update-agent.service
+After=-.mount basic.target system.slice sysinit.target totem-player-runtime-update-agent.timer kiosky-player.service systemd-journald.socket systemd-tmpfiles-setup.service totem-firstboot-gate.service tmp.mount network-online.target
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+ActiveEnterTimestampMonotonic=0
+---ready-marker
+/run/totem/c26-firstboot-ready.json mode=600 uid=0 gid=0 size=162
+{
+  "boot_id": "d711dbac-e712-40ed-90e4-df53ea0609ba",
+  "completed_at_utc": "2026-07-19T17:35:54.066538Z",
+  "schema_version": "dadooh.c26.firstboot-ready.v1"
+}
+---image-contract
+{"feature": "c26-product-reset-gc-static-v1", "passed": true, "reason": "c26_product_reset_gc_image_contract_ok"}
+image_contract_rc=0
+
+__EXPECT_EXIT_CODE__=0

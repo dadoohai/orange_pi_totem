@@ -1,0 +1,5 @@
+boot_id=d711dbac-e712-40ed-90e4-df53ea0609ba
+core_state_sha256=b5d734794136d33f4a0efda5b1c626ad1ad78b535a5c2e72fe29e6a41a62b343
+config_sha256=461d07e6c0a7af07e77049ddbc844144cae6f6eea707c2304c4d28fc8d243171
+reset_entries=homologation-seed-disabled.json,graveyard,
+terminal_units=0

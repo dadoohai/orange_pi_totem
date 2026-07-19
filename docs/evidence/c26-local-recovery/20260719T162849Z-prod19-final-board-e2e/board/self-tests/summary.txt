@@ -1,0 +1,14 @@
+PASS config-writer-self
+PASS config-writer-extended
+PASS settings-trigger
+PASS settings-policy
+PASS config-contract
+PASS wifi-adapter
+PASS qr-pairing
+PASS visual-splash
+PASS status-aggregate
+PASS status-preview
+PASS writer-handoff
+PASS visual-wizard
+PASS minimal-server
+PASS local-wizard

@@ -1,0 +1,13 @@
+product_reset_code=ok
+product_reset_operation_id=9766fc98-346e-460b-bf1d-0ecc4751391e
+product_reset_phase=finalized
+product_reset_local_complete=true
+product_reset_pending_credential=false
+product_reset_finalize_result=revoked
+product_reset_graveyard_count=1
+product_reset_receipt_present=true
+product_reset_gc_pending=false
+product_reset_secret_public=false
+product_reset_api_url_public=false
+product_reset_environment_public=false
+product_reset_station_public=false

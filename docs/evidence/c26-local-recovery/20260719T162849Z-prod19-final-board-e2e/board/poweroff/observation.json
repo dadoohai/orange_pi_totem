@@ -1,0 +1,17 @@
+{
+  "schema": "dadooh.c26.poweroff_observation.v1",
+  "requested_at_utc": "2026-07-19T17:35:42Z",
+  "boot_id_before": "4c2f9a39-ba1c-4625-827e-460f1a33adcc",
+  "ping_became_unreachable_on_sample": 10,
+  "consecutive_down_checks_after_shutdown": 12,
+  "manual_power_restore_required": true,
+  "boot_id_after": "d711dbac-e712-40ed-90e4-df53ea0609ba",
+  "new_boot_observed": true,
+  "config_hash_preserved": true,
+  "settings_context_hash_preserved": true,
+  "orientation_hash_preserved": true,
+  "update_policy_hash_preserved": true,
+  "terminal_action_state_clean": true,
+  "player_active": true,
+  "player_restarts": 0
+}

@@ -1,0 +1,83 @@
+2026-07-19T17:30:34Z
+boot_id=4c2f9a39-ba1c-4625-827e-460f1a33adcc
+current=releases/c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions
+previous=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+d9bab6998f444aff99f8b5b44c529e74ed790c181dad9a43ed2572928afaa0d1  /data/core/totem/state.json
+461d07e6c0a7af07e77049ddbc844144cae6f6eea707c2304c4d28fc8d243171  /data/config/config.json
+2343e14556932579ba68f9a9e809bb04a6fd76e36bc2e219ee1402ee244c5be3  /data/state/totem-settings/last-settings.json
+947be60d1862d21cad03b8ac9bfd415a7a97f502e325293dc753ec97750dab1d  /data/state/totem-display/orientation.json
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /data/updates/policy.json
+active
+NRestarts=0
+{"credentials_written": false, "http_status": 200}
+product_reset_code=noop
+product_reset_operation_id=none
+product_reset_phase=no_intent
+product_reset_local_complete=false
+product_reset_pending_credential=false
+product_reset_graveyard_count=0
+product_reset_receipt_present=false
+product_reset_gc_pending=false
+product_reset_secret_public=false
+product_reset_api_url_public=false
+product_reset_environment_public=false
+product_reset_station_public=false
+{
+  "component": "totem-core",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/core/totem",
+  "current_symlink_target": "releases/c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions",
+  "data_root": "/data",
+  "previous_symlink_target": "releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions",
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "totem-core",
+    "current": {
+      "applied_at_utc": "2026-07-19T17:30:16Z",
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-19T03:55:05Z",
+      "path": "releases/c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions",
+      "payload_sha256": "d95980da061c1497fb144894e6308cb6685eaf5a1f74b9b4824803391f466d4d",
+      "source": "image_embed_previous",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "a09bf390f15763839d330555e6aff4d2eb0c1924",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions",
+      "via": "manual_rollback"
+    },
+    "last_operation": {
+      "finished_at_utc": "2026-07-19T17:30:16Z",
+      "rolled_back_to": "c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions",
+      "started_at_utc": "2026-07-19T17:29:39Z",
+      "status": "success",
+      "type": "rollback"
+    },
+    "previous": {
+      "channel": "homologation",
+      "manifest_created_at_utc": "2026-07-19T03:55:43Z",
+      "path": "releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions",
+      "payload_sha256": "2027d9ac9d9b76daa8ca999b90dd20f2aa15f69f7fa36ee97df4492305d0d0f5",
+      "source": "image_embed",
+      "source_branch": "foundation-v0.1",
+      "source_commit": "5df952130576664785d1825e0ff790e72e9fc9f7",
+      "source_repo": "dadoohai/orange_pi_totem",
+      "version": "c26.16-local-recovery-20260719-5df9521-final-guarded-actions"
+    },
+    "schema": "dadooh.totem.update.state.v1",
+    "updated_at": "2026-07-19T04:47:13Z"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}

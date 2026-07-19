@@ -1,0 +1,12 @@
+{
+  "schema": "dadooh.c26.restart_observation.v1",
+  "boot_id_before": "75f171b0-b1bf-460c-ad7a-d2858ba87867",
+  "boot_id_after": "f9d79586-d511-4213-80c4-101dd2486584",
+  "new_boot_observed": true,
+  "config_preserved": true,
+  "settings_context_preserved": true,
+  "orientation_preserved": true,
+  "update_policy_preserved": true,
+  "player_active": true,
+  "player_restarts": 0
+}

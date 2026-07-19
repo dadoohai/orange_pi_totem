@@ -1,0 +1,8 @@
+rc=40
+before_current=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+after_current=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+before_previous=releases/c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions
+after_previous=releases/c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions
+state_unchanged=true
+2026-07-19T17:06:05Z INFO update_lock_acquired operation=rollback:totem-core lock=/run/totem-updatectl.lock
+2026-07-19T17:06:05Z WARN rollback_blocked_by_component_guard component=totem-core reason=product_reset_graveyard_present rc=40

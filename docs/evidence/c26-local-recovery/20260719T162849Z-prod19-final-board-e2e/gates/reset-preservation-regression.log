@@ -1,0 +1,6 @@
+test_product_reset_preserves_real_orientation_and_external_wifi_boundary (scripts.qa.c26_local_recovery_static_test.C26LocalRecoveryContractTest.test_product_reset_preserves_real_orientation_and_external_wifi_boundary) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 11.630s
+
+OK

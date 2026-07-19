@@ -1,0 +1,24 @@
+
+collected_at_utc=2026-07-19T20:06:40Z
+boot_id=d711dbac-e712-40ed-90e4-df53ea0609ba
+core_current=releases/c26.17-product-stable-20260719T193306Z-0e02019-actions
+core_previous=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+461d07e6c0a7af07e77049ddbc844144cae6f6eea707c2304c4d28fc8d243171  /data/config/config.json
+947be60d1862d21cad03b8ac9bfd415a7a97f502e325293dc753ec97750dab1d  /data/state/totem-display/orientation.json
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /data/updates/policy.json
+wifi_profiles_begin
+Wired connection 1:c3d932e5-d09d-3aa4-9386-4690614b0d34:802-3-ethernet
+lo:8d29281c-ac4c-406d-8d3d-cbd58cff7ffb:loopback
+wifi_profiles_end
+MainPID=8780
+Result=success
+NRestarts=0
+ActiveState=active
+SubState=running
+Result=exit-code
+ExecMainStatus=45
+ActiveState=failed
+SubState=failed
+degraded
+
+__EXPECT_EXIT_CODE__=0

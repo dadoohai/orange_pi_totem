@@ -1,0 +1,9 @@
+test_existing_valid_config_uses_active_config (__main__.ProductionApplyPolicySelfTest.test_existing_valid_config_uses_active_config) ... ok
+test_invalid_config_falls_back_to_pairing_without_read_claim (__main__.ProductionApplyPolicySelfTest.test_invalid_config_falls_back_to_pairing_without_read_claim) ... ok
+test_new_device_uses_qr_ready_private_source_none (__main__.ProductionApplyPolicySelfTest.test_new_device_uses_qr_ready_private_source_none) ... ok
+test_written_policy_is_private_and_has_no_lab_claim (__main__.ProductionApplyPolicySelfTest.test_written_policy_is_private_and_has_no_lab_claim) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.007s
+
+OK

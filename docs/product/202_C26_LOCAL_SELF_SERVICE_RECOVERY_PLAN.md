@@ -1,20 +1,19 @@
 # 202 - C26 - Recuperacao local pelo usuario
 
-Status: C26.5 provada ponta a ponta na placa `prod16` pelo updater governado, incluindo reset
-online, reset offline com corte fisico, revogacao, nova ativacao,
-rollback/reaplicacao, reinicio e desligamento reais. A auditoria final rejeitou
-a `prod17`: uma instalacao limpa teria apenas `current`, sem `previous`, e por
-isso ocultaria a restauracao. A proxima imagem deve sair com C26.5 como retorno
-conhecido e uma C26 sucessora distinta como ativa.
+Status: fechado funcionalmente na imagem `prod19`. C26.16 ativa e C26.15
+anterior passaram a regua offline, gravacao limpa e campanha fisica completa:
+fluxo `F10`, reinicio, restauracao interrompida por corte real, revogacao exata,
+nova ativacao, roundtrip OTA, desligamento e saude final do player. A mesma
+arvore executavel foi promovida como C26.17 stable e aplicada remotamente.
 
-Data: 2026-07-18
+Data: 2026-07-19
 
 ## Missao
 
 Reduzir visitas tecnicas dando a uma pessoa nao tecnica poucos comandos locais
 capazes de recuperar o totem ou devolve-lo ao inicio da configuracao. O fluxo
 deve funcionar sem suporte remoto, ter baixo atrito cognitivo, sobreviver a
-interrupcao e preservar a baseline `prod15`.
+interrupcao e nao regredir a baseline anterior `prod15`.
 
 Prioridade: primeiro oferecer ancoras amplas e previsiveis. Diagnostico
 granular e tratamento de casos especificos evoluem depois, a partir de falhas
@@ -496,5 +495,63 @@ passaram o gate semantico atual,
 enquanto C26.13 e C26.14 foram explicitamente reprovadas por ele.
 
 A composicao da `prod19` usa C26.16 como `current` e C26.15 como `previous`.
-Isso ainda e uma candidata offline: a regua completa passou `85/85`, mas faltam
-a auditoria da imagem e a prova fisica na placa antes de promover a baseline.
+A imagem passou a regua completa `85/85`, auditoria offline, integridade do
+rootfs e a campanha fisica decisiva na placa.
+
+## Fechamento prod19
+
+Imagem aceita:
+
+- tag `c18-hwdecode-prod-19-c26`;
+- versao `c18.image-prod.19-c26`;
+- SHA256
+  `991ee90b8c042cbd1424c29f8c5062668c3125c999a24e32c01f14d9b4ec1ebc`;
+- C26.16 atual
+  `c26.16-local-recovery-20260719-5df9521-final-guarded-actions`;
+- C26.15 anterior
+  `c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions`.
+
+Provas na placa gravada do zero:
+
+- boot limpo, identidade exata, dois slots compativeis e 14 grupos de self-test;
+- abertura pelo caminho real de input `F10` e confirmacoes com foco inicial em
+  `Cancelar`;
+- reinicio real preservando configuracao, orientacao, policy e playback;
+- restauracao iniciada sem acesso ao backend, corte fisico e retomada da mesma
+  operacao no boot;
+- uma unica revogacao autoritativa, token antigo passando de HTTP 200 para 403,
+  nova ativacao em HTTP 200 e token antigo ainda recusado depois dela;
+- rollback C26.16 -> C26.15 e retorno C26.15 -> C26.16 pelo updater governado,
+  sem perder configuracao nem reiniciar o player;
+- desligamento real, permanencia offline ate religamento manual e boot final
+  sem estado residual;
+- health final da campanha com 60/60 amostras em `v4l2request-copy`, playback
+  avancando, zero falha de carga, zero restart e nenhum erro de kernel ou
+  armazenamento.
+
+C26.15, C26.16 e C26.17 possuem identidades de pacote diferentes, mas a mesma
+arvore executavel byte a byte. Os roundtrips provam os mecanismos OTA, o canal
+publico e a compatibilidade do slot de retorno; nao provam implementacoes
+funcionalmente diferentes.
+
+A imagem `prod19` e a referencia de gravacao. A release C26.17 stable, tag
+`totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions`, foi
+publicada com seis assets validados e alvo exato
+`0e02019a83b092a0915ca6dfa9a020fc33f6a341`. Na placa, rollback para C26.16,
+download/aplicacao publica de C26.17, no-op e gate operacional passaram. O
+health depois do apply publico passou com 25 amostras, tres transicoes e zero
+restart/falha de carga.
+
+Uma janela anterior de 60 segundos foi preservada como resultado negativo: o
+gate classificou dois episodios de uma unica amostra nas bordas de transicao.
+Cinco episodios completos progrediram, sem restart, falha de carga, kernel ou
+armazenamento. A repeticao imediata e o health posterior ao apply publico
+passaram; o comportamento de amostragem fica como hardening, nao como resultado
+apagado.
+
+O seletor antigo da `prod15` recusou C26.17 por feature incompativel sem mutar o
+estado e continuou selecionando C21.24. A rodada nao cria reinstalacao integral,
+particao de recovery ou raiz A/B.
+
+Evidencia:
+`docs/evidence/c26-local-recovery/20260719T162849Z-prod19-final-board-e2e/`.

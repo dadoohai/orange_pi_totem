@@ -1,0 +1,23 @@
+schema=dadooh.c26.prod15_compatibility_probe.v1
+collected_at_utc=2026-07-19T20:00:39Z
+prod15_image_repo_commit=ab892251e434aa1bcd4fa4ab773fc5f0025ee468
+prod15_updater_sha256=3c39aa4dcda793eb52a9eeebbe6c03e38d1a8c2080c8814ea938ae21e559b282
+candidate_manifest_sha256=c0dd37330e4577c808cc8f871eb021186a7c1b64501158f941b4d986333952d5
+candidate_payload_sha256=0bbd935fc4a589f65438f380acecdb8d38c1877bd14cf0ba53dd16bd12f823d3
+files_before_begin
+updates/policy.json 184
+files_before_end
+exit_code=41
+stdout_begin
+stdout_end
+stderr_begin
+2026-07-19T20:00:39Z INFO update_lock_acquired operation=apply-local:totem-core lock=/tmp/c26-prod15-final-exact-reject.oJooHq/update.lock
+2026-07-19T20:00:39Z ERROR local_manifest_validate_failed err=manifest requires unsupported updater features: ['c26-product-reset-gc-static-v1']
+stderr_end
+files_after_begin
+logs/totem-update.log 284
+updates/policy.json 184
+files_after_end
+current_link=absent
+state_file=absent
+result=prod15_rejected_exact_final_c26_feature_before_release_state_or_symlink

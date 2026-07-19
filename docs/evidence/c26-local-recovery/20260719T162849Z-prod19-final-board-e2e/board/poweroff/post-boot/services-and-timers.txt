@@ -1,0 +1,22 @@
+kiosky-player.service_active=active
+kiosky-player.service_enabled=enabled
+totem-settings-trigger.service_active=active
+totem-settings-trigger.service_enabled=enabled
+totem-open-settings.service_active=inactive
+totem-open-settings.service_enabled=static
+totem-firstboot-gate.service_active=inactive
+totem-firstboot-gate.service_enabled=enabled
+totem-product-reset-gc.service_active=inactive
+totem-product-reset-gc.service_enabled=static
+totem-update-agent.timer_active=active
+totem-update-agent.timer_enabled=enabled
+totem-player-runtime-update-agent.timer_active=active
+totem-player-runtime-update-agent.timer_enabled=enabled
+NRestarts=0
+ActiveState=active
+SubState=running
+NEXT                        LEFT       LAST                        PASSED    UNIT                                    ACTIVATES
+Sun 2026-07-19 17:55:22 UTC 6min left  Sun 2026-07-19 17:22:43 UTC 25min ago totem-update-agent.timer                totem-update-agent.service
+Sun 2026-07-19 18:05:39 UTC 17min left Sun 2026-07-19 17:31:43 UTC 16min ago totem-player-runtime-update-agent.timer totem-player-runtime-update-agent.service
+
+2 timers listed.

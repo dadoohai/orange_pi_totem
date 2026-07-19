@@ -1,6 +1,6 @@
 # C18 OTA - fonte da verdade operacional
 
-Estado em 2026-07-18. Este documento e o radar curto para decidir os proximos
+Estado em 2026-07-19. Este documento e o radar curto para decidir os proximos
 passos de OTA. O contrato detalhado continua em `docs/UPDATE_CONTRACT.md`; este
 arquivo existe para nao perder as decisoes praticas enquanto fechamos a etapa
 operacional.
@@ -39,28 +39,31 @@ rollback se necessario.
 
 Hoje a C18 tem dois caminhos reais:
 
-- `totem-core`: auto-pull stable C21.24; o roundtrip completo foi provado na
-  `prod14`, e a `prod15` embutiu/adotou a versao exata e confirmou no-op por
-  timer real depois do reboot;
+- `totem-core`: auto-pull publico stable C26.17 para a `prod19`. A release
+  publica foi baixada, aplicada, validada e consultada novamente como no-op na
+  placa real; C26.16 virou o retorno. Clientes antigos que nao entendem o
+  contrato C26 ignoram essa release e continuam selecionando a C21.24 retida;
 - `player-runtime`: auto-pull de producao fechado somente para o alvo exato
   C25B `c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4`, com timer
   real, no-op, rollback, reaplicacao e 600 segundos continuos limpos. Qualquer
   alvo futuro continua bloqueado ate nova autorizacao presa por hashes.
 
-Estado de distribuicao vigente: `prod15` + C25B + C21.24 e a referencia aceita.
-A imagem completou na placa wizard, playback, apply exato, no-op, freeze,
-rollback, restauracao, reboot e os dois timers reais pos-reboot. O gate global
-e tres perspectivas independentes fecharam sem blocker para a baseline.
-`prod14` passa a ser a referencia anterior. `prod9`, `prod10`, `prod11` e
-`prod13` continuam bloqueadas pelos achados registrados no historico abaixo;
-`prod12` permanece bancada intermediaria, nao imagem final.
+Estado de distribuicao vigente: novas gravacoes usam `prod19` + C25B +
+C26.16/C26.15 embutidas. Depois do primeiro auto-pull, o estado esperado e
+C26.17 atual e C26.16 anterior. A imagem completou boot limpo, wizard,
+playback, roundtrip OTA, reinicio, restauracao interrompida por corte real,
+revogacao exata, nova ativacao, desligamento e boot final. `prod15` passa a ser
+a referencia anterior e continua operando com C21.24 como release compativel.
+`prod9`, `prod10`, `prod11`, `prod13`, `prod17` e `prod18` continuam bloqueadas
+pelos achados registrados no historico; `prod12` e `prod16` permanecem bancadas
+intermediarias, nao imagens finais.
 
 O M5 anterior nao deve ser reaberto. A arquitetura C24 para reconciliar
 a fonte e autorizar alvos futuros sem regravacao esta aprovada, mas foi movida
-para roadmap. A prioridade atual e fechar M10: recuperacao local simples para
-o usuario. C26.5 ja manteve `F10` abrindo o wizard atual e adicionou acesso
-discreto a reiniciar, desligar com seguranca e `Restaurar para configuracao
-inicial`. A restauracao revoga a ativacao exclusiva atual quando existir,
+para roadmap. O M10 esta fechado na `prod19`: `F10` continua abrindo o wizard
+atual e oferece acesso discreto a reiniciar, desligar com seguranca e
+`Restaurar para configuracao inicial`. A restauracao revoga a ativacao
+exclusiva atual quando existir,
 remove apenas a copia local de chave legada, limpa config/conteudo/estado
 operacional e preserva Wi-Fi, orientacao, imagem e toda a governanca OTA. Ela
 nao e reinstalacao do SO: corrupcao de boot/rootfs continua exigindo
@@ -107,9 +110,16 @@ guiadas no proprio aparelho. M11 nao bloqueia M10.
   repetido. C26.13/C26.14 nao devem ser embutidas;
 - C26.15 e C26.16 sao os dois slots sucessores: possuem os mesmos executaveis
   corrigidos, origens imutaveis distintas e passaram o gate semantico atual;
-- pendente macro: fechar a composicao da nova imagem, executar a regua completa,
-  auditar o artefato, prova-lo na placa e so entao promover a baseline.
-  Ate la, a referencia publica continua `prod15` + C25B + C21.24.
+- a `prod19` exata passou `85/85`, auditoria offline, gravacao limpa e campanha
+  fisica completa. Ela substitui a `prod15` como referencia de gravacao;
+- a mesma arvore executavel de C26.16 foi promovida como C26.17 stable, presa
+  ao commit `0e02019a83b092a0915ca6dfa9a020fc33f6a341`. A placa fez rollback para
+  C26.16, baixou a release publica, reaplicou C26.17 e passou no-op e health;
+- o seletor antigo da `prod15` recusou C26.17 por contrato incompativel sem
+  mutacao e encontrou C21.24. Isso preserva a frota anterior sem impedir a
+  evolucao da `prod19`;
+- M10 esta fechado. O proximo nivel de recuperacao integral permanece M11 e nao
+  e inferido a partir desta entrega.
 
 ## Repositorio de entrega
 
@@ -123,7 +133,7 @@ O repo `kiosky-player`, branch `appliance-v0.1`, sera a fonte editavel do
 comportamento depois da convergencia C24. Ele nao publica direto para placas.
 Toda entrega para cliente continua passando por um snapshot de commit exato na
 frente `player-runtime` do fluxo C18. Ate a convergencia fechar, o snapshot
-C25B e a verdade funcional da referencia `prod15`.
+C25B e a verdade funcional da referencia `prod19`.
 
 Nota de nome: em runtime o servico ainda pode se chamar `kiosky-player.service`.
 Isso nao torna `kiosky-player` uma rota de release C18. O launcher C18 deve
@@ -149,8 +159,9 @@ imagem/fallback quando nao houver.
    cache, systemd, kernel ou updater novo.
 3. `player-runtime` nao pode carregar MPV/ffmpeg/kernel/midia/config/cache; o
    pacote atual e deliberadamente estreito.
-4. Auto-pull de `totem-core` C21.24 e de `player-runtime` C25B estao provados; isso nao
-   autoriza `latest` amplo nem futuros pacotes de player por inferencia.
+4. Auto-pull de `totem-core` C26.17 na `prod19` e de `player-runtime` C25B
+   estao provados. C21.24 permanece fallback para clientes antigos; isso nao
+   autoriza futuros pacotes de player por inferencia.
 5. Regravar imagem em laboratorio e permitido como reset/prova, mas nao conta
    como OTA de producao.
 6. Toda atualizacao real precisa ter dry-run, apply, validacao e rollback.
@@ -486,8 +497,10 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 
 ## Estado da referencia e pendencias
 
-- `prod15` + C25B + C21.24 e a referencia de producao comprovada. `prod14`
-  permanece como referencia anterior;
+- `prod19` + C25B + C26.16/C26.15 embutidas e a referencia de producao
+  comprovada para novas gravacoes. C26.17 e o `totem-core stable` publico atual
+  para essa imagem; `prod15` permanece como referencia anterior e encontra a
+  release C21.24 compativel;
 - `prod9` esta **bloqueada e nao deve ser gravada**. Seu SHA256 e
   `4a413bc84d76de045a4e0884a1b1f60db962823e2bdca042e31e17feaee0c050`.
 - `prod10` tambem esta **bloqueada e nao deve ser gravada**. Ela resolveu os
@@ -517,7 +530,7 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
 - a `prod15` incorporou C21.24 e o avaliador image-bound corrigido, foi gravada
   do zero e concluiu wizard, playback, OTA C25B, no-op, freeze `rc=44`, rollback
   ao fallback da imagem, restauracao, reboot e no-op pelos dois timers reais;
-  a auditoria final promoveu a `prod15` como referencia atual;
+  a auditoria daquela rodada promoveu a `prod15`, hoje referencia anterior;
 - a `prod16` e a bancada C26 atual. C26.5 chegou por OTA e completou a campanha
   funcional de recuperacao local; isso nao promove a imagem candidata por
   inferencia;
@@ -526,6 +539,18 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
   `696bd671cfc819c51c8dcc977633d0a803fb2c986d09c3b21a2c6d099d27d00b`.
   mas foi rejeitada antes do flash porque nao possui `previous`. A sucessora
   deve ter dois slots C26 distintos e aptos a restauracao;
+- a `prod18` tambem foi rejeitada antes do flash: seu slot anterior reabria
+  contratos inseguros de transporte e seu slot atual ainda aceitava entradas
+  que so falhariam depois do ponto destrutivo;
+- a `prod19`, SHA256
+  `991ee90b8c042cbd1424c29f8c5062668c3125c999a24e32c01f14d9b4ec1ebc`,
+  embute C26.16 atual e C26.15 anterior. Foi gravada do zero e passou boot,
+  onboarding, playback, `F10`, reinicio, restauracao com corte real, revogacao
+  exata, nova ativacao, roundtrip OTA, desligamento e boot final;
+- C26.17 stable foi publicada com seis assets validados. A placa foi
+  rollbackada para C26.16 e o servico publico baixou/aplicou C26.17; a consulta
+  seguinte foi no-op, o gate operacional passou e o health final ficou verde
+  com 25 amostras, tres transicoes e zero restart/falha de carga;
 - manter como frente separada o RCA da ativacao que uma vez ficou em espera ate
   `F5`; o onboarding concluiu, mas a experiencia ainda nao e considerada
   encerrada por esse caso;
@@ -563,8 +588,9 @@ rollback.
 
 Leitura pratica:
 
-- novas placas devem sair com a `prod15`, C25B como
-  fallback/target exato do player e C21.24 como stable atual do core;
+- novas placas devem sair com a `prod19`, C25B como fallback/target exato do
+  player e C26.16/C26.15 embutidas. O auto-pull adota C26.17 stable; clientes
+  antigos continuam encontrando C21.24;
 - `totem-core` e o auto-pull padrao para wizard e produto; apply remoto, no-op,
   rollback, restauracao e reboot estao provados na placa;
 - `player-runtime` esta fechado para C25B por caminho pinado/hash-bound, health
@@ -578,12 +604,14 @@ Leitura pratica:
 
 Resultado dessa decisao: a linha de producao pragmatica foi materializada:
 
-1. imagem `prod15`, sem marcador `not_for_production`;
+1. imagem `prod19`, sem marcador `not_for_production` e com recuperacao local
+   C26 comprovada;
 2. policy de producao e timer habilitado para auto-pull de `totem-core`;
 3. timer real aplicando update remoto, no-op, rollback e restauracao;
 4. especificacao curta para devs e fabrica;
 5. ponte publica exact-target para C25B, com rollback e health real;
-6. auditoria final concluida; `prod15` e a referencia aceita.
+6. auditoria pre-publicacao concluida sem blocker; o fechamento documental e a
+   auditoria independente post-publicacao encerram a rastreabilidade da rodada.
 
 ## Historico V3/M5 - C22/prod7
 
@@ -965,6 +993,15 @@ podemos escolher entre:
 22. O commit `a09bf39` fechou a transacao sucessora. C26.15 e C26.16 foram
     geradas de commits distintos, possuem os mesmos 21 arquivos regulares,
     incluindo 19 executaveis em `bin/`, e passaram o gate semantico atualizado;
-    C26.13/C26.14 agora reprovam. A
-    `prod19` passa a ser composta com C26.16 atual e C26.15 anterior, ainda sem
-    claim de imagem pronta ate regua completa, auditoria offline e prova na placa.
+    C26.13/C26.14 agora reprovam. A `prod19` foi composta com C26.16 atual e
+    C26.15 anterior, passou `85/85`, auditoria offline e campanha fisica na
+    placa. Reinicio, restauracao offline interrompida por corte, revogacao,
+    reativacao, roundtrip OTA, desligamento e health final passaram; a imagem
+    substitui a `prod15` como referencia de gravacao.
+23. O alinhamento publico foi fechado pela C26.17 stable, tag
+    `totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions`. O
+    pacote executavel e byte-identico a C26.16, mas possui identidade stable e
+    evidencias presas a imagem `prod19`. A placa fez rollback para C26.16,
+    baixou/aplicou C26.17 pelo servico de producao, passou no-op, gate
+    operacional e health. O seletor antigo ignorou C26.17 e encontrou C21.24,
+    preservando compatibilidade com a `prod15`.

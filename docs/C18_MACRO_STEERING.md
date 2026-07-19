@@ -343,8 +343,9 @@ deve bloquear redes abertas comuns, copy correta e simplificacao do fluxo.
 
 ### M10 - Recuperacao Local Pelo Usuario
 
-Status: direcao refinada e aprovada para execucao em 2026-07-17; os novos
-controles ainda nao estao implementados.
+Status: fechado funcionalmente na `prod19` em 2026-07-19. Campanha fisica,
+publicacao stable e prova remota passaram; resta somente o fechamento
+documental e a auditoria independente post-publicacao.
 
 Valor: reduzir visitas tecnicas permitindo que uma pessoa nao tecnica entenda e
 resolva localmente as falhas comuns, inclusive quando o totem estiver offline.
@@ -369,9 +370,9 @@ Direcao:
   a acao so aparece quando `current` e `previous` entendem o reset, e auto-pull
   fica adiado pelo guard de settings ja enforcado enquanto houver operacao
   pendente;
-- a `prod15` precisa provar em boot graph e placa que o firstboot recria esse
-  guard antes dos agentes com atraso de 10/20 minutos; se nao provar, a ordem
-  systemd entra na proxima imagem antes de expor a acao;
+- a imagem sucessora precisa provar em boot graph e placa que o firstboot
+  recria esse guard antes dos agentes com atraso de 10/20 minutos. A `prod19`
+  incorporou e provou essa ordem antes de expor a acao;
 - reboot e poweroff passam pelo shell pai protegido, mantendo os locks de
   settings/update e sem comando livre vindo da UI;
 - reinstalacao integral de boot/rootfs continua sendo regravacao externa;
@@ -456,6 +457,24 @@ tenta novamente, mas compartilha cota por IP. Portanto a baseline esta fechada;
 rollout concentrado sob o mesmo NAT nao deve ser prometido ate existir indice
 stable sem polling ou credencial de leitura por dispositivo/coorte. Evidencia:
 `docs/evidence/c18-update-validation/20260717T140500Z-prod15-postflash-board-validation/`.
+
+## Consolidacao Prod19 / C26
+
+Fechamento em 2026-07-19: `prod19` + C25B + C26.16 atual/C26.15 anterior passa
+a ser a baseline de gravacao. A imagem exata foi gravada do zero e concluiu
+boot, onboarding, playback com HW decode, fluxo `F10`, reinicio, restauracao
+offline interrompida por corte real, retomada da mesma operacao, revogacao
+exata, reativacao, roundtrip OTA, desligamento e boot final saudavel.
+
+O SHA256 da imagem e
+`991ee90b8c042cbd1424c29f8c5062668c3125c999a24e32c01f14d9b4ec1ebc`.
+C26.15/C26.16 continuam embutidas como os dois slots de fabrica. A mesma arvore
+executavel foi promovida como C26.17 stable, presa ao commit `0e02019`, e a
+placa real baixou/aplicou essa release depois de rollback para C26.16; no-op,
+gate operacional e health passaram. Clientes antigos ignoram C26.17 por
+contrato e continuam encontrando C21.24. `prod15` e a baseline anterior;
+reinstalacao completa permanece M11. Evidencia:
+`docs/evidence/c26-local-recovery/20260719T162849Z-prod19-final-board-e2e/`.
 
 ## Checklist Contra Hiperfoco
 
@@ -572,5 +591,7 @@ Enquanto nada mudar, a ordem de execucao e:
     rollback ou a baseline ja comprovados.
 17. Para o primeiro lote esperado de duas ou tres placas por rede, o limite
     publico compartilhado permanece conhecido, mas nao e a maior entrega agora.
-    A proxima frente e M10: recuperacao local simples e segura pelo usuario,
-    conforme o plano 202.
+    M10 foi fechado na `prod19`: as tres acoes locais, a retomada apos corte, a
+    revogacao exata, o auto-pull C26.17 e a saude final passaram na placa. A
+    proxima decisao volta para M4 e para a maior frente visivel de produto; M11
+    continua roadmap e nao deve reabrir C26 sem regressao comprovada.

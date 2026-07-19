@@ -1,0 +1,12 @@
+product_reset_code=noop
+product_reset_operation_id=none
+product_reset_phase=no_intent
+product_reset_local_complete=false
+product_reset_pending_credential=false
+product_reset_graveyard_count=0
+product_reset_receipt_present=false
+product_reset_gc_pending=false
+product_reset_secret_public=false
+product_reset_api_url_public=false
+product_reset_environment_public=false
+product_reset_station_public=false

@@ -1,0 +1,40 @@
+
+{
+  "component": "player-runtime",
+  "component_apply_guard_ok": true,
+  "component_apply_guard_reason": "settings_session_inactive",
+  "component_base": "/data/player-runtime",
+  "current_symlink_target": null,
+  "data_root": "/data",
+  "previous_symlink_target": null,
+  "schema": "dadooh.totem.update.state.v1",
+  "service_active": true,
+  "state": {
+    "component": "player-runtime",
+    "current": null,
+    "last_operation": {
+      "finished_at_utc": "2026-05-11T22:00:55Z",
+      "reason": "manual_reconcile",
+      "started_at_utc": "2026-05-11T22:00:55Z",
+      "status": "noop",
+      "type": "reconcile"
+    },
+    "previous": null,
+    "schema": "dadooh.totem.update.state.v1"
+  },
+  "token_file_present": false,
+  "update_policy": {
+    "allow_downgrade": false,
+    "allow_prerelease": false,
+    "allowed_components": [
+      "totem-core"
+    ],
+    "device_channel": "stable",
+    "device_track": "c18-hwdecode",
+    "policy_source": "file",
+    "schema": "dadooh.totem.update.policy.v1"
+  }
+}
+data_current=data_previous=image_commit=54308e4a09ef693dbfb3d6b31ce9626908ca0c16
+
+__EXPECT_EXIT_CODE__=0

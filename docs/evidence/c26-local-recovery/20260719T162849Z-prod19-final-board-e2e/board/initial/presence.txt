@@ -1,0 +1,11 @@
+
+/data/config/config.json absent
+/data/core/totem/state.json present mode=644 owner=root:root type=regular file
+/data/player-runtime/state.json present mode=644 owner=root:root type=regular file
+/run/totem/settings-session.lock absent
+/data/state/product-reset/intent.json absent
+/data/state/product-reset/gc-pending.json absent
+config_regular_files=0
+reset_entries=0
+
+__EXPECT_EXIT_CODE__=0

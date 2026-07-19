@@ -1,0 +1,9 @@
+current=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+previous=releases/c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions
+b5d734794136d33f4a0efda5b1c626ad1ad78b535a5c2e72fe29e6a41a62b343  /data/core/totem/state.json
+461d07e6c0a7af07e77049ddbc844144cae6f6eea707c2304c4d28fc8d243171  /data/config/config.json
+2343e14556932579ba68f9a9e809bb04a6fd76e36bc2e219ee1402ee244c5be3  /data/state/totem-settings/last-settings.json
+947be60d1862d21cad03b8ac9bfd415a7a97f502e325293dc753ec97750dab1d  /data/state/totem-display/orientation.json
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /data/updates/policy.json
+225e6a31afec16d0084d29d890455d224eb9fe278dfeedfa6fc44d0d337966fa  /data/player-runtime/state.json
+config_mode=640 config_owner=root:totem config_size=1545 config_links=1

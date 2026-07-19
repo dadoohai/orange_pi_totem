@@ -1,0 +1,46 @@
+
+phase=public_remote_apply
+collected_at_utc=2026-07-19T20:17:45Z
+initial_current=releases/c26.17-product-stable-20260719T193306Z-0e02019-actions
+initial_previous=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+2026-07-19T20:17:45Z INFO update_lock_acquired operation=rollback:totem-core lock=/run/totem-updatectl.lock
+{
+  "rollback": "ok",
+  "rolled_to": "c26.16-local-recovery-20260719-5df9521-final-guarded-actions"
+}
+2026-07-19T20:18:22Z INFO manual_rollback_ok rolled_to=c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+rollback_rc=0
+rollback_current=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+rollback_previous=releases/c26.17-product-stable-20260719T193306Z-0e02019-actions
+service_start_rc=0
+final_current=releases/c26.17-product-stable-20260719T193306Z-0e02019-actions
+final_previous=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+461d07e6c0a7af07e77049ddbc844144cae6f6eea707c2304c4d28fc8d243171  /data/config/config.json
+947be60d1862d21cad03b8ac9bfd415a7a97f502e325293dc753ec97750dab1d  /data/state/totem-display/orientation.json
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /data/updates/policy.json
+Result=success
+ExecMainStatus=0
+ActiveState=inactive
+SubState=dead
+MainPID=8780
+Result=success
+NRestarts=0
+ActiveState=active
+SubState=running
+running
+Jul 19 20:18:22 orangepizero3 systemd[1]: Starting totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull)...
+Jul 19 20:18:23 orangepizero3 totem-updatectl[32031]: 2026-07-19T20:18:23Z INFO update_lock_acquired operation=apply-github-latest:totem-core lock=/run/totem-updatectl.lock
+Jul 19 20:18:23 orangepizero3 totem-updatectl[32031]: 2026-07-19T20:18:23Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json dest=/data/updates/incoming/totem-core/github-select-1784492303/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json
+Jul 19 20:18:24 orangepizero3 totem-updatectl[32031]: 2026-07-19T20:18:24Z INFO apply_start source=github:dadoohai/orange_pi_totem:totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions manifest=/data/updates/incoming/totem-core/github-select-1784492303/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json
+Jul 19 20:18:24 orangepizero3 totem-updatectl[32031]: 2026-07-19T20:18:24Z INFO downloading_payload version=c26.17-product-stable-20260719T193306Z-0e02019-actions dest=/data/updates/incoming/totem-core/c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.tar.gz
+Jul 19 20:18:25 orangepizero3 totem-updatectl[32031]: 2026-07-19T20:18:25Z INFO payload_downloaded bytes=285556 sha256=0bbd935fc4a589f65438f380acecdb8d38c1877bd14cf0ba53dd16bd12f823d3
+Jul 19 20:18:25 orangepizero3 totem-updatectl[32031]: 2026-07-19T20:18:25Z WARN release_dir_exists_will_overwrite path=/data/core/totem/releases/c26.17-product-stable-20260719T193306Z-0e02019-actions
+Jul 19 20:18:44 orangepizero3 totem-updatectl[32031]: 2026-07-19T20:18:44Z INFO totem_core_health_check_starting
+Jul 19 20:19:03 orangepizero3 totem-updatectl[32031]: 2026-07-19T20:19:03Z INFO apply_success version=c26.17-product-stable-20260719T193306Z-0e02019-actions
+Jul 19 20:19:03 orangepizero3 totem-updatectl[32031]: 2026-07-19T20:19:03Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c26.17-product-stable-20260719T193306Z-0e02019-actions
+Jul 19 20:19:03 orangepizero3 totem-updatectl[32031]: 2026-07-19T20:19:03Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/github-select-1784492303
+Jul 19 20:19:03 orangepizero3 systemd[1]: totem-update-agent.service: Deactivated successfully.
+Jul 19 20:19:03 orangepizero3 systemd[1]: Finished totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull).
+Jul 19 20:19:03 orangepizero3 systemd[1]: totem-update-agent.service: Consumed 32.072s CPU time.
+
+__EXPECT_EXIT_CODE__=0

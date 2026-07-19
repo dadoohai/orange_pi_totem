@@ -1,0 +1,24 @@
+
+---journal
+2026-07-19T18:11:52+0000 orangepizero3 systemd[1]: Stopping totem-settings-trigger.service - Dadooh Totem Settings Trigger...
+2026-07-19T18:11:52+0000 orangepizero3 systemd[1]: totem-settings-trigger.service: Deactivated successfully.
+2026-07-19T18:11:52+0000 orangepizero3 systemd[1]: Stopped totem-settings-trigger.service - Dadooh Totem Settings Trigger.
+2026-07-19T18:11:52+0000 orangepizero3 systemd[1]: totem-settings-trigger.service: Consumed 5.778s CPU time.
+2026-07-19T18:11:52+0000 orangepizero3 systemd[1]: Started totem-settings-trigger.service - Dadooh Totem Settings Trigger.
+2026-07-19T18:11:59+0000 orangepizero3 systemd[1]: Starting totem-open-settings.service - Dadooh Open Totem Settings (production)...
+2026-07-19T18:19:13+0000 orangepizero3 systemd[1]: totem-open-settings.service: Deactivated successfully.
+2026-07-19T18:19:13+0000 orangepizero3 systemd[1]: Finished totem-open-settings.service - Dadooh Open Totem Settings (production).
+2026-07-19T18:19:13+0000 orangepizero3 systemd[1]: totem-open-settings.service: Consumed 1min 7.158s CPU time.
+---final
+Result=success
+ExecMainStartTimestamp=Sun 2026-07-19 18:11:59 UTC
+ExecMainExitTimestamp=Sun 2026-07-19 18:19:10 UTC
+ExecMainStatus=0
+ActiveState=inactive
+SubState=dead
+InactiveEnterTimestamp=Sun 2026-07-19 18:19:13 UTC
+player_active=active
+player_restarts=0
+boot_id=d711dbac-e712-40ed-90e4-df53ea0609ba
+
+__EXPECT_EXIT_CODE__=0

@@ -1,0 +1,26 @@
+
+phase=public_noop_after_remote_apply
+collected_at_utc=2026-07-19T20:19:16Z
+before_state_sha256=c374c95782e826f70d496fee31e47caa2134e49067cf02f49badb659e36ca6e1
+before_current=releases/c26.17-product-stable-20260719T193306Z-0e02019-actions
+before_previous=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+service_start_rc=0
+after_state_sha256=c374c95782e826f70d496fee31e47caa2134e49067cf02f49badb659e36ca6e1
+after_current=releases/c26.17-product-stable-20260719T193306Z-0e02019-actions
+after_previous=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+Result=success
+ExecMainStatus=0
+ActiveState=inactive
+SubState=dead
+running
+Jul 19 20:19:16 orangepizero3 systemd[1]: Starting totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull)...
+Jul 19 20:19:16 orangepizero3 totem-updatectl[32405]: 2026-07-19T20:19:16Z INFO update_lock_acquired operation=apply-github-latest:totem-core lock=/run/totem-updatectl.lock
+Jul 19 20:19:17 orangepizero3 totem-updatectl[32405]: 2026-07-19T20:19:17Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json dest=/data/updates/incoming/totem-core/github-select-1784492356/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json
+Jul 19 20:19:18 orangepizero3 totem-updatectl[32405]: 2026-07-19T20:19:18Z INFO apply_start source=github:dadoohai/orange_pi_totem:totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions manifest=/data/updates/incoming/totem-core/github-select-1784492356/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json
+Jul 19 20:19:18 orangepizero3 totem-updatectl[32405]: 2026-07-19T20:19:18Z INFO apply_noop_already_current component=totem-core version=c26.17-product-stable-20260719T193306Z-0e02019-actions payload_sha256=0bbd935fc4a589f65438f380acecdb8d38c1877bd14cf0ba53dd16bd12f823d3 current=releases/c26.17-product-stable-20260719T193306Z-0e02019-actions
+Jul 19 20:19:18 orangepizero3 totem-updatectl[32405]: 2026-07-19T20:19:18Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/github-select-1784492356
+Jul 19 20:19:18 orangepizero3 systemd[1]: totem-update-agent.service: Deactivated successfully.
+Jul 19 20:19:18 orangepizero3 systemd[1]: Finished totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull).
+Jul 19 20:19:18 orangepizero3 systemd[1]: totem-update-agent.service: Consumed 1.935s CPU time.
+
+__EXPECT_EXIT_CODE__=0

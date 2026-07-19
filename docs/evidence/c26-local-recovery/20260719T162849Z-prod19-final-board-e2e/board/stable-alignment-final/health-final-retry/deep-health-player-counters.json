@@ -1,0 +1,9 @@
+{
+  "file_media_load_failed": 0,
+  "file_mpv_restart": 0,
+  "journal_media_load_failed": 0,
+  "journal_mpv_restart": 0,
+  "journal_query_failed": false,
+  "media_load_failed": 0,
+  "mpv_restart": 0
+}

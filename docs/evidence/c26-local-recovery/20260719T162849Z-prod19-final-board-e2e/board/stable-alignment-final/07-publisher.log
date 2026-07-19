@@ -1,0 +1,24 @@
+[publish_totem_core_github_release] repo            = dadoohai/orange_pi_totem
+[publish_totem_core_github_release] tag             = totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions
+[publish_totem_core_github_release] source_commit   = 0e02019a83b092a0915ca6dfa9a020fc33f6a341
+[publish_totem_core_github_release] tag_target      = 0e02019a83b092a0915ca6dfa9a020fc33f6a341 (will be created by gh --target)
+[publish_totem_core_github_release] title           = Totem core c26.17-product-stable-20260719T193306Z-0e02019-actions
+[publish_totem_core_github_release] prerelease      = no
+[publish_totem_core_github_release] draft           = 0
+[publish_totem_core_github_release] manifest        = /tmp/c26-stable-isolated-output-final/c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json
+[publish_totem_core_github_release] payload         = /tmp/c26-stable-isolated-output-final/c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.tar.gz
+[publish_totem_core_github_release] base_ref        = 076e18b4de08ddb98d45d0f47fc9a960f133bc80
+[publish_totem_core_github_release] gate_evidence   = /tmp/c26-stable-isolated-output-final/c26.17-product-stable-20260719T193306Z-0e02019-actions/c18-ota-release-gate.json
+[publish_totem_core_github_release] stable_evidence = /tmp/c26-stable-isolated-output-final/c26.17-product-stable-20260719T193306Z-0e02019-actions/c18-stable-promotion-evidence.json
+[publish_totem_core_github_release] stable_image_build_manifest = /tmp/c26-stable-isolated-output-final/c26.17-product-stable-20260719T193306Z-0e02019-actions/c18-production-image-build-manifest.json
+[publish_totem_core_github_release] stable_image_offline_validation = /tmp/c26-stable-isolated-output-final/c26.17-product-stable-20260719T193306Z-0e02019-actions/c18-production-image-offline-validation.json
+[publish_totem_core_github_release] stable_server_side_assets = 0
+[publish_totem_core_github_release] publish_assets  = 6
+[publish_totem_core_github_release] payload_sha256  = 0bbd935fc4a589f65438f380acecdb8d38c1877bd14cf0ba53dd16bd12f823d3
+[publish_totem_core_github_release] version         = c26.17-product-stable-20260719T193306Z-0e02019-actions
+[publish_totem_core_github_release] channel         = stable
+[publish_totem_core_github_release] mode            = publish
+[publish_totem_core_github_release] calling: gh release create totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions --repo dadoohai/orange_pi_totem --title Totem core c26.17-product-stable-20260719T193306Z-0e02019-actions --notes-file /tmp/totem-core-release-notes-oRTrTE.md --target 0e02019a83b092a0915ca6dfa9a020fc33f6a341 --latest -- <validated-assets>
+[publish_totem_core_github_release] release_url=https://github.com/dadoohai/orange_pi_totem/releases/tag/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions
+[publish_totem_core_github_release] release_tag=totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions
+[publish_totem_core_github_release] published=true

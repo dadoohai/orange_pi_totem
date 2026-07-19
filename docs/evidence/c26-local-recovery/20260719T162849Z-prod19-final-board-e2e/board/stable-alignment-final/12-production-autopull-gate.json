@@ -1,0 +1,17 @@
+{
+  "blockers": [],
+  "expected_image_tag": "c18-hwdecode-prod-19-c26",
+  "expected_release_tag": "totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions",
+  "expected_rollback_version": "c26.16-local-recovery-20260719-5df9521-final-guarded-actions",
+  "expected_version": "c26.17-product-stable-20260719T193306Z-0e02019-actions",
+  "non_claims": [
+    "does_not_thaw_player_runtime",
+    "does_not_update_media_system",
+    "does_not_publish_release"
+  ],
+  "passed": true,
+  "result_claim": "totem_core_production_timer_ready",
+  "rollback_summary": null,
+  "schema": "dadooh.c18.totem_core.production_timer_evidence_gate.v1",
+  "summary": "docs/evidence/c26-local-recovery/20260719T162849Z-prod19-final-board-e2e/board/stable-alignment-final/11-production-autopull-summary.json"
+}

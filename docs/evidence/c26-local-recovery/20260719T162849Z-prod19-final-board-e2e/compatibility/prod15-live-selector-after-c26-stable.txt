@@ -1,0 +1,40 @@
+schema=dadooh.c26.prod15_live_release_selection.v1
+collected_at_utc=2026-07-19T20:17:03Z
+updater_commit=ab892251e434aa1bcd4fa4ab773fc5f0025ee468
+exit_code=0
+stdout_begin
+{
+  "allow_prerelease": false,
+  "component": "totem-core",
+  "device_channel": "stable",
+  "dry_run": true,
+  "repo": "dadoohai/orange_pi_totem",
+  "selected_channel": "stable",
+  "selected_tag": "totem-core-c21.24-product-stable-20260717T025907Z-076e18b",
+  "selected_version": "c21.24-product-stable-20260717T025907Z-076e18b",
+  "selection_decisions": [
+    {
+      "detail": "manifest requires unsupported updater features: ['c26-product-reset-gc-static-v1']",
+      "draft": false,
+      "prerelease": false,
+      "reason": "invalid_manifest_ignored",
+      "selected": false,
+      "tag_name": "totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions"
+    },
+    {
+      "draft": false,
+      "manifest_channel": "stable",
+      "manifest_version": "c21.24-product-stable-20260717T025907Z-076e18b",
+      "prerelease": false,
+      "reason": "selected",
+      "selected": true,
+      "tag_name": "totem-core-c21.24-product-stable-20260717T025907Z-076e18b"
+    }
+  ],
+  "state_changed": false
+}
+stdout_end
+stderr_begin
+2026-07-19T20:17:02Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json dest=/tmp/totem-update-list-brnyysii/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json
+2026-07-19T20:17:02Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/totem-core-c21.24-product-stable-20260717T025907Z-076e18b/dadooh-totem-core-c21.24-product-stable-20260717T025907Z-076e18b.manifest.json dest=/tmp/totem-update-list-brnyysii/totem-core-c21.24-product-stable-20260717T025907Z-076e18b/dadooh-totem-core-c21.24-product-stable-20260717T025907Z-076e18b.manifest.json
+stderr_end

@@ -1,0 +1,23 @@
+2026-07-19T17:29:38Z
+boot_id=4c2f9a39-ba1c-4625-827e-460f1a33adcc
+current=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+previous=releases/c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions
+160f0dba66940372428247779f2b69173a363bac08d7cbe83b97ceef759e0cf7  /data/core/totem/state.json
+461d07e6c0a7af07e77049ddbc844144cae6f6eea707c2304c4d28fc8d243171  /data/config/config.json
+2343e14556932579ba68f9a9e809bb04a6fd76e36bc2e219ee1402ee244c5be3  /data/state/totem-settings/last-settings.json
+947be60d1862d21cad03b8ac9bfd415a7a97f502e325293dc753ec97750dab1d  /data/state/totem-display/orientation.json
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /data/updates/policy.json
+active
+NRestarts=0
+product_reset_code=noop
+product_reset_operation_id=none
+product_reset_phase=no_intent
+product_reset_local_complete=false
+product_reset_pending_credential=false
+product_reset_graveyard_count=0
+product_reset_receipt_present=false
+product_reset_gc_pending=false
+product_reset_secret_public=false
+product_reset_api_url_public=false
+product_reset_environment_public=false
+product_reset_station_public=false

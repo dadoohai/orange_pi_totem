@@ -1,0 +1,29 @@
+
+---timer
+NextElapseUSecRealtime=
+LastTriggerUSec=Sun 2026-07-19 17:55:23 UTC
+ActiveState=active
+SubState=waiting
+UnitFileState=enabled
+---service
+Result=exit-code
+NRestarts=0
+ExecMainStartTimestamp=Sun 2026-07-19 17:55:23 UTC
+ExecMainExitTimestamp=Sun 2026-07-19 17:55:26 UTC
+ExecMainCode=1
+ExecMainStatus=45
+ActiveState=failed
+SubState=failed
+---journal
+2026-07-19T17:55:23+0000 orangepizero3 systemd[1]: Starting totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull)...
+2026-07-19T17:55:24+0000 orangepizero3 totem-updatectl[3844]: 2026-07-19T17:55:24Z INFO update_lock_acquired operation=apply-github-latest:totem-core lock=/run/totem-updatectl.lock
+2026-07-19T17:55:25+0000 orangepizero3 totem-updatectl[3844]: 2026-07-19T17:55:25Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/totem-core-c21.24-product-stable-20260717T025907Z-076e18b/dadooh-totem-core-c21.24-product-stable-20260717T025907Z-076e18b.manifest.json dest=/data/updates/incoming/totem-core/github-select-1784483724/totem-core-c21.24-product-stable-20260717T025907Z-076e18b/dadooh-totem-core-c21.24-product-stable-20260717T025907Z-076e18b.manifest.json
+2026-07-19T17:55:26+0000 orangepizero3 totem-updatectl[3844]: 2026-07-19T17:55:26Z INFO apply_start source=github:dadoohai/orange_pi_totem:totem-core-c21.24-product-stable-20260717T025907Z-076e18b manifest=/data/updates/incoming/totem-core/github-select-1784483724/totem-core-c21.24-product-stable-20260717T025907Z-076e18b/dadooh-totem-core-c21.24-product-stable-20260717T025907Z-076e18b.manifest.json
+2026-07-19T17:55:26+0000 orangepizero3 totem-updatectl[3844]: 2026-07-19T17:55:26Z ERROR manifest_rejected_by_downgrade_policy reason=downgrade_not_allowed_by_policy version=c21.24-product-stable-20260717T025907Z-076e18b
+2026-07-19T17:55:26+0000 orangepizero3 totem-updatectl[3844]: 2026-07-19T17:55:26Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/github-select-1784483724
+2026-07-19T17:55:26+0000 orangepizero3 systemd[1]: totem-update-agent.service: Main process exited, code=exited, status=45/n/a
+2026-07-19T17:55:26+0000 orangepizero3 systemd[1]: totem-update-agent.service: Failed with result 'exit-code'.
+2026-07-19T17:55:26+0000 orangepizero3 systemd[1]: Failed to start totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull).
+2026-07-19T17:55:26+0000 orangepizero3 systemd[1]: totem-update-agent.service: Consumed 1.895s CPU time.
+
+__EXPECT_EXIT_CODE__=0

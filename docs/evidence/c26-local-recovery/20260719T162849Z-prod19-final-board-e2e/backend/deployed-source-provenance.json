@@ -1,0 +1,42 @@
+{
+  "schema": "dadooh.c26.backend_deployed_source_provenance.v1",
+  "collected_at_utc": "2026-07-19T18:33:07Z",
+  "firebase_project": "habitat-19883",
+  "function": {
+    "id": "api",
+    "platform": "gcfv2",
+    "region": "us-central1",
+    "state": "ACTIVE",
+    "deployed_hash": "fa6ed5dbec6f837b753a43ef5aaf736d4770bef1",
+    "source_bucket": "gcf-v2-sources-991116479040-us-central1",
+    "source_object": "api/function-source.zip",
+    "source_generation": "1784349189736165",
+    "source_zip_bytes": 1544503,
+    "source_zip_sha256": "0aebf5f80e6905862f22c62cd6e21b10b50db5252c4970033a30ca93e5a9fc95"
+  },
+  "git": {
+    "commit": "cd131f00de0280988706d4a1dd24cac6a1a28aff",
+    "remote_ref": "origin/c21/totem-auth-prod",
+    "remote_contains_commit": true
+  },
+  "comparison": {
+    "deployed_non_generated_files": 296,
+    "non_generated_tree_sha256": "d3743d2ced505122efd9c038318135d92d3fbb1bc81a45839276b67585424ff6",
+    "non_generated_files_match_commit": true,
+    "git_only_file": "src/test-server.ts",
+    "git_only_file_declared_in_firebase_ignore": true,
+    "generated_lib_files": 448,
+    "generated_lib_tree_sha256": "7eff429a68e9809eb8683b99c139b16fb5a0be8132863c6738794ca7077d7729",
+    "fresh_swc_rebuild_matches_deployed_lib": true,
+    "deployed_source_matches_commit": true
+  },
+  "unit_test": {
+    "path": "tests/unit/totem-auth-self-revocation.test.ts",
+    "passed": 48,
+    "failed": 0,
+    "expect_calls": 372,
+    "log_sha256": "67dd5375f7cc32769ff4a83f09d62042467b945cb46a4c7a74e5c34896bb58dc"
+  },
+  "credentials_written": false,
+  "passed": true
+}

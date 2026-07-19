@@ -1,0 +1,11 @@
+
+2026-07-19T19:54:20Z INFO update_lock_acquired operation=apply-local:totem-core lock=/run/totem-updatectl.lock
+2026-07-19T19:54:20Z INFO apply_start source=local:dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json manifest=/tmp/c26-stable-alignment-final-0e02019/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json
+2026-07-19T19:54:20Z INFO local_payload_staged bytes=285556 sha256=0bbd935fc4a589f65438f380acecdb8d38c1877bd14cf0ba53dd16bd12f823d3
+2026-07-19T19:54:20Z WARN release_dir_exists_will_overwrite path=/data/core/totem/releases/c26.17-product-stable-20260719T193306Z-0e02019-actions
+2026-07-19T19:54:38Z INFO totem_core_health_check_starting
+2026-07-19T19:54:57Z INFO apply_success version=c26.17-product-stable-20260719T193306Z-0e02019-actions
+2026-07-19T19:54:57Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/c26.17-product-stable-20260719T193306Z-0e02019-actions
+
+__EXPECT_EXIT_CODE__=0
+local_wrapper_rc=0

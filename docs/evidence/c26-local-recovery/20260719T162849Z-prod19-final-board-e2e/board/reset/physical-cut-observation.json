@@ -1,0 +1,16 @@
+{
+  "schema": "dadooh.c26.physical_interruption_observation.v1",
+  "operation_id": "9766fc98-346e-460b-bf1d-0ecc4751391e",
+  "boot_id_before": "f9d79586-d511-4213-80c4-101dd2486584",
+  "boot_id_after": "4c2f9a39-ba1c-4625-827e-460f1a33adcc",
+  "new_boot_observed": true,
+  "phase_before": "local_complete",
+  "pending_credential_before": true,
+  "receipt_before": false,
+  "phase_after": "finalized",
+  "pending_credential_after": false,
+  "receipt_after": true,
+  "result_after": "revoked",
+  "same_operation_resumed": true,
+  "old_config_reintroduced": false
+}

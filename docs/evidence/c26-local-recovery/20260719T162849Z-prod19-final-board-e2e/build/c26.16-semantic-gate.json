@@ -1,0 +1,13 @@
+{
+  "checks": {
+    "composed_transport_probe": true,
+    "payload_regular_file": true,
+    "required_files_present": true
+  },
+  "passed": true,
+  "payload": "releases/core-updates/c26.16-local-recovery-20260719-5df9521-final-guarded-actions/dadooh-totem-core-c26.16-local-recovery-20260719-5df9521-final-guarded-actions.tar.gz",
+  "probe_stderr_tail": "warning: config_saved_status_artifact_unavailable\n",
+  "probe_stdout_tail": "{\"contract\": \"c26-recovery-transport-v1\", \"passed\": true}\n",
+  "reason": "",
+  "schema": "dadooh.c26.totem_core_payload_semantic_gate.v1"
+}

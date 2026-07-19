@@ -1232,6 +1232,121 @@ terminal_action_reconcile_complete
             timeout=240,
         )
 
+    def test_product_reset_preserves_real_orientation_and_external_wifi_boundary(self) -> None:
+        expected_domains = (
+            pathlib.Path("config"),
+            pathlib.Path("media/kiosky-player"),
+            pathlib.Path("state/kiosky-player"),
+            pathlib.Path("spool/kiosky-player"),
+            pathlib.Path("logs/kiosky-player"),
+        )
+        orientation_rel = pathlib.Path("state/totem-display/orientation.json")
+        self.assertEqual(config_writer.PRODUCT_RESET_FIXED_DOMAINS, expected_domains)
+        self.assertTrue(all(domain not in orientation_rel.parents for domain in expected_domains))
+
+        def identity(path: pathlib.Path) -> tuple[str, int, bytes]:
+            content = path.read_bytes()
+            return hashlib.sha256(content).hexdigest(), path.stat().st_mode & 0o777, content
+
+        cases: tuple[str | None, ...] = (None, *config_writer.PRODUCT_RESET_FAULT_PHASES)
+        with tempfile.TemporaryDirectory(prefix="dadooh-c26-preservation-", dir="/tmp") as raw_root:
+            root = pathlib.Path(raw_root)
+            for index, fault_phase in enumerate(cases, start=500):
+                fixture = config_writer.product_reset_self_test_fixture(root, index)
+                data = fixture["data"]
+                operation_id = config_writer.product_reset_self_test_uuid(index)
+
+                orientation = data / orientation_rel
+                orientation.parent.mkdir(parents=True, exist_ok=True)
+                orientation.write_text(
+                    json.dumps(
+                        {
+                            "schema_version": "dadooh.totem.orientation.v1",
+                            "updated_at": "2026-07-19T12:00:00Z",
+                            "rotation_deg": 270,
+                            "orientation_label": "retrato direita",
+                        },
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                orientation.chmod(0o644)
+
+                wifi_profile = (
+                    root
+                    / f"network-manager-{index}"
+                    / "etc/NetworkManager/system-connections/lab.nmconnection"
+                )
+                wifi_profile.parent.mkdir(parents=True, exist_ok=True)
+                wifi_profile.write_text(
+                    "[connection]\nid=lab\n[wifi]\nssid=preserved-test-network\n",
+                    encoding="utf-8",
+                )
+                wifi_profile.chmod(0o600)
+
+                expected_orientation = identity(orientation)
+                expected_wifi = identity(wifi_profile)
+
+                def assert_preserved(stage: str) -> None:
+                    self.assertEqual(identity(orientation), expected_orientation, stage)
+                    self.assertEqual(identity(wifi_profile), expected_wifi, stage)
+                    self.assertEqual(
+                        visual_wizard.initial_rotation_from_context({}, orientation),
+                        270,
+                        stage,
+                    )
+
+                ctx = config_writer.product_reset_self_test_context(
+                    data,
+                    fault_after=fault_phase,
+                )
+                if fault_phase is None:
+                    status = config_writer.product_reset_start_or_resume(
+                        ctx,
+                        operation_id_raw=operation_id,
+                        start=True,
+                    )
+                else:
+                    with self.assertRaises(config_writer.WriterError, msg=fault_phase):
+                        config_writer.product_reset_start_or_resume(
+                            ctx,
+                            operation_id_raw=operation_id,
+                            start=True,
+                        )
+                    assert_preserved(f"fault:{fault_phase}")
+                    status = config_writer.product_reset_start_or_resume(
+                        config_writer.product_reset_self_test_context(data),
+                        operation_id_raw=None,
+                        start=False,
+                    )
+                self.assertEqual(status["phase"], "local_complete", fault_phase)
+                assert_preserved(f"local_complete:{fault_phase}")
+
+                finalized = config_writer.product_reset_finalize(
+                    config_writer.product_reset_self_test_context(data),
+                    operation_id_raw=operation_id,
+                    result="revoked",
+                )
+                self.assertEqual(finalized["phase"], "finalized", fault_phase)
+                assert_preserved(f"finalized:{fault_phase}")
+
+                config_writer.product_reset_self_test_write_new_config(data, index)
+                completed = config_writer.product_reset_complete_onboarding(
+                    config_writer.product_reset_self_test_context(data)
+                )
+                self.assertEqual(completed["phase"], "onboarding_complete", fault_phase)
+                assert_preserved(f"onboarding_complete:{fault_phase}")
+
+                collected = config_writer.product_reset_gc(
+                    config_writer.product_reset_self_test_context(data),
+                    max_remove=1,
+                )
+                self.assertEqual(collected["phase"], "gc", fault_phase)
+                self.assertEqual(collected["graveyards_removed"], 1, fault_phase)
+                assert_preserved(f"gc:{fault_phase}")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

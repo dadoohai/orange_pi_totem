@@ -1,0 +1,65 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/unit/totem-auth-self-revocation.test.ts:
+🧪 Setting up test environment...
+(pass) totem auth self-revocation > keeps C26 out of Drizzle history and applies the isolated surgical artifact [283.90ms]
+(pass) totem auth self-revocation > accepts the four official runtime/admin catalogs with or without the historical 0010 index [1671.57ms]
+(pass) totem auth self-revocation > requires a viable users.id parent key for the exact admin FK variant [647.45ms]
+(pass) totem auth self-revocation > rejects invented api_tokens DDL even when its FK semantics are otherwise official [302.70ms]
+(pass) totem auth self-revocation > rejects invented activation DDL even when its columns remain compatible [196.62ms]
+(pass) totem auth self-revocation > rejects an external trigger that references a sensitive auth table [236.35ms]
+(pass) totem auth self-revocation > rejects a partial target and never completes it implicitly [198.19ms]
+(pass) totem auth self-revocation > rejects a target trigger that could mutate unrelated api tokens [270.82ms]
+(pass) totem auth self-revocation > rejects unexpected target table options and indexes [609.97ms]
+(pass) totem auth self-revocation > rejects global index-name collisions before creating the target table [271.05ms]
+{"event_name":"db.query","timestamp":"2026-07-19T18:32:29.719Z","request_id":"unknown","route":"unknown","stage":"db","query_name":"processTicksAndRejections@native:7","query_kind":"delete","duration_ms":17,"row_count":0,"region":"unknown","revision":"unknown","instanceId":"unknown","db_host":"","db_client_epoch":1,"client_recreated":false,"client_recreate_reason":"initial","db_active_queries_at_start":1,"db_idle_ms_before":0,"last_query_duration_ms":17,"consecutive_slow_queries":0,"retriable":false,"retry_count":0,"attempt":1,"query_fingerprint":"0ed87a708b983c3594aaa53c7bbfd5af","severity":"INFO","message":"db.query"}
+(pass) totem auth self-revocation > rolls a fresh apply back completely when any statement fails [253.12ms]
+(pass) totem auth self-revocation > validates every base column selected by the runtime and its SQLite type [378.30ms]
+(pass) totem auth self-revocation > rejects base table SQL, index, and trigger drift before creating the target [764.27ms]
+(pass) totem auth self-revocation > does not initialize a schema when the API key is missing [51.07ms]
+(pass) totem auth self-revocation > propagates cancellation to the dedicated remote database fetch [51.87ms]
+(pass) totem auth self-revocation > revokes only the presented totem-device token and stores the response [159.52ms]
+(pass) totem auth self-revocation > requires exactly one activation linked to the presented token [175.25ms]
+{"event_name":"db.query","timestamp":"2026-07-19T18:32:31.959Z","request_id":"unknown","route":"unknown","stage":"db","query_name":"processTicksAndRejections@native:7","query_kind":"select","duration_ms":1,"row_count":1,"region":"unknown","revision":"unknown","instanceId":"unknown","db_host":"","db_client_epoch":1,"client_recreated":false,"client_recreate_reason":"initial","db_active_queries_at_start":1,"db_idle_ms_before":2,"last_query_duration_ms":2,"consecutive_slow_queries":0,"retriable":false,"retry_count":0,"attempt":1,"query_fingerprint":"bbcbd3ca4eedf27d62b1c204b794ac9d","severity":"INFO","message":"db.query"}
+(pass) totem auth self-revocation > rejects partial or incoherent consumed activation state [477.19ms]
+(pass) totem auth self-revocation > replays the exact same operation without extending its retention clock [156.75ms]
+(pass) totem auth self-revocation > expires replay identity 90 days after creation even with recent activity metadata [164.96ms]
+(pass) totem auth self-revocation > rejects payload or token changes for an existing operation id [151.63ms]
+(pass) totem auth self-revocation > rejects a revoked token when it starts a new operation [185.24ms]
+(pass) totem auth self-revocation > requires exact canonical totem-device scopes and a finite future expiry [445.21ms]
+(pass) totem auth self-revocation > preserves non-totem legacy compatibility with null expiry and loose scopes [100.83ms]
+(pass) totem auth self-revocation > accepts the exact totem-device scope contract with a null station [162.77ms]
+{"event_name":"db.query","timestamp":"2026-07-19T18:32:33.534Z","request_id":"unknown","route":"unknown","stage":"db","query_name":"processTicksAndRejections@native:7","query_kind":"select","duration_ms":1,"row_count":0,"region":"unknown","revision":"unknown","instanceId":"unknown","db_host":"","db_client_epoch":1,"client_recreated":false,"client_recreate_reason":"initial","db_active_queries_at_start":1,"db_idle_ms_before":1,"last_query_duration_ms":0,"consecutive_slow_queries":0,"retriable":false,"retry_count":0,"attempt":1,"query_fingerprint":"a2942fbe99adcebc758008985d4df1ee","severity":"INFO","message":"db.query"}
+(pass) totem auth self-revocation > returns a stateless deterministic result for legacy tokens without growing operations [201.12ms]
+(pass) totem auth self-revocation > does not acquire a write transaction for invalid or legacy shared keys [79.16ms]
+{"event_name":"db.query","timestamp":"2026-07-19T18:32:33.697Z","request_id":"unknown","route":"unknown","stage":"db","query_name":"processTicksAndRejections@native:7","query_kind":"insert","duration_ms":17,"row_count":0,"region":"unknown","revision":"unknown","instanceId":"unknown","db_host":"","db_client_epoch":1,"client_recreated":false,"client_recreate_reason":"initial","db_active_queries_at_start":1,"db_idle_ms_before":4,"last_query_duration_ms":17,"consecutive_slow_queries":0,"retriable":false,"retry_count":0,"attempt":1,"query_fingerprint":"e7b36e68882f99d26684f5b220a1ddd7","severity":"INFO","message":"db.query"}
+(pass) totem auth self-revocation > purges only a strict batch of expired replay records during a valid revocation [127.30ms]
+(pass) totem auth self-revocation > reuses an expired operation id beyond the cleanup batch without widening revocation [224.66ms]
+(pass) totem auth self-revocation > allows an exact legacy device activation with no stored fingerprint to revoke itself [148.86ms]
+(pass) totem auth self-revocation > fails closed for fingerprint mismatch and api_token_id mismatch [105.40ms]
+(pass) totem auth self-revocation > fails closed for missing and expired tokens [97.58ms]
+(pass) totem auth self-revocation > does not touch a newer activation on the same fingerprint [149.75ms]
+(pass) totem auth self-revocation > fails closed for a colliding token hash even when api_token_id is supplied [104.10ms]
+(pass) totem auth self-revocation > fails closed when three rows share a token hash regardless of row order [134.96ms]
+(pass) totem auth self-revocation > converges exact replay across independent local libSQL connections [810.68ms]
+(pass) totem auth self-revocation > returns 503 for SERVER_ERROR and HTTP 5xx writes after journal reconciliation [70.05ms]
+(pass) totem auth self-revocation > recovers an uncertain commit written in the same SQLite timestamp second [82.11ms]
+(pass) totem auth self-revocation > enforces the write deadline when a transaction remains pending [10074.97ms]
+(pass) totem auth self-revocation > keeps a slot after client disconnect until the first handler and cleanup finish [267.91ms]
+(pass) totem auth self-revocation > preserves lookup and approve bearer guards and the pending poll response [169.41ms]
+(pass) totem auth self-revocation > route rejects extra authority fields with strict body validation [198.40ms]
+(pass) totem auth self-revocation > route returns 401 when x-api-key is missing [188.13ms]
+{"event_name":"db.query","timestamp":"2026-07-19T18:32:46.617Z","request_id":"unknown","route":"unknown","stage":"db","query_name":"processTicksAndRejections@native:7","query_kind":"delete","duration_ms":17,"row_count":0,"region":"unknown","revision":"unknown","instanceId":"unknown","db_host":"","db_client_epoch":1,"client_recreated":false,"client_recreate_reason":"initial","db_active_queries_at_start":1,"db_idle_ms_before":0,"last_query_duration_ms":19,"consecutive_slow_queries":0,"retriable":false,"retry_count":0,"attempt":1,"query_fingerprint":"6e8a0259230f53c82fecca6146135602","severity":"INFO","message":"db.query"}
+{"structuredData":{"summary":"Validation error: operation_id must be a canonical UUID v4 at \"operation_id\"","errors":[{"path":"operation_id","message":"operation_id must be a canonical UUID v4"}],"path":"/self-revocations","method":"POST"},"severity":"WARNING","message":"Invalid totem activation payload"}
+{"structuredData":{"summary":"Validation error: Required at \"device_fingerprint\"","errors":[{"path":"device_fingerprint","message":"Required"}],"path":"/self-revocations","method":"POST"},"severity":"WARNING","message":"Invalid totem activation payload"}
+(pass) totem auth self-revocation > route returns 400 for malformed UUIDs and malformed bodies [150.22ms]
+(pass) totem auth self-revocation > redacts activation and self-revocation credentials from validation logs [45.41ms]
+(pass) totem auth self-revocation > route returns successful self-revocation response and replays it after revocation [161.10ms]
+(pass) totem auth self-revocation > route rejects ambiguous multiple x-api-key values when Express exposes an array [153.90ms]
+(pass) totem auth self-revocation > route rejects duplicate x-api-key header lines received on the wire [198.41ms]
+🧹 Cleaning up test environment...
+
+ 48 pass
+ 0 fail
+ 372 expect() calls
+Ran 48 tests across 1 file. [24.74s]

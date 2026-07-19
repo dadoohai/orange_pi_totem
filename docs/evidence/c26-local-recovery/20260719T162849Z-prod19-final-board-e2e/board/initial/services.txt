@@ -1,0 +1,22 @@
+
+kiosky-player.service active=active
+kiosky-player.service enabled=enabled
+totem-firstboot-gate.service active=inactive
+totem-firstboot-gate.service enabled=enabled
+totem-open-settings.service active=inactive
+totem-open-settings.service enabled=static
+totem-product-reset-gc.service active=inactive
+totem-product-reset-gc.service enabled=static
+totem-update-agent.timer active=active
+totem-update-agent.timer enabled=enabled
+totem-player-runtime-update-agent.timer active=active
+totem-player-runtime-update-agent.timer enabled=enabled
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-05-11 22:00:55 UTC
+ActiveState=active
+SubState=running
+ActiveEnterTimestamp=Mon 2026-05-11 22:00:55 UTC
+Sun 2026-07-19 16:36:13 UTC 6min left     -                           -        totem-update-agent.timer                totem-update-agent.service
+Sun 2026-07-19 16:50:50 UTC 21min left    -                           -        totem-player-runtime-update-agent.timer totem-player-runtime-update-agent.service
+
+__EXPECT_EXIT_CODE__=0

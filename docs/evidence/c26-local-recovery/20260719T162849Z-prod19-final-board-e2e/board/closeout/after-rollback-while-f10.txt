@@ -1,0 +1,7 @@
+collected_at_utc=2026-07-19T18:13:12Z
+boot_id=d711dbac-e712-40ed-90e4-df53ea0609ba
+settings_service=activating
+wizard_process_count=3
+current=/data/core/totem/releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+previous=/data/core/totem/releases/c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions
+state_sha256=b5d734794136d33f4a0efda5b1c626ad1ad78b535a5c2e72fe29e6a41a62b343

@@ -1,0 +1,68 @@
+test_actions_package_requires_image_feature_and_health_gate (__main__.C26LocalRecoveryContractTest.test_actions_package_requires_image_feature_and_health_gate) ... [build_totem_core_release_package] component       = totem-core
+[build_totem_core_release_package] version         = c26-package-a
+[build_totem_core_release_package] channel         = homologation
+[build_totem_core_release_package] source_repo     = dadoohai/orange_pi_totem
+[build_totem_core_release_package] source_branch   = foundation-v0.1
+[build_totem_core_release_package] source_commit   = 5838983806f953bf055734f8c413b63801a138ae
+[build_totem_core_release_package] device_track    = c18-hwdecode
+[build_totem_core_release_package] dirty           = 1
+[build_totem_core_release_package] out_dir         = /tmp/dadooh-c26-package-gate-cd99pkfv/c26-package-a
+[build_totem_core_release_package] mode            = build-package
+[build_totem_core_release_package] totem_actions   = 0
+[build_totem_core_release_package] build_package=true
+[build_totem_core_release_package] payload_path=/tmp/dadooh-c26-package-gate-cd99pkfv/c26-package-a/dadooh-totem-core-c26-package-a.tar.gz
+[build_totem_core_release_package] manifest_path=/tmp/dadooh-c26-package-gate-cd99pkfv/c26-package-a/dadooh-totem-core-c26-package-a.manifest.json
+[build_totem_core_release_package] payload_sha256=8ae7d1051b9133c683a950acef41072733121e5032fb217919d6b70194af3593
+[build_totem_core_release_package] payload_bytes=285548
+[build_totem_core_release_package] source_commit=5838983806f953bf055734f8c413b63801a138ae
+[build_totem_core_release_package] version=c26-package-a
+[build_totem_core_release_package] component       = totem-core
+[build_totem_core_release_package] version         = c26-package-b-actions
+[build_totem_core_release_package] channel         = homologation
+[build_totem_core_release_package] source_repo     = dadoohai/orange_pi_totem
+[build_totem_core_release_package] source_branch   = foundation-v0.1
+[build_totem_core_release_package] source_commit   = 5838983806f953bf055734f8c413b63801a138ae
+[build_totem_core_release_package] device_track    = c18-hwdecode
+[build_totem_core_release_package] dirty           = 1
+[build_totem_core_release_package] out_dir         = /tmp/dadooh-c26-package-gate-cd99pkfv/c26-package-b-actions
+[build_totem_core_release_package] mode            = build-package
+[build_totem_core_release_package] totem_actions   = 1
+[build_totem_core_release_package] build_package=true
+[build_totem_core_release_package] payload_path=/tmp/dadooh-c26-package-gate-cd99pkfv/c26-package-b-actions/dadooh-totem-core-c26-package-b-actions.tar.gz
+[build_totem_core_release_package] manifest_path=/tmp/dadooh-c26-package-gate-cd99pkfv/c26-package-b-actions/dadooh-totem-core-c26-package-b-actions.manifest.json
+[build_totem_core_release_package] payload_sha256=8be183b2e151680b47734d1455b728c32615dd97daed1b4a68e29bfc634d6e9e
+[build_totem_core_release_package] payload_bytes=285556
+[build_totem_core_release_package] source_commit=5838983806f953bf055734f8c413b63801a138ae
+[build_totem_core_release_package] version=c26-package-b-actions
+ok
+test_actions_remain_hidden_until_loaded_boot_graph_is_safe (__main__.C26LocalRecoveryContractTest.test_actions_remain_hidden_until_loaded_boot_graph_is_safe) ... ok
+test_actions_require_exact_static_gc_image_contract (__main__.C26LocalRecoveryContractTest.test_actions_require_exact_static_gc_image_contract) ... ok
+test_actions_require_success_for_the_current_boot (__main__.C26LocalRecoveryContractTest.test_actions_require_success_for_the_current_boot) ... ok
+test_actions_shell_consumes_fixed_updater_image_probe (__main__.C26LocalRecoveryContractTest.test_actions_shell_consumes_fixed_updater_image_probe) ... ok
+test_api_transport_contract_is_compositional_before_reset (__main__.C26LocalRecoveryContractTest.test_api_transport_contract_is_compositional_before_reset) ... ok
+test_bulk_cleanup_is_exact_and_deferred_until_after_player_restore (__main__.C26LocalRecoveryContractTest.test_bulk_cleanup_is_exact_and_deferred_until_after_player_restore) ... ok
+test_c26a_and_c26b_package_identities_cannot_collide (__main__.C26LocalRecoveryContractTest.test_c26a_and_c26b_package_identities_cannot_collide) ... ok
+test_completion_requires_a_valid_new_config_and_full_companion_health (__main__.C26LocalRecoveryContractTest.test_completion_requires_a_valid_new_config_and_full_companion_health) ... warning: config_saved_status_artifact_unavailable
+self-test: ok
+self-test: ok
+self-test: ok
+self-test: ok
+ok
+test_extended_product_reset_fault_matrix (__main__.C26LocalRecoveryContractTest.test_extended_product_reset_fault_matrix) ... extended-self-test: ok
+ok
+test_firstboot_guard_precedes_update_lock_and_player_stop (__main__.C26LocalRecoveryContractTest.test_firstboot_guard_precedes_update_lock_and_player_stop) ... ok
+test_firstboot_orders_recovery_before_both_ota_agents (__main__.C26LocalRecoveryContractTest.test_firstboot_orders_recovery_before_both_ota_agents) ... ok
+test_homologation_seed_tombstone_blocks_reintroduction (__main__.C26LocalRecoveryContractTest.test_homologation_seed_tombstone_blocks_reintroduction) ... ok
+test_openvt_exec_transport_preserves_semantic_exit_codes_fail_closed (__main__.C26LocalRecoveryContractTest.test_openvt_exec_transport_preserves_semantic_exit_codes_fail_closed) ... ok
+test_ota_stays_blocked_until_deferred_cleanup_finishes (__main__.C26LocalRecoveryContractTest.test_ota_stays_blocked_until_deferred_cleanup_finishes) ... ok
+test_payload_semantic_gate_rejects_known_unsafe_slots (__main__.C26LocalRecoveryContractTest.test_payload_semantic_gate_rejects_known_unsafe_slots) ... ok
+test_persistent_reset_can_recreate_its_runtime_request (__main__.C26LocalRecoveryContractTest.test_persistent_reset_can_recreate_its_runtime_request) ... self-test: ok
+ok
+test_product_reset_preserves_real_orientation_and_external_wifi_boundary (__main__.C26LocalRecoveryContractTest.test_product_reset_preserves_real_orientation_and_external_wifi_boundary) ... ok
+test_reopening_settings_preserves_device_token_identity_privately (__main__.C26LocalRecoveryContractTest.test_reopening_settings_preserves_device_token_identity_privately) ... ok
+test_terminal_actions_are_reconciled_in_two_phases (__main__.C26LocalRecoveryContractTest.test_terminal_actions_are_reconciled_in_two_phases) ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 60.954s
+
+OK

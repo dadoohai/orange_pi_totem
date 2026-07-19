@@ -26,6 +26,8 @@ RUN_NAME = "c17-8-simulation-lab-mvp"
 INITIAL_VERSION = "c17.8-sim-initial"
 PRODUCT_RESET_GC_IMAGE_FEATURE = "c26-product-reset-gc-static-v1"
 PRODUCT_RESET_GC_UNIT_SOURCE = REPO_ROOT / "scripts" / "board" / "totem-product-reset-gc.service"
+IMAGE_BOUND_UPDATECTL_PATH = "scripts/board/totem_updatectl.py"
+IMAGE_BOUND_PRODUCT_RESET_GC_UNIT_PATH = "scripts/board/totem-product-reset-gc.service"
 
 CORE_FILES = (
     "totem_setup_visual_wizard.py",
@@ -33,7 +35,10 @@ CORE_FILES = (
     "totem_visual_splash.py",
     "totem_status_aggregate.py",
     "totem_status_render_preview.py",
+    "totem_api_url_contract.py",
     "totem_config_contract_validate.py",
+    "totem_qr_pairing_client.py",
+    "totem_settings_production_apply_policy.py",
     "totem_open_settings_session.sh",
     "totem_visual_tty_guard.sh",
     "totem_firstboot_gate.sh",
@@ -413,23 +418,112 @@ def manifest_sha_matches(manifest: Path, payload: Path) -> bool:
     return str(data.get("payload_sha256", "")).lower() == sha256_file(payload).lower()
 
 
-def configure_simulated_image_contract(manifest: Path, sandbox: Path, env: dict[str, str]) -> bool:
+def git_show_file(commit: str, repo_path: str, destination: Path) -> bool:
+    proc = subprocess.run(
+        ["git", "show", f"{commit}:{repo_path}"],
+        cwd=str(REPO_ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if proc.returncode != 0 or not proc.stdout:
+        return False
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(proc.stdout)
+    return True
+
+
+def configure_simulated_image_contract(
+    manifest: Path,
+    sandbox: Path,
+    env: dict[str, str],
+) -> tuple[bool, Path, dict[str, Any]]:
+    repo_updatectl = REPO_ROOT / IMAGE_BOUND_UPDATECTL_PATH
+    details: dict[str, Any] = {
+        "mode": "repo_updater",
+        "repo_commit": None,
+        "updatectl_sha256": sha256_file(repo_updatectl),
+        "product_reset_gc_unit_sha256": None,
+    }
     try:
         data = json.loads(manifest.read_text(encoding="utf-8"))
         features = (data.get("requires") or {}).get("updater_features") or []
     except Exception:
-        return False
+        return False, repo_updatectl, details
     if PRODUCT_RESET_GC_IMAGE_FEATURE not in features:
-        return True
-    if not PRODUCT_RESET_GC_UNIT_SOURCE.is_file():
-        return False
-    unit = sandbox / "etc" / "systemd" / "system" / "totem-product-reset-gc.service"
-    unit.parent.mkdir(parents=True, exist_ok=True)
-    unit.parent.chmod(0o755)
-    shutil.copyfile(PRODUCT_RESET_GC_UNIT_SOURCE, unit)
-    unit.chmod(0o644)
-    env["TOTEM_TEST_PRODUCT_RESET_GC_UNIT"] = str(unit)
-    return True
+        return True, repo_updatectl, details
+
+    local_updater_supports_feature = PRODUCT_RESET_GC_IMAGE_FEATURE in repo_updatectl.read_text(
+        encoding="utf-8"
+    )
+    if local_updater_supports_feature and PRODUCT_RESET_GC_UNIT_SOURCE.is_file():
+        unit = sandbox / "etc" / "systemd" / "system" / "totem-product-reset-gc.service"
+        unit.parent.mkdir(parents=True, exist_ok=True)
+        unit.parent.chmod(0o755)
+        shutil.copyfile(PRODUCT_RESET_GC_UNIT_SOURCE, unit)
+        unit.chmod(0o644)
+        env["TOTEM_TEST_PRODUCT_RESET_GC_UNIT"] = str(unit)
+        details["product_reset_gc_unit_sha256"] = sha256_file(unit)
+        return True, repo_updatectl, details
+
+    if data.get("channel") != "stable":
+        details["mode"] = "image_bound_contract_unavailable"
+        return False, repo_updatectl, details
+    release_dir = manifest.parent
+    stable_evidence_path = release_dir / "c18-stable-promotion-evidence.json"
+    image_build_path = release_dir / "c18-production-image-build-manifest.json"
+    try:
+        stable_evidence = json.loads(stable_evidence_path.read_text(encoding="utf-8"))
+        image_build = json.loads(image_build_path.read_text(encoding="utf-8"))
+    except Exception:
+        details["mode"] = "image_bound_evidence_invalid"
+        return False, repo_updatectl, details
+    if sha256_file(stable_evidence_path) != data.get("stable_promotion_evidence_sha256"):
+        details["mode"] = "stable_evidence_hash_mismatch"
+        return False, repo_updatectl, details
+    if sha256_file(image_build_path) != stable_evidence.get("production_image_build_manifest_sha256"):
+        details["mode"] = "image_build_hash_mismatch"
+        return False, repo_updatectl, details
+    if (
+        image_build.get("image_tag") != stable_evidence.get("production_image_tag")
+        or image_build.get("image_sha256") != stable_evidence.get("production_image_sha256")
+        or image_build.get("repo_dirty") is not False
+    ):
+        details["mode"] = "image_identity_mismatch"
+        return False, repo_updatectl, details
+    repo_commit = image_build.get("repo_commit")
+    if (
+        not isinstance(repo_commit, str)
+        or len(repo_commit) != 40
+        or any(char not in "0123456789abcdef" for char in repo_commit)
+    ):
+        details["mode"] = "image_repo_commit_invalid"
+        return False, repo_updatectl, details
+
+    bound_root = sandbox / "tmp" / "image-bound-contract"
+    bound_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    bound_root.chmod(0o700)
+    bound_updatectl = bound_root / "totem_updatectl.py"
+    bound_unit = bound_root / "totem-product-reset-gc.service"
+    if not git_show_file(repo_commit, IMAGE_BOUND_UPDATECTL_PATH, bound_updatectl):
+        details["mode"] = "image_updatectl_source_unavailable"
+        return False, repo_updatectl, details
+    if not git_show_file(repo_commit, IMAGE_BOUND_PRODUCT_RESET_GC_UNIT_PATH, bound_unit):
+        details["mode"] = "image_gc_unit_source_unavailable"
+        return False, repo_updatectl, details
+    bound_updatectl.chmod(0o700)
+    bound_unit.chmod(0o644)
+    if PRODUCT_RESET_GC_IMAGE_FEATURE not in bound_updatectl.read_text(encoding="utf-8"):
+        details["mode"] = "image_updater_feature_missing"
+        return False, repo_updatectl, details
+    env["TOTEM_TEST_PRODUCT_RESET_GC_UNIT"] = str(bound_unit)
+    details.update({
+        "mode": "stable_image_bound_updater",
+        "repo_commit": repo_commit,
+        "updatectl_sha256": sha256_file(bound_updatectl),
+        "product_reset_gc_unit_sha256": sha256_file(bound_unit),
+    })
+    return True, bound_updatectl, details
 
 
 def current_target(sandbox: Path) -> str:
@@ -442,11 +536,15 @@ def previous_target(sandbox: Path) -> str:
     return os.readlink(link) if link.is_symlink() else ""
 
 
-def run_updatectl_apply(manifest: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+def run_updatectl_apply(
+    manifest: Path,
+    env: dict[str, str],
+    updatectl_path: Path,
+) -> subprocess.CompletedProcess[str]:
     return run(
         [
             "python3",
-            "scripts/board/totem_updatectl.py",
+            str(updatectl_path),
             "apply-local",
             "--component",
             "totem-core",
@@ -457,9 +555,12 @@ def run_updatectl_apply(manifest: Path, env: dict[str, str]) -> subprocess.Compl
     )
 
 
-def run_updatectl_rollback(env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+def run_updatectl_rollback(
+    env: dict[str, str],
+    updatectl_path: Path,
+) -> subprocess.CompletedProcess[str]:
     return run(
-        ["python3", "scripts/board/totem_updatectl.py", "rollback", "--component", "totem-core"],
+        ["python3", str(updatectl_path), "rollback", "--component", "totem-core"],
         env=env,
         timeout=120,
     )
@@ -530,17 +631,26 @@ def main() -> int:
             blockers.append("package_build_failed")
 
     sha_ok = bool(manifest and payload and manifest_sha_matches(manifest, payload))
-    image_contract_simulated = bool(
-        manifest and configure_simulated_image_contract(manifest, sandbox, env)
-    )
-    if manifest and not image_contract_simulated:
-        blockers.append("image_contract_simulation_failed")
+    updatectl_path = REPO_ROOT / IMAGE_BOUND_UPDATECTL_PATH
+    image_contract_simulated = manifest is None
+    image_contract_details: dict[str, Any] = {
+        "mode": "not_applicable",
+        "repo_commit": None,
+        "updatectl_sha256": None,
+        "product_reset_gc_unit_sha256": None,
+    }
+    if manifest:
+        image_contract_simulated, updatectl_path, image_contract_details = (
+            configure_simulated_image_contract(manifest, sandbox, env)
+        )
+        if not image_contract_simulated:
+            blockers.append("image_contract_simulation_failed")
     selected_channel = manifest_channel(manifest) if manifest else "stable"
     if manifest:
         write_update_policy(sandbox, selected_channel)
     apply_proc: subprocess.CompletedProcess[str] | None = None
-    if manifest and sha_ok:
-        apply_proc = run_updatectl_apply(manifest, env)
+    if manifest and sha_ok and image_contract_simulated:
+        apply_proc = run_updatectl_apply(manifest, env, updatectl_path)
     apply_local_passed = bool(apply_proc and apply_proc.returncode == 0)
     if not apply_local_passed:
         blockers.append("apply_local_failed")
@@ -555,7 +665,7 @@ def main() -> int:
     rollback_proc: subprocess.CompletedProcess[str] | None = None
     if apply_local_passed:
         wrapper_current_passed, wrapper_fallback_passed = wrapper_checks(sandbox, env)
-        rollback_proc = run_updatectl_rollback(env)
+        rollback_proc = run_updatectl_rollback(env, updatectl_path)
     rollback_passed = bool(rollback_proc and rollback_proc.returncode == 0 and current_target(sandbox) == initial_current)
     if apply_local_passed and not rollback_passed:
         blockers.append("rollback_failed")
@@ -569,7 +679,7 @@ def main() -> int:
     if manifest and sha_ok:
         current_before_channel_guard = current_target(sandbox)
         write_update_policy(sandbox, incompatible_channel(selected_channel))
-        blocked_channel_proc = run_updatectl_apply(manifest, env)
+        blocked_channel_proc = run_updatectl_apply(manifest, env, updatectl_path)
         current_after_channel_guard = current_target(sandbox)
         channel_guard_incompatible_blocked = (
             blocked_channel_proc.returncode == 41
@@ -587,11 +697,11 @@ def main() -> int:
         current_before_blocked_apply = current_target(sandbox)
         lock_path.mkdir(mode=0o755)
         lock_path.chmod(0o755)
-        blocked_proc = run_updatectl_apply(manifest, env)
+        blocked_proc = run_updatectl_apply(manifest, env, updatectl_path)
         settings_blocked = blocked_proc.returncode == 40
         current_after_blocked_apply = current_target(sandbox)
         lock_path.rmdir()
-        final_proc = run_updatectl_apply(manifest, env)
+        final_proc = run_updatectl_apply(manifest, env, updatectl_path)
         final_apply_passed = final_proc.returncode == 0
         settings_lock_guard_passed = (
             settings_blocked
@@ -627,6 +737,7 @@ def main() -> int:
         "package_source": package_source,
         "sha256_validated": sha_ok,
         "image_contract_simulated_when_required": image_contract_simulated,
+        "image_contract": image_contract_details,
         "apply_local_passed": apply_local_passed,
         "current_symlink_updated": current_symlink_updated,
         "previous_symlink_updated": previous_symlink_updated,

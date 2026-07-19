@@ -1,0 +1,10 @@
+
+2026-07-19T19:52:07Z INFO update_lock_acquired operation=rollback:totem-core lock=/run/totem-updatectl.lock
+{
+  "rollback": "ok",
+  "rolled_to": "c26.16-local-recovery-20260719-5df9521-final-guarded-actions"
+}
+2026-07-19T19:52:43Z INFO manual_rollback_ok rolled_to=c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+
+__EXPECT_EXIT_CODE__=0
+local_wrapper_rc=0

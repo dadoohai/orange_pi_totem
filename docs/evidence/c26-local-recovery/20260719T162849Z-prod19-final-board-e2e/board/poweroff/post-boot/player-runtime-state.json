@@ -1,0 +1,22 @@
+{
+  "component": "player-runtime",
+  "current": {
+    "applied_at_utc": "2026-07-19T17:36:00Z",
+    "kiosk_py_sha256": "7b67003a450902ddd4ea5d8c9f11653a43b9e55df0c45ccd4496be08188df3f0",
+    "path": "/data/player-runtime/releases/c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+    "payload_sha256": "b6e1a58b6434107a5af43d27bc07f19b0255bcc58c86deac59be6acc2742b70d",
+    "tree_sha256": "a7baf69dc249c39b2f6f8653873171fa8d799c814acbe8bc95c3eeed2c7136fc",
+    "version": "c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4",
+    "via": "player_runtime_reconcile"
+  },
+  "last_operation": {
+    "finished_at_utc": "2026-07-19T17:36:00Z",
+    "reason": "manual_reconcile",
+    "started_at_utc": "2026-07-19T17:36:00Z",
+    "status": "current_verified",
+    "type": "reconcile",
+    "verified": "releases/c18.player-runtime-homolog-20260713-c25b-still-fix-54308e4"
+  },
+  "previous": null,
+  "schema": "dadooh.totem.update.state.v1"
+}

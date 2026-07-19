@@ -1,0 +1,5 @@
+config_present=false
+last_settings_present=false
+6d0fb46a8401ac1b6df8d733fc5210209824927159ca918711323fe3d5e0bd4f  /data/updates/policy.json
+releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+releases/c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions

@@ -1,0 +1,13 @@
+{
+  "schema": "dadooh.c26.sanitized_revocation_observation.v1",
+  "row_count": 1,
+  "operation_id": "9766fc98-346e-460b-bf1d-0ecc4751391e",
+  "result_status": "revoked",
+  "response_status_code": 200,
+  "token_linked": true,
+  "activation_linked": true,
+  "response_operation_id_matches": true,
+  "response_status": "revoked",
+  "response_revoked": true,
+  "credentials_written": false
+}

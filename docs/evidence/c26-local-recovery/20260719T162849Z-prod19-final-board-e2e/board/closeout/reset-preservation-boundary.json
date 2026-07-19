@@ -1,0 +1,28 @@
+{
+  "schema": "dadooh.c26.reset_preservation_boundary.v1",
+  "repo_commit": "5838983806f953bf055734f8c413b63801a138ae",
+  "real_data_root": "/data",
+  "fixed_reset_domains": [
+    "config",
+    "media/kiosky-player",
+    "state/kiosky-player",
+    "spool/kiosky-player",
+    "logs/kiosky-player"
+  ],
+  "separate_reset_target": "state/totem-settings/last-settings.json",
+  "wifi_profile_root": "/etc/NetworkManager/system-connections",
+  "wifi_outside_real_data_root": true,
+  "orientation_path": "/data/state/totem-display/orientation.json",
+  "orientation_outside_reset_domains": true,
+  "context_rejects_non_data_real_root": true,
+  "self_test_preserved_non_target_sentinels": true,
+  "installed_self_test_passed": true,
+  "clean_image_wifi_profile_count": 0,
+  "physical_wifi_profile_preservation_exercised_in_this_campaign": false,
+  "physical_orientation_byte_identity_across_restore_recorded": false,
+  "claim": "reset_write_boundary_does_not_target_wifi_or_public_orientation",
+  "non_claims": [
+    "not_a_wifi_association_test",
+    "not_a_non_default_orientation_restore_test"
+  ]
+}
