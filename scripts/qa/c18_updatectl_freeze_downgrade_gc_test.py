@@ -2221,6 +2221,10 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
                 source = REPO_ROOT / "scripts" / "board" / name
                 self.assertNotEqual(name, "kiosky_service_launcher.sh")
                 shutil.copy2(source, bin_dir / name)
+            shutil.copy2(
+                REPO_ROOT / "scripts" / "board" / "totem_api_url_contract.py",
+                bin_dir / "totem_api_url_contract.py",
+            )
             health_dir = release / "health"
             health_dir.mkdir()
             (health_dir / "totem-core-health.json").write_text(
@@ -2246,6 +2250,10 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             bin_dir.mkdir(parents=True)
             for name in (*updatectl.TOTEM_CORE_REQUIRED_BIN, *updatectl.TOTEM_CORE_OPTIONAL_BIN):
                 shutil.copy2(REPO_ROOT / "scripts" / "board" / name, bin_dir / name)
+            shutil.copy2(
+                REPO_ROOT / "scripts" / "board" / "totem_api_url_contract.py",
+                bin_dir / "totem_api_url_contract.py",
+            )
             legacy_aggregate = bin_dir / "totem_status_aggregate.py"
             legacy_aggregate.write_text(
                 "#!/usr/bin/env python3\n"
@@ -2269,6 +2277,10 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             bin_dir.mkdir(parents=True)
             for name in (*updatectl.TOTEM_CORE_REQUIRED_BIN, *updatectl.TOTEM_CORE_OPTIONAL_BIN):
                 shutil.copy2(REPO_ROOT / "scripts" / "board" / name, bin_dir / name)
+            shutil.copy2(
+                REPO_ROOT / "scripts" / "board" / "totem_api_url_contract.py",
+                bin_dir / "totem_api_url_contract.py",
+            )
 
             ok, reason = updatectl._totem_core_health_check(release)
 
@@ -2283,6 +2295,10 @@ class C18UpdatectlFreezeDowngradeGcTest(unittest.TestCase):
             for name in updatectl.TOTEM_CORE_REQUIRED_BIN:
                 source = REPO_ROOT / "scripts" / "board" / name
                 shutil.copy2(source, bin_dir / name)
+            shutil.copy2(
+                REPO_ROOT / "scripts" / "board" / "totem_api_url_contract.py",
+                bin_dir / "totem_api_url_contract.py",
+            )
 
             ok, reason = updatectl._totem_core_health_check(release)
 
