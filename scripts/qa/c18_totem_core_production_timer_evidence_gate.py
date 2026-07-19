@@ -93,7 +93,8 @@ def correlated_journal_event(
             observed = dt.datetime.fromisoformat(match.group(1).replace("Z", "+00:00"))
         except ValueError:
             continue
-        if abs((observed - trigger).total_seconds()) <= TIMER_EVENT_MAX_SKEW_SECONDS:
+        elapsed = (observed - trigger).total_seconds()
+        if 0 <= elapsed <= TIMER_EVENT_MAX_SKEW_SECONDS:
             return True
     return False
 
@@ -498,6 +499,18 @@ class ProductionTimerGateSelfTest(unittest.TestCase):
         payload["service"]["journal_tail"] = [
             f"INFO apply_start source=github:dadoohai/orange_pi_totem:{DEFAULT_EXPECTED_RELEASE_TAG}",
             f"INFO apply_success version={DEFAULT_EXPECTED_VERSION}",
+        ]
+        result = self.run_fixture(payload)
+        self.assertFalse(result["passed"])
+        self.assertIn("timer_expected_release_event_not_correlated", result["blockers"])
+        self.assertIn("timer_success_event_not_correlated", result["blockers"])
+
+    def test_service_event_before_timer_trigger_denies(self) -> None:
+        payload = self.fixture()
+        payload["timer"]["show"]["LastTriggerUSec"] = "Sun 2026-07-05 18:59:00 UTC"
+        payload["service"]["journal_tail"] = [
+            f"2026-07-05T18:58:01Z INFO apply_start source=github:dadoohai/orange_pi_totem:{DEFAULT_EXPECTED_RELEASE_TAG}",
+            f"2026-07-05T18:58:20Z INFO apply_success version={DEFAULT_EXPECTED_VERSION}",
         ]
         result = self.run_fixture(payload)
         self.assertFalse(result["passed"])

@@ -64,8 +64,9 @@ real e confirmar `LastTriggerUSec` novo.
 Confirmar que `LastTriggerUSec` avancou, o journal cita a tag exata e o estado
 atual passou para a versao esperada. Entao coletar:
 
-O gate correlaciona `LastTriggerUSec` com os timestamps UTC do download e do
-`apply_success`/no-op da mesma release. Um trigger antigo somado a um
+O gate exige que os timestamps UTC do download e do `apply_success`/no-op da
+mesma release ocorram depois de `LastTriggerUSec` e dentro da janela curta de
+correlacao. Um trigger antigo somado a um
 `systemctl start` manual posterior deve reprovar, mesmo quando ambos aparecem
 no mesmo journal.
 
