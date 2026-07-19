@@ -9,7 +9,9 @@ or authorize player-runtime thaw.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -30,6 +32,9 @@ REQUIRED_NON_CLAIMS = (
     "does_not_update_media_system",
     "does_not_publish_release",
 )
+TIMER_EVENT_MAX_SKEW_SECONDS = 120
+JOURNAL_UTC_RE = re.compile(r"\b(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)\b")
+TIMER_UTC_RE = re.compile(r"^(?:[A-Za-z]{3}\s+)?(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\s+UTC$")
 
 
 def load_json(path: Path) -> tuple[dict[str, Any], list[str]]:
@@ -60,6 +65,37 @@ def bool_string_false_or_absent(value: Any) -> bool:
 
 def truthy_marker(value: Any) -> bool:
     return value in (True, "true", "True", "1", 1)
+
+
+def parse_timer_utc(value: str) -> dt.datetime | None:
+    match = TIMER_UTC_RE.fullmatch(value.strip())
+    if match is None:
+        return None
+    try:
+        return dt.datetime.fromisoformat(f"{match.group(1)}T{match.group(2)}+00:00")
+    except ValueError:
+        return None
+
+
+def correlated_journal_event(
+    lines: list[str],
+    *,
+    trigger: dt.datetime,
+    required_fragments: tuple[str, ...],
+) -> bool:
+    for line in lines:
+        if not all(fragment in line for fragment in required_fragments):
+            continue
+        match = JOURNAL_UTC_RE.search(line)
+        if match is None:
+            continue
+        try:
+            observed = dt.datetime.fromisoformat(match.group(1).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if abs((observed - trigger).total_seconds()) <= TIMER_EVENT_MAX_SKEW_SECONDS:
+            return True
+    return False
 
 
 def validate_summary(
@@ -134,6 +170,28 @@ def validate_summary(
         blockers.append("service_journal_missing_expected_release_tag")
     if "apply_success" not in journal and "already_current" not in journal:
         blockers.append("service_journal_missing_apply_success_or_noop")
+    journal_lines = [str(item) for item in as_list(service.get("journal_tail"))]
+    trigger_utc = parse_timer_utc(last_trigger)
+    if trigger_utc is None:
+        blockers.append("timer_last_trigger_unparseable")
+    else:
+        if not correlated_journal_event(
+            journal_lines,
+            trigger=trigger_utc,
+            required_fragments=(expected_release_tag,),
+        ):
+            blockers.append("timer_expected_release_event_not_correlated")
+        success_correlated = correlated_journal_event(
+            journal_lines,
+            trigger=trigger_utc,
+            required_fragments=("apply_success", expected_version),
+        ) or correlated_journal_event(
+            journal_lines,
+            trigger=trigger_utc,
+            required_fragments=("already_current", expected_version),
+        )
+        if not success_correlated:
+            blockers.append("timer_success_event_not_correlated")
 
     status = as_dict(data.get("totem_core_status"))
     state = as_dict(status.get("state"))
@@ -327,8 +385,8 @@ class ProductionTimerGateSelfTest(unittest.TestCase):
             "service": {
                 "show": {"Result": "success", "ExecMainStatus": "0"},
                 "journal_tail": [
-                    f"INFO apply_start source=github:dadoohai/orange_pi_totem:{DEFAULT_EXPECTED_RELEASE_TAG}",
-                    f"INFO apply_success version={DEFAULT_EXPECTED_VERSION}",
+                    f"2026-07-05T18:58:01Z INFO apply_start source=github:dadoohai/orange_pi_totem:{DEFAULT_EXPECTED_RELEASE_TAG}",
+                    f"2026-07-05T18:58:20Z INFO apply_success version={DEFAULT_EXPECTED_VERSION}",
                 ],
             },
             "totem_core_status": {
@@ -422,6 +480,29 @@ class ProductionTimerGateSelfTest(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertIn("totem_core_current_version_mismatch", result["blockers"])
         self.assertIn("totem_core_current_payload_sha256_mismatch", result["blockers"])
+
+    def test_manual_service_event_after_old_timer_denies(self) -> None:
+        payload = self.fixture()
+        payload["timer"]["show"]["LastTriggerUSec"] = "Sun 2026-07-05 17:55:23 UTC"
+        payload["service"]["journal_tail"] = [
+            f"2026-07-05T20:17:23Z INFO apply_start source=github:dadoohai/orange_pi_totem:{DEFAULT_EXPECTED_RELEASE_TAG}",
+            f"2026-07-05T20:17:40Z INFO apply_success version={DEFAULT_EXPECTED_VERSION}",
+        ]
+        result = self.run_fixture(payload)
+        self.assertFalse(result["passed"])
+        self.assertIn("timer_expected_release_event_not_correlated", result["blockers"])
+        self.assertIn("timer_success_event_not_correlated", result["blockers"])
+
+    def test_journal_without_machine_timestamp_denies(self) -> None:
+        payload = self.fixture()
+        payload["service"]["journal_tail"] = [
+            f"INFO apply_start source=github:dadoohai/orange_pi_totem:{DEFAULT_EXPECTED_RELEASE_TAG}",
+            f"INFO apply_success version={DEFAULT_EXPECTED_VERSION}",
+        ]
+        result = self.run_fixture(payload)
+        self.assertFalse(result["passed"])
+        self.assertIn("timer_expected_release_event_not_correlated", result["blockers"])
+        self.assertIn("timer_success_event_not_correlated", result["blockers"])
 
     def test_missing_freeze_probe_denies(self) -> None:
         payload = self.fixture()

@@ -80,6 +80,12 @@ Target:
 17. Post-public-apply deep health passed with 25 samples, three content
     transitions, expected `v4l2request-copy`, advancing playback, zero restart,
     zero load failure and no kernel/storage fault.
+18. After a clean reboot, the production timer fired naturally at
+    `2026-07-19T21:01:09Z`. Its service selected the exact public C26.17 tag,
+    completed `apply_noop_already_current` three seconds later and left C26.17
+    current, C26.16 previous, the player active and the system healthy. The
+    hardened evidence gate correlated the timer and service timestamps and
+    passed.
 
 ## Evidence layout
 
@@ -98,7 +104,8 @@ Target:
   live firstboot contract, active-session updater guard and timer observation;
 - `board/stable-alignment-final/`: exact stable apply/rollback/reapply, public
   release verification, production-service remote apply/no-op, operational gate
-  and final playback health;
+  and final playback health, followed by a naturally fired timer and its
+  timestamp-correlated gate;
 - `compatibility/`: old-updater fail-closed rejection and retained C21.24
   selection;
 - `backend/` and `token-liveness/`: sanitized revocation and HTTP-status-only
@@ -126,6 +133,12 @@ Target:
   episodes progressed, but two one-sample transition-boundary episodes made the
   strict summary fail. The immediate retry and post-public-apply health passed;
   the raw negative is not rewritten or discarded.
+- The first post-publication timer harness is retained as a negative tooling
+  result: it parsed the boot ID before it was available and was interrupted
+  after reboot. The subsequent collection used the actual systemd trigger and
+  passed. The earlier uncorrelated green timer artifact is preserved but
+  superseded by the explicit rejection in `12b` and the correlated pass in
+  `16`.
 - This campaign publishes only C26.17 for prod19-capable `totem-core` clients.
   It does not change `player-runtime`, add full-system reinstall/A-B recovery or
   authorize future releases by inference.
@@ -136,12 +149,13 @@ The original timer run found public C21.24 older than embedded C26.16 and
 rejected it without mutation (`rc=45`). C26.17 resolves that alignment. The
 same production unit subsequently downloaded/applied C26.17 and completed a
 public no-op; system state returned to `running`, the operational gate passed
-and playback remained healthy. A natural post-publication timer firing was not
-fabricated: timer-to-service wiring was already observed on the original run,
-while publication apply/no-op used that exact production service.
+and playback remained healthy. A later clean reboot let the enabled production
+timer fire naturally. Its exact C26.17 selection and no-op occurred within
+three seconds of `LastTriggerUSec`; the hardened gate rejects an old timer
+combined with a later manual service and accepted this correlated run.
 
-Repository freeze and the post-publication independent audit remain the two
-administrative closeout steps. They do not require more board or HDMI work.
+Repository freeze and the independent re-audit remain the administrative
+closeout steps. They do not require more board or HDMI work.
 
 No API key, token value, password, SSID, pairing code, QR payload or customer
 identifier is included.

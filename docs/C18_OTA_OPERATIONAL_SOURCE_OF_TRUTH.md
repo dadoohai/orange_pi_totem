@@ -551,6 +551,14 @@ release gate; nao foram repetidos como mutacao de placa nesta corrida HDMI.
   rollbackada para C26.16 e o servico publico baixou/aplicou C26.17; a consulta
   seguinte foi no-op, o gate operacional passou e o health final ficou verde
   com 25 amostras, tres transicoes e zero restart/falha de carga;
+- depois de reboot limpo, o timer de producao disparou naturalmente em
+  `2026-07-19T21:01:09Z`, selecionou a tag C26.17 exata e concluiu no-op tres
+  segundos depois. O gate endurecido correlaciona os timestamps do trigger e
+  do servico e reprova a combinacao de timer antigo com start manual posterior;
+- `prod16` e `prod17` nunca sao baselines de distribuicao. Seus updaters podem
+  aceitar o manifest C26.17 e depois recusar o payload por allowlist (`rc=7`),
+  sem promocao. Se alguma placa fora da bancada aparecer nessas imagens, deve
+  ser regravada com `prod19` antes do rollout;
 - manter como frente separada o RCA da ativacao que uma vez ficou em espera ate
   `F5`; o onboarding concluiu, mas a experiencia ainda nao e considerada
   encerrada por esse caso;
@@ -578,6 +586,9 @@ Hardenings nao bloqueantes apontados pela auditoria do marco anterior de
   gate, alem dos campos do marker ja validados;
 - revalidacao completa de timer/policy no resumo de rollback, nao apenas no
   resumo pos-timer e no estado final.
+- numa imagem futura, tratar "nenhuma release publica compativel" como no-op do
+  seletor, sem transformar em sucesso uma aplicacao explicita invalida e sem
+  enfraquecer colisao de identidade, downgrade ou allowlist.
 
 ## Direcao de producao por decisao de negocio
 
@@ -607,7 +618,8 @@ Resultado dessa decisao: a linha de producao pragmatica foi materializada:
 1. imagem `prod19`, sem marcador `not_for_production` e com recuperacao local
    C26 comprovada;
 2. policy de producao e timer habilitado para auto-pull de `totem-core`;
-3. timer real aplicando update remoto, no-op, rollback e restauracao;
+3. timer real aplicando update remoto, no-op natural correlacionado, rollback e
+   restauracao;
 4. especificacao curta para devs e fabrica;
 5. ponte publica exact-target para C25B, com rollback e health real;
 6. auditoria pre-publicacao concluida sem blocker; o fechamento documental e a

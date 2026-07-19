@@ -32,6 +32,8 @@
     "public_noop_without_state_mutation": true,
     "post_public_apply_playback_health": true,
     "production_autopull_evidence_gate": true,
+    "natural_postpublication_timer_pull": true,
+    "timer_event_release_correlation_gate": true,
     "core_autopull_operationally_clean": true,
     "repo_clean_before_closeout": false,
     "independent_final_audit": false

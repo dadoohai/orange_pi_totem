@@ -1,7 +1,9 @@
-01180dcf1f465f4fa2a76a43fc8d40fe60d99648024bec6b7e81ab4b36bff607  ./README.md
+88b5c948d629a65c9fdad648eff46f4803af5f7a26e657f5e933fd23933800df  ./README.md
 e21a8fdca0bfc6aba7e5bd46b4701cca70b91f9898394232701864ea164b7b3a  ./audits/01-pre-final-completion-audit.md
 1a480dd7b757285a30398080b51342dc6b9bc2450d5d970bd3ff563593014eaa  ./audits/02-reset-preservation-audit.md
 c65671970a8e0f034aa75d7f4a0d593337e088b7e9e2e268057ae4e9ca6cc7cc  ./audits/03-stable-alignment-independent-audit.md
+d351866bb9860e1ad030b93a742a010192a7400f11699bed1bcc96b0c0289f30  ./audits/04-pre-freeze-compatibility-audit.md
+92a3f976a03ca2d410acab8c413fe8221ad63ebd2ff64df50550dc3dfbe9ad47  ./audits/05-post-publication-independent-audit-round-1.md
 559203fa5c415e78cfe15636fd0fe32bd8e223b4d61f92e38af6209d47909c5c  ./backend/deployed-source-provenance.json
 f52e52800c5721bfa89237f3781901c4c97b42187dbd8c29949ca226057ae9ff  ./backend/revocation-operation.json
 67dd5375f7cc32769ff4a83f09d62042467b945cb46a4c7a74e5c34896bb58dc  ./backend/self-revocation-unit-test.log
@@ -137,6 +139,11 @@ cfed244d26df03ebba7d4f4b8e84da85447ad62b0eebffdec65ce8f434962342  ./board/stable
 b9597deac28611c9d5cd8cfe1c4f2e744a5e20b262cf3e09cf946dd4f4ddd134  ./board/stable-alignment-final/10-public-noop-after-remote-apply.txt
 6e03a486cb10b4f070a0f0965415924057fd5836149e46ff5ab4f62244ac2c96  ./board/stable-alignment-final/11-production-autopull-summary.json
 d50bde1dd5f68090e913b1db476ba6e9a8193e68edb6ac328ec766a2538d38d5  ./board/stable-alignment-final/12-production-autopull-gate.json
+1339e3ee266383aaa2986b28f3d97718c1635729e08801d5a8b811e453ef640b  ./board/stable-alignment-final/12b-pre-correlation-summary-rejected.json
+21ba4feb6c0aaaf7739215b6e5aa902da70fdb78ec8d386c9e30853566d96716  ./board/stable-alignment-final/13-natural-timer-harness-parser-interrupted.txt
+07e6d901e9f4acb4d3fafb77c02238c406f69008786fb6496b523b0fdd41a4b6  ./board/stable-alignment-final/14-natural-timer-after-publication.txt
+d254a7d6c7a0b072a2063b54e264d9ab5203b48b8d883866eb61edf834f3ba42  ./board/stable-alignment-final/15-natural-timer-summary.json
+12e24a0ed1593afcdbe67490544b4142f4b1a9fcf9df9e3e0526f7f25d3b661a  ./board/stable-alignment-final/16-natural-timer-correlated-gate.json
 e250725b723fe57b9d483eb336af9994d38afac19f60aa57e07e50ebea9071d9  ./board/stable-alignment-final/health-after-apply/deep-health-kernel.json
 4b407cef0b96e40382f4d49d5152e28aa58b794a9b04ea1007a0ce6354554563  ./board/stable-alignment-final/health-after-apply/deep-health-player-counters.json
 fa279a73c7ff1396727e6e1cb6a66521755342158d02730628f1a0da181ad35b  ./board/stable-alignment-final/health-after-apply/deep-health-process.json
@@ -204,7 +211,7 @@ bc390975875c4742997a374b285621f14b13ef99a9994035540dd037ec44a9da  ./build/c26.15
 4016f914978a88a4638f27b73dff76a87717ffe05bcab51c9405fd9a21d5b847  ./build/c26.16-semantic-gate.json
 3f4a1d581643ce5ea8866d148da000d13d4816c396a37fe2e8820423a6f2bdf6  ./build/independent-image-audit.md
 39392c5934f524c8c1333ebdb2f3dc4b3b80ab37229292dd4da1c932cfd94902  ./build/offline_validation.json
-2bda6cf7f29ea1a5bcf0213c75488aaecb134fd5a1d3b3b96926d67fc9f57a32  ./campaign-summary.json
+716ff8c90306488aebfbf4996c54261b4d88a1ca26ee7311d3f6d96aefe4af53  ./campaign-summary.json
 ba0a8f5b803b6c0cd4df1def012fab45eb7dc9fccc3af436bef598e8639da1d8  ./compatibility/prod15-live-selector-after-c26-stable.txt
 f7bf7ac3e9503f5df9454223758cde8dedffdda016ab8640f7b00e1370d62091  ./compatibility/prod15-rejects-c26.17.txt
 7d3eb198e314265b2cdaa1f1ef0f7057bf94c27b0f72b25b3b202cdb805a2f47  ./gates/c26-local-recovery-final.log

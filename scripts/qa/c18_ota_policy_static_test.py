@@ -1941,6 +1941,15 @@ exec "$C18_REAL_PYTHON3" "$@"
         readme = README_PATH.read_text(encoding="utf-8")
         self.assertRegex(
             readme,
+            r"Baseline atual de gravacao/delivery: `c18-hwdecode-prod-19-c26`",
+        )
+        self.assertIn(
+            "991ee90b8c042cbd1424c29f8c5062668c3125c999a24e32c01f14d9b4ec1ebc",
+            readme,
+        )
+        self.assertIn(f"Golden historica pos-M6 validada em hardware: `{current_tag}`", readme)
+        self.assertNotRegex(
+            readme,
             rf"Baseline atual de laborat.rio/delivery: `{re.escape(current_tag)}`",
         )
         self.assertNotIn("Ela ainda nao substitui a golden `1t`", readme)

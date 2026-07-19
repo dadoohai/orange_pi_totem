@@ -1,0 +1,52 @@
+phase=natural_timer_after_publication
+monitor_started_at_utc=2026-07-19T20:50:52Z
+prior_boot_id=d711dbac-e712-40ed-90e4-df53ea0609ba
+
+current_boot_id=4e519c78-eef0-4031-985d-7eee5f198078
+uptime_seconds=59.67
+# /etc/systemd/system/totem-update-agent.timer
+[Unit]
+Description=Dadooh Totem Update Timer (production core auto-pull)
+Documentation=https://github.com/dadoohai/orange_pi_totem
+
+[Timer]
+# Production cadence for stable-only totem-core releases.
+OnBootSec=10min
+OnUnitActiveSec=6h
+RandomizedDelaySec=10min
+Persistent=true
+Unit=totem-update-agent.service
+
+[Install]
+WantedBy=timers.target
+LastTriggerUSec=Sun 2026-07-19 17:55:23 UTC
+Result=success
+ActiveState=active
+
+__EXPECT_EXIT_CODE__=0
+natural_timer_observed=1
+
+after_current=releases/c26.17-product-stable-20260719T193306Z-0e02019-actions
+after_previous=releases/c26.16-local-recovery-20260719-5df9521-final-guarded-actions
+LastTriggerUSec=Sun 2026-07-19 21:01:09 UTC
+Result=success
+ActiveState=active
+Result=success
+ExecMainStatus=0
+ActiveState=inactive
+NRestarts=0
+ActiveState=active
+system_state=running
+Starting totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull)...
+2026-07-19T21:01:10Z INFO update_lock_acquired operation=apply-github-latest:totem-core lock=/run/totem-updatectl.lock
+2026-07-19T21:01:11Z INFO downloading_manifest url=https://github.com/dadoohai/orange_pi_totem/releases/download/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json dest=/data/updates/incoming/totem-core/github-select-1784494870/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json
+2026-07-19T21:01:12Z INFO apply_start source=github:dadoohai/orange_pi_totem:totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions manifest=/data/updates/incoming/totem-core/github-select-1784494870/totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions/dadooh-totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions.manifest.json
+2026-07-19T21:01:12Z INFO apply_noop_already_current component=totem-core version=c26.17-product-stable-20260719T193306Z-0e02019-actions payload_sha256=0bbd935fc4a589f65438f380acecdb8d38c1877bd14cf0ba53dd16bd12f823d3 current=releases/c26.17-product-stable-20260719T193306Z-0e02019-actions
+2026-07-19T21:01:12Z INFO stage_cleanup_ok path=/data/updates/incoming/totem-core/github-select-1784494870
+totem-update-agent.service: Deactivated successfully.
+Finished totem-update-agent.service - Dadooh Totem Update Agent (production core auto-pull).
+totem-update-agent.service: Consumed 1.711s CPU time.
+
+__EXPECT_EXIT_CODE__=0
+finished_at_utc=2026-07-19T21:01:23Z
+result=passed

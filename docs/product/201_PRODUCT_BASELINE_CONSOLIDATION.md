@@ -50,8 +50,8 @@ Fechamento:
 8. [concluido] Publicar a mesma arvore executavel como C26.17 stable, presa a
    imagem e commit exatos.
 9. [concluido] Provar na placa rollback para C26.16, download/aplicacao publica
-   de C26.17, no-op, gate operacional, playback e fallback C21.24 no cliente
-   antigo.
+   de C26.17, no-op manual e natural pelo timer, correlacao temporal do gate,
+   playback e fallback C21.24 no cliente antigo.
 10. [em fechamento] Congelar evidencias/documentos e concluir a auditoria
     independente post-publicacao.
 

@@ -4,19 +4,29 @@ Documentação técnica e operacional para construção, validação e evoluçã
 
 ## Estado C18 OTA
 
-Baseline atual de laboratório/delivery: `c18-hwdecode-lab-1u` (C18 HW decode +
-OTA `totem-core` validado end-to-end + fundação segura para thaw futuro de
-`player-runtime`, com boot reconcile ordenado por `/data`, boot-state auditavel,
-crash-boundary offline no caminho real de `player-runtime` e hardening pos-M6 de
-`kiosky-player reconcile` validado em hardware). O OTA C18 comum é
-manual/operator-triggered e restrito a
-`totem-core`; `kiosky-player`, `player-runtime`, launcher do player,
-MPV/hwdecode, display, kernel, systemd e updater ficam fora desse fluxo e
-exigem imagem/homologação ou um pacote C18-aware explicitamente aprovado.
+Baseline atual de gravacao/delivery: `c18-hwdecode-prod-19-c26`
+(`c18.image-prod.19-c26`), SHA256
+`991ee90b8c042cbd1424c29f8c5062668c3125c999a24e32c01f14d9b4ec1ebc`.
+Ela embute `totem-core` C26.16/C26.15 e player-runtime C25B. Para placas
+`prod19`, o core publico atual e C26.17 stable, aplicado por auto-pull com
+rollback e no-op; clientes antigos que nao entendem C26 continuam em C21.24.
+Futuros alvos de player-runtime continuam exigindo autorizacao exata e health;
+MPV/hwdecode, display, kernel, updater e sistema base continuam sendo entrega
+por nova imagem, nao `totem-core` comum.
 
-Evidencia hardware da golden atual:
+Fonte operacional vigente:
+`docs/C18_OTA_OPERATIONAL_SOURCE_OF_TRUTH.md`. Fechamento C26/prod19:
+`docs/evidence/c26-local-recovery/20260719T162849Z-prod19-final-board-e2e/`.
+
+### Historico inicial C18
+
+As secoes abaixo preservam a evolucao desde 1u. Termos como "atual" ou
+"golden" dentro delas descrevem o momento da captura e nao substituem a
+baseline `prod19` declarada acima.
+
+Evidencia hardware historica da golden 1u:
 `docs/evidence/c18-update-validation/20260608T035330Z-1u-coldboot-deep-health/`.
-Ela promove a imagem `1u` como golden lab/delivery e valida o baseline/fallback
+Naquele marco ela promoveu `1u` como golden lab/delivery e validou o baseline/fallback
 da imagem com config real, freeze publico e deep-health em hardware. Nao valida
 thaw publico de `player-runtime`, adocao de release `/data`, power-loss fisico,
 auto-pull, stable/producao ou soak.
@@ -60,7 +70,7 @@ SIGTERM saudavel do Python-kiosk via IPC quit, rollback para A2 real em `/data`
 e release gate host aceitando a evidencia em modo `decisive` com a tripla
 explicita da imagem `1x`. Esse marco restaura a autorizacao decisiva lab para
 `player-runtime`, mas nao promove a `1x` como golden baseline/fallback geral: a
-fonte canonica de recovery/delivery continua sendo `current-golden.json` (`1u`)
+fonte canonica de recovery/delivery naquele marco continuava sendo `current-golden.json` (`1u`)
 enquanto nao houver uma promocao propria de baseline/fallback da `1x`. Ainda nao
 e thaw publico, OTA de `kiosky-player`, GitHub publish, auto-pull,
 stable/producao, power-loss fisico ou soak.
@@ -86,13 +96,13 @@ deep-health e reconcile verdes no resume. Elas ampliam a matriz fisica de
 power-loss, mas nao provam todos os checkpoints restantes, long soak,
 stable/producao, auto-pull ou thaw publico.
 
-Golden pos-M6 validada em hardware: `c18-hwdecode-lab-1u`.
+Golden historica pos-M6 validada em hardware: `c18-hwdecode-lab-1u`.
 Evidencia offline:
 `docs/evidence/c18-update-validation/20260608T024500Z-1u-offline-build/`.
 Imagem para gravacao:
 `/mnt/d/images_orange/Armbian-unofficial_25.11.1_Orangepizero3_bookworm_current_6.12.58-c18-hwdecode-lab-1u_minimal.img`
 (`sha256=57cd3e1620820c14ff9b297850386d7d95a1979b2f06201ff082526b8ffd13dd`).
-Ela substitui a `1t` como golden de laboratorio/delivery. A `1t` permanece
+Naquele marco ela substituiu a `1t` como golden de laboratorio/delivery. A `1t` permanece
 historica e como a imagem na qual o marco M6 A->B->A foi capturado.
 
 Fonte única do contrato: [docs/UPDATE_CONTRACT.md](docs/UPDATE_CONTRACT.md).

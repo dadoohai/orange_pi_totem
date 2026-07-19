@@ -344,8 +344,9 @@ deve bloquear redes abertas comuns, copy correta e simplificacao do fluxo.
 ### M10 - Recuperacao Local Pelo Usuario
 
 Status: fechado funcionalmente na `prod19` em 2026-07-19. Campanha fisica,
-publicacao stable e prova remota passaram; resta somente o fechamento
-documental e a auditoria independente post-publicacao.
+publicacao stable, prova remota e disparo natural correlacionado do timer
+passaram; resta somente o fechamento documental e a auditoria independente
+post-publicacao.
 
 Valor: reduzir visitas tecnicas permitindo que uma pessoa nao tecnica entenda e
 resolva localmente as falhas comuns, inclusive quando o totem estiver offline.

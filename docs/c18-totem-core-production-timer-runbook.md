@@ -64,6 +64,11 @@ real e confirmar `LastTriggerUSec` novo.
 Confirmar que `LastTriggerUSec` avancou, o journal cita a tag exata e o estado
 atual passou para a versao esperada. Entao coletar:
 
+O gate correlaciona `LastTriggerUSec` com os timestamps UTC do download e do
+`apply_success`/no-op da mesma release. Um trigger antigo somado a um
+`systemctl start` manual posterior deve reprovar, mesmo quando ambos aparecem
+no mesmo journal.
+
 ```sh
 ssh root@<IP> 'python3 /tmp/c18_totem_core_production_timer_collect.py \
   --expected-image-tag c18-hwdecode-prod-14 \

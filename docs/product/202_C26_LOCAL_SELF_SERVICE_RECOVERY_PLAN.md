@@ -542,6 +542,11 @@ download/aplicacao publica de C26.17, no-op e gate operacional passaram. O
 health depois do apply publico passou com 25 amostras, tres transicoes e zero
 restart/falha de carga.
 
+Depois de reboot limpo, o timer de producao disparou naturalmente em
+`2026-07-19T21:01:09Z`, selecionou a release C26.17 exata e concluiu no-op tres
+segundos depois. O gate final correlaciona o trigger com os eventos da mesma
+release e reprova um timer antigo combinado com execucao manual posterior.
+
 Uma janela anterior de 60 segundos foi preservada como resultado negativo: o
 gate classificou dois episodios de uma unica amostra nas bordas de transicao.
 Cinco episodios completos progrediram, sem restart, falha de carga, kernel ou
