@@ -10,19 +10,19 @@ verificada antes de tocar o timer da placa.
 
 ## Alvo Atual
 
-- Imagem: `c18-hwdecode-prod-14` / `c18.image-prod.14`
+- Imagem: `c18-hwdecode-prod-19-c26` / `c18.image-prod.19-c26`
 - Image SHA256:
-  `3d93f05f896c8e7c17866129a901a02803e65d7968ed69eac3987b03a4b02682`
+  `991ee90b8c042cbd1424c29f8c5062668c3125c999a24e32c01f14d9b4ec1ebc`
 - Release:
-  `totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea`
+  `totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions`
 - Versao:
-  `c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea`
+  `c26.17-product-stable-20260719T193306Z-0e02019-actions`
 - Payload SHA256:
-  `b3560b9c172f9cef697f3b475052a684d6d59ec19ea0dbfdf7c8b5c3cf2e6292`
+  `0bbd935fc4a589f65438f380acecdb8d38c1877bd14cf0ba53dd16bd12f823d3`
 - Source commit:
-  `766b1eadbc4b69dd92a81e468e29d816c7feffc9`
+  `0e02019a83b092a0915ca6dfa9a020fc33f6a341`
 - Rollback esperado:
-  `c20.14-settings-stop-hardening-20260714T034217Z-22bd473`
+  `c26.16-local-recovery-20260719-5df9521-final-guarded-actions`
 
 Ao reutilizar o runbook para outra imagem ou release, substituir todos esses
 valores e passar os overrides explicitos ao coletor e ao gate. Nao depender
@@ -48,8 +48,8 @@ ssh root@<IP> 'python3 /tmp/c18_totem_core_production_timer_collect.py --self-te
 
 ## 1. Aplicacao Pelo Timer Real
 
-Reabilitar o timer e aguardar uma nova execucao real. A primeira aplicacao nao
-pode ser iniciada manualmente:
+Reabilitar o timer e aguardar uma nova execucao real. O disparo usado para
+provar o timer nao pode ser iniciado manualmente:
 
 ```sh
 ssh root@<IP> 'systemctl enable --now totem-update-agent.timer'
@@ -57,9 +57,16 @@ ssh root@<IP> 'systemctl enable --now totem-update-agent.timer'
 
 Se o timer for habilitado depois que `OnBootSec` ja passou, o systemd pode
 mostra-lo como `active (elapsed)` e sem proximo disparo. Isso nao prova o timer
-e nao autoriza iniciar o primeiro apply manualmente. Registrar o diagnostico e
+e nao autoriza substituir a prova natural por um start manual. Registrar o diagnostico e
 reiniciar a placa com o timer ja habilitado; depois do boot, aguardar o disparo
 real e confirmar `LastTriggerUSec` novo.
+
+Se a release exata ja estiver em `current`, o disparo natural pode terminar em
+`apply_noop_already_current`. Nesse caso, a campanha tambem precisa conter uma
+aplicacao publica mutante da mesma release pelo mesmo servico governado, com
+rollback anterior e hashes preservados. O no-op natural prova agendamento,
+consulta e selecao; a execucao separada prova a mutacao. Nenhuma das duas deve
+ser apresentada isoladamente como prova de todo o ciclo.
 
 Confirmar que `LastTriggerUSec` avancou, o journal cita a tag exata e o estado
 atual passou para a versao esperada. Entao coletar:
@@ -72,8 +79,8 @@ no mesmo journal.
 
 ```sh
 ssh root@<IP> 'python3 /tmp/c18_totem_core_production_timer_collect.py \
-  --expected-image-tag c18-hwdecode-prod-14 \
-  --expected-release-tag totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea \
+  --expected-image-tag c18-hwdecode-prod-19-c26 \
+  --expected-release-tag totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions \
   --probe-frozen-player-runtime \
   --output /tmp/c18-core-post-timer.json'
 scp root@<IP>:/tmp/c18-core-post-timer.json \
@@ -85,13 +92,13 @@ Validar com todos os valores explicitos:
 ```sh
 python3 scripts/qa/c18_totem_core_production_timer_evidence_gate.py \
   --summary docs/evidence/c18-update-validation/<RUN>/post-timer-summary.json \
-  --expected-image-tag c18-hwdecode-prod-14 \
-  --expected-image-version c18.image-prod.14 \
-  --expected-release-tag totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea \
-  --expected-version c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea \
-  --expected-rollback-version c20.14-settings-stop-hardening-20260714T034217Z-22bd473 \
-  --expected-payload-sha256 b3560b9c172f9cef697f3b475052a684d6d59ec19ea0dbfdf7c8b5c3cf2e6292 \
-  --expected-source-commit 766b1eadbc4b69dd92a81e468e29d816c7feffc9 \
+  --expected-image-tag c18-hwdecode-prod-19-c26 \
+  --expected-image-version c18.image-prod.19-c26 \
+  --expected-release-tag totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions \
+  --expected-version c26.17-product-stable-20260719T193306Z-0e02019-actions \
+  --expected-rollback-version c26.16-local-recovery-20260719-5df9521-final-guarded-actions \
+  --expected-payload-sha256 0bbd935fc4a589f65438f380acecdb8d38c1877bd14cf0ba53dd16bd12f823d3 \
+  --expected-source-commit 0e02019a83b092a0915ca6dfa9a020fc33f6a341 \
   --json
 ```
 
@@ -114,8 +121,8 @@ Somente depois de a aplicacao e o no-op passarem:
 ```sh
 ssh root@<IP> '/opt/totem/bin/totem-updatectl rollback --component totem-core'
 ssh root@<IP> 'python3 /tmp/c18_totem_core_production_timer_collect.py \
-  --expected-image-tag c18-hwdecode-prod-14 \
-  --expected-release-tag totem-core-c21.12-prod14-stable-alignment-20260714T204248Z-766b1ea \
+  --expected-image-tag c18-hwdecode-prod-19-c26 \
+  --expected-release-tag totem-core-c26.17-product-stable-20260719T193306Z-0e02019-actions \
   --probe-frozen-player-runtime \
   --output /tmp/c18-core-post-rollback.json'
 scp root@<IP>:/tmp/c18-core-post-rollback.json \
@@ -128,7 +135,7 @@ Repetir o gate anterior adicionando:
 --rollback-summary docs/evidence/c18-update-validation/<RUN>/post-rollback-summary.json
 ```
 
-O rollback deve tornar C20.14 atual e manter C21.12 como `previous`, com
+O rollback deve tornar C26.16 atual e manter C26.17 como `previous`, com
 self-test e player verdes.
 
 ## 4. Restauracao
@@ -140,7 +147,7 @@ ssh root@<IP> 'systemctl start totem-update-agent.service'
 ```
 
 Coletar `restored-summary.json` e rodar o gate de resumo sem
-`--rollback-summary`. C21.12 deve voltar a `current`, C20.14 deve ficar como
+`--rollback-summary`. C26.17 deve voltar a `current`, C26.16 deve ficar como
 `previous`, o timer deve permanecer ativo e o freeze publico de
 `player-runtime` deve continuar em `rc=44`.
 
@@ -149,8 +156,8 @@ Coletar `restored-summary.json` e rodar o gate de resumo sem
 Com os dois componentes restaurados, confirmar os dois timers habilitados e
 ativos, reiniciar uma vez e recoletar o estado. O fechamento exige:
 
-- marker prod14 e configuracao persistidos;
-- `totem-core` C21.12 atual e self-test verde;
+- marker prod19 e configuracao persistidos;
+- `totem-core` C26.17 atual e self-test verde;
 - `player-runtime` C25B atual e freeze publico `rc=44`;
 - player ativo, MPV em hardware decode e conteudo avancando;
 - zero units falhadas e nenhum item em quarentena;
