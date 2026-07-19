@@ -5,6 +5,7 @@
   "image_version": "c18.image-prod.19-c26",
   "repo_commit": "5838983806f953bf055734f8c413b63801a138ae",
   "closeout_audit_commit": "ea235fe6bb54b674dcdbf96ab1651eb9ece8d5b5",
+  "closeout_gate_commit": "9c0d34755f2ee3d142247adcd2662d28e548d9dd",
   "current_version": "c26.17-product-stable-20260719T193306Z-0e02019-actions",
   "previous_version": "c26.16-local-recovery-20260719-5df9521-final-guarded-actions",
   "checks": {
@@ -36,7 +37,7 @@
     "natural_postpublication_timer_pull": true,
     "timer_event_release_correlation_gate": true,
     "post_timer_hardening_release_gate_85_of_85": true,
-    "independent_final_release_gate_85_of_85": true,
+    "final_closeout_release_gate_85_of_85": true,
     "core_autopull_operationally_clean": true,
     "repo_clean_before_closeout": true,
     "independent_final_audit": true

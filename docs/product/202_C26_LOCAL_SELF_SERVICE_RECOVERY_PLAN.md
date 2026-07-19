@@ -548,8 +548,9 @@ segundos depois. O gate final correlaciona o trigger com os eventos da mesma
 release e reprova um timer antigo combinado com execucao manual posterior.
 
 O fechamento documental foi auditado duas vezes de forma independente no
-commit limpo `ea235fe`; ambos os pareceres foram GO, e um deles rerodou o gate
-completo em 85/85 nesse HEAD exato.
+commit limpo `ea235fe`; ambos os pareceres foram GO. Depois dos registros
+administrativos, uma execucao propria do repositorio foi anexada no descendente
+limpo `9c0d347`, com gate completo 85/85 e zero falha.
 
 Uma janela anterior de 60 segundos foi preservada como resultado negativo: o
 gate classificou dois episodios de uma unica amostra nas bordas de transicao.

@@ -1,11 +1,11 @@
-db588956007135fb4ca247530363ac382a1bfb7dede5519a7022e29f9d32aa45  ./README.md
+91d6ed7ed8fa5b464a7fc97f7f2e74f5be4eee268a40996729f52e0026cf7da0  ./README.md
 e21a8fdca0bfc6aba7e5bd46b4701cca70b91f9898394232701864ea164b7b3a  ./audits/01-pre-final-completion-audit.md
 1a480dd7b757285a30398080b51342dc6b9bc2450d5d970bd3ff563593014eaa  ./audits/02-reset-preservation-audit.md
 c65671970a8e0f034aa75d7f4a0d593337e088b7e9e2e268057ae4e9ca6cc7cc  ./audits/03-stable-alignment-independent-audit.md
 d351866bb9860e1ad030b93a742a010192a7400f11699bed1bcc96b0c0289f30  ./audits/04-pre-freeze-compatibility-audit.md
 92a3f976a03ca2d410acab8c413fe8221ad63ebd2ff64df50550dc3dfbe9ad47  ./audits/05-post-publication-independent-audit-round-1.md
-2e63049a3d3795a77586a022a246cd543c0be5cc3ebb1c9d0cb14802597b1b95  ./audits/06-final-independent-audit.md
-f4f33155165736e99e82b2c9e5749d91984f325401ff0790801a4cdb701e14d6  ./audits/07-blocker-closure-reaudit.md
+29193a720be7820143dbd3acc815e336fe6ab1c3cb6331893e2391fa2f59fd35  ./audits/06-final-independent-audit.md
+bb1b9b122d1c36a3fbb76964a199339c7fe4c86515cba7ddc5c3f2a59a5630e0  ./audits/07-blocker-closure-reaudit.md
 559203fa5c415e78cfe15636fd0fe32bd8e223b4d61f92e38af6209d47909c5c  ./backend/deployed-source-provenance.json
 f52e52800c5721bfa89237f3781901c4c97b42187dbd8c29949ca226057ae9ff  ./backend/revocation-operation.json
 67dd5375f7cc32769ff4a83f09d62042467b945cb46a4c7a74e5c34896bb58dc  ./backend/self-revocation-unit-test.log
@@ -213,7 +213,7 @@ bc390975875c4742997a374b285621f14b13ef99a9994035540dd037ec44a9da  ./build/c26.15
 4016f914978a88a4638f27b73dff76a87717ffe05bcab51c9405fd9a21d5b847  ./build/c26.16-semantic-gate.json
 3f4a1d581643ce5ea8866d148da000d13d4816c396a37fe2e8820423a6f2bdf6  ./build/independent-image-audit.md
 39392c5934f524c8c1333ebdb2f3dc4b3b80ab37229292dd4da1c932cfd94902  ./build/offline_validation.json
-f1870908afba863dedb4052766670f8e44f37f65ea0af8eefd61fe5b5b8557d6  ./campaign-summary.json
+9b5b74ee614c51d5263141ba6aacb9f1cbdf7ede58ed9194eca376e708c3e6bc  ./campaign-summary.json
 ba0a8f5b803b6c0cd4df1def012fab45eb7dc9fccc3af436bef598e8639da1d8  ./compatibility/prod15-live-selector-after-c26-stable.txt
 f7bf7ac3e9503f5df9454223758cde8dedffdda016ab8640f7b00e1370d62091  ./compatibility/prod15-rejects-c26.17.txt
 7d3eb198e314265b2cdaa1f1ef0f7057bf94c27b0f72b25b3b202cdb805a2f47  ./gates/c26-local-recovery-final.log
@@ -222,6 +222,7 @@ f7bf7ac3e9503f5df9454223758cde8dedffdda016ab8640f7b00e1370d62091  ./compatibilit
 02072a641c936fd55d8867c5f679073494e7ad568f751c254675cd74d036d4a9  ./gates/c26.17-final-sandbox-isolated/totem-core-sandbox.json
 5518f801ba0dea0a1ecdd00a410e4bc85cd915d5604035ecdd6a6bb6e89a0f05  ./gates/c26.17-final-sandbox/ASSESSMENT.md
 558b4bfbdb5a192f89b3815ad0abb4c0d8aa35f3d252aa202e272400b78a6cb2  ./gates/c26.17-final-sandbox/totem-core-sandbox.json
+5cf3dd463ffa71f00dce71fc2f7eef22504496bff3fcd5529648f1305b5a8bd5  ./gates/final-closeout-release-gate.json
 7a114e83db017763f910d82af01732886260e7a8af7b3cc8bffa7d3b93909fa3  ./gates/final-natural-timer-release-gate.json
 237bc69cf0a3ec85ddf3008c4607566cf4dc57fa9ad37ba047d59356ae62ca00  ./gates/post-publication-release-gate.json
 30ebf832fa4401bfd70af755ee802ffd3d8dc711eae31cf2daa24c900fc4f0ed  ./gates/release-gate.json

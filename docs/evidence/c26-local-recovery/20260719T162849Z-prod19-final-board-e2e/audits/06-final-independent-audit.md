@@ -15,8 +15,8 @@ auto-pull contract. No technical blocker remained.
 ## Independently verified
 
 - all campaign files were tracked and both checksum manifests passed;
-- the full release gate rerun on the exact target returned 85/85 with a clean
-  repository and no failed step;
+- the auditor reported a full release gate rerun on the exact target at 85/85
+  with a clean repository and no failed step;
 - the natural timer trigger at `21:01:09Z` preceded C26.17 selection at
   `21:01:11Z` and the safe no-op at `21:01:12Z`;
 - the hardened timer gate passed the real summary and all 11 self-tests;
@@ -36,3 +36,10 @@ auto-pull contract. No technical blocker remained.
   full-system reinstall or broader rollout controls by inference;
 - the campaign images were not OCR-scanned again in this final read-only pass;
   prior visual/evidence reviews found no exposed credential.
+
+## Repository-owned follow-up
+
+Because the auditor's command output was not itself versioned, the repository
+later captured a new full 85/85 run on clean descendant `9c0d347` in
+`gates/final-closeout-release-gate.json`. The final claim relies on that tracked
+artifact, not solely on this report.

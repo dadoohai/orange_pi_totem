@@ -21,8 +21,11 @@ GO. No technical or documentary blocker remained.
   restored as the current runbook target;
 - all then-present campaign checksum entries passed;
 - the committed post-timer release gate contains 85 passed steps, no failed
-  step and a clean f4e5233 parent; the independent final audit separately
-  reran all 85 steps on ea235fe.
+  step and a clean f4e5233 parent.
+
+After this review, the repository captured a separate full 85/85 run on clean
+descendant `9c0d347` in `gates/final-closeout-release-gate.json`, eliminating
+dependence on an unversioned auditor command result.
 
 The campaign's prior `passed=false` was accepted only as the intentional
 pre-verdict handshake. This report authorizes the administrative closeout to

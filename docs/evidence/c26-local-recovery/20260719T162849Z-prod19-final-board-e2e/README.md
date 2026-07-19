@@ -90,8 +90,11 @@ Target:
 19. With that hardening committed, the full release gate passed 85/85 again
     on clean HEAD `f4e5233`, with no failed step.
 20. Two independent read-only closeout reviews returned GO on clean
-    `ea235fe`; one of them independently reran the full gate at 85/85 on that
-    exact HEAD. No technical or documentary blocker remained.
+    `ea235fe`. No technical blocker remained.
+21. After the audit reports and administrative summary were committed, a
+    repository-owned full gate run was captured on clean `9c0d347`: 85/85,
+    zero failed step. This tracked JSON supersedes reliance on an auditor's
+    unversioned command output.
 
 ## Evidence layout
 
