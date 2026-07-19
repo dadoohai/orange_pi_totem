@@ -963,7 +963,8 @@ podemos escolher entre:
     antes do build; dois slots posteriores devem provar preservacao pre-troca,
     validacao do arquivo oculto e rollback protegido contra sinais repetidos.
 22. O commit `a09bf39` fechou a transacao sucessora. C26.15 e C26.16 foram
-    geradas de commits distintos, possuem os mesmos 21 arquivos executaveis e
-    passaram o gate semantico atualizado; C26.13/C26.14 agora reprovam. A
+    geradas de commits distintos, possuem os mesmos 21 arquivos regulares,
+    incluindo 19 executaveis em `bin/`, e passaram o gate semantico atualizado;
+    C26.13/C26.14 agora reprovam. A
     `prod19` passa a ser composta com C26.16 atual e C26.15 anterior, ainda sem
     claim de imagem pronta ate regua completa, auditoria offline e prova na placa.

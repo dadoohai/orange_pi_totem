@@ -490,10 +490,11 @@ novos slots sucessores precisam passar o gate atualizado.
 
 O contrato corrigido foi congelado em `a09bf39`. C26.15 foi gerada desse
 commit e registrada em `5df9521`; C26.16 foi gerada de `5df9521`. Os dois
-payloads possuem os mesmos 21 arquivos executaveis, byte a byte, mas versoes,
-hashes e commits de origem distintos. Ambos passaram o gate semantico atual,
+payloads possuem os mesmos 21 arquivos regulares, incluindo 19 executaveis em
+`bin/`, byte a byte, mas versoes, hashes e commits de origem distintos. Ambos
+passaram o gate semantico atual,
 enquanto C26.13 e C26.14 foram explicitamente reprovadas por ele.
 
 A composicao da `prod19` usa C26.16 como `current` e C26.15 como `previous`.
-Isso ainda e uma candidata offline: faltam a regua completa, a auditoria da
-imagem e a prova fisica na placa antes de promover a baseline.
+Isso ainda e uma candidata offline: a regua completa passou `85/85`, mas faltam
+a auditoria da imagem e a prova fisica na placa antes de promover a baseline.
