@@ -437,25 +437,25 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             except ValueError:
                 pass
 
-        expected_core_version = "c26.14-local-recovery-20260719-fd58c0f-final-actions"
+        expected_core_version = "c26.16-local-recovery-20260719-5df9521-final-guarded-actions"
         expected_core_tag = f"totem-core-{expected_core_version}"
-        expected_core_sha = "8a6f35eae71de7d34fdcb144127abca56899c4eac21feae9cd0c5624d3ca2a7b"
+        expected_core_sha = "2027d9ac9d9b76daa8ca999b90dd20f2aa15f69f7fa36ee97df4492305d0d0f5"
         self.assertEqual(mod.TOTEM_CORE_VERSION, expected_core_version)
         self.assertEqual(mod.TOTEM_CORE_RELEASE_TAG, expected_core_tag)
         self.assertEqual(mod.TOTEM_CORE_CHANNEL, "homologation")
         self.assertEqual(mod.TOTEM_CORE_PAYLOAD_SHA256, expected_core_sha)
-        self.assertEqual(mod.TOTEM_CORE_CREATED_AT_UTC, "2026-07-19T02:06:01Z")
+        self.assertEqual(mod.TOTEM_CORE_CREATED_AT_UTC, "2026-07-19T03:55:43Z")
         self.assertEqual(
             mod.TOTEM_CORE_SOURCE_COMMIT,
-            "fd58c0f9f531be38d7a81397219c247f424f4a30",
+            "5df952130576664785d1825e0ff790e72e9fc9f7",
         )
         self.assertEqual(
             mod.TOTEM_CORE_PREVIOUS_VERSION,
-            "c26.13-local-recovery-20260719-6d95dd1-bound-atomic-actions",
+            "c26.15-local-recovery-20260719-a09bf39-guarded-transaction-actions",
         )
         self.assertEqual(
             mod.TOTEM_CORE_PREVIOUS_PAYLOAD_SHA256,
-            "c34a5dea177d9730d30b15e89f51a05f576686b58e3ccc9361116d3568b823e9",
+            "d95980da061c1497fb144894e6308cb6685eaf5a1f74b9b4824803391f466d4d",
         )
         release_provenance = mod.validate_totem_core_release_provenance(
             REPO_ROOT,
@@ -622,7 +622,7 @@ class C18OtaPolicyStaticTest(unittest.TestCase):
             'PRODUCTION_IMAGE_BOUND_PLAYBACK_SUMMARY_COMMIT = "c075a5572148ed25aed000a22202f918c4157fda"',
             derive,
         )
-        self.assertIn('"totem_core_c26_14_current_c26_13_previous_embedded"', derive)
+        self.assertIn('"totem_core_c26_16_current_c26_15_previous_embedded"', derive)
         self.assertIn('"totem_core_two_distinct_product_reset_slots"', derive)
         self.assertIn('"image_identity_prod19_c26"', derive)
         self.assertIn('"playback_health_summary_c075a55"', derive)

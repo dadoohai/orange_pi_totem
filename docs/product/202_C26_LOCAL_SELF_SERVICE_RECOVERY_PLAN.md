@@ -485,3 +485,15 @@ diretorio continuam tendo resultado de persistencia ambiguo, mas somente entre o
 arquivo anterior e o candidato completo, previamente validado; o launcher ainda
 falha fechado antes do playback. C26.13/C26.14 nao devem compor a imagem; dois
 novos slots sucessores precisam passar o gate atualizado.
+
+## Slots sucessores C26.15 e C26.16
+
+O contrato corrigido foi congelado em `a09bf39`. C26.15 foi gerada desse
+commit e registrada em `5df9521`; C26.16 foi gerada de `5df9521`. Os dois
+payloads possuem os mesmos 21 arquivos executaveis, byte a byte, mas versoes,
+hashes e commits de origem distintos. Ambos passaram o gate semantico atual,
+enquanto C26.13 e C26.14 foram explicitamente reprovadas por ele.
+
+A composicao da `prod19` usa C26.16 como `current` e C26.15 como `previous`.
+Isso ainda e uma candidata offline: faltam a regua completa, a auditoria da
+imagem e a prova fisica na placa antes de promover a baseline.

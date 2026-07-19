@@ -105,7 +105,9 @@ guiadas no proprio aparelho. M11 nao bloqueia M10.
   bloqueia escrita concorrente do usuario do player durante a transacao,
   preserva o anterior em falha pre-troca e protege o rollback de `SIGTERM`
   repetido. C26.13/C26.14 nao devem ser embutidas;
-- pendente macro: gerar dois novos slots sucessores, compor a nova imagem,
+- C26.15 e C26.16 sao os dois slots sucessores: possuem os mesmos executaveis
+  corrigidos, origens imutaveis distintas e passaram o gate semantico atual;
+- pendente macro: fechar a composicao da nova imagem, executar a regua completa,
   auditar o artefato, prova-lo na placa e so entao promover a baseline.
   Ate la, a referencia publica continua `prod15` + C25B + C21.24.
 
@@ -960,3 +962,8 @@ podemos escolher entre:
     apagar a configuracao antiga se o backup sumisse. A composicao foi bloqueada
     antes do build; dois slots posteriores devem provar preservacao pre-troca,
     validacao do arquivo oculto e rollback protegido contra sinais repetidos.
+22. O commit `a09bf39` fechou a transacao sucessora. C26.15 e C26.16 foram
+    geradas de commits distintos, possuem os mesmos 21 arquivos executaveis e
+    passaram o gate semantico atualizado; C26.13/C26.14 agora reprovam. A
+    `prod19` passa a ser composta com C26.16 atual e C26.15 anterior, ainda sem
+    claim de imagem pronta ate regua completa, auditoria offline e prova na placa.
