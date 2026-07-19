@@ -87,7 +87,7 @@ PRODUCTION_IMAGE_BOUND_TRANSACTION_COMMIT = "bfb0d04489ac4251908ba27396bd8ed37be
 PRODUCTION_IMAGE_BOUND_PLAYBACK_SUMMARY_COMMIT = "c075a5572148ed25aed000a22202f918c4157fda"
 PRODUCTION_SUCCESSOR_SCOPE = (
     "image_identity_prod19_c26",
-    "totem_core_c26_10_current_c26_9_previous_embedded",
+    "totem_core_c26_12_current_c26_11_previous_embedded",
     "totem_core_two_distinct_product_reset_slots",
     "playback_health_summary_c075a55",
     "player_runtime_c25b_exact_target_preserved",
